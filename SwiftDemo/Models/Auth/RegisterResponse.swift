@@ -1,0 +1,35 @@
+import Foundation
+
+struct RegisterResponse: Codable {
+    let response: Int
+    let message: MessageType?
+    let user_id: Int?
+    let patient_id: Int?
+
+    enum MessageType: Codable {
+        case string(String)
+        case array([String])
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            if let str = try? container.decode(String.self) {
+                self = .string(str)
+            } else if let arr = try? container.decode([String].self) {
+                self = .array(arr)
+            } else {
+                self = .string("Unknown error")
+            }
+        }
+    }
+
+    func formattedMessage() -> String {
+        switch message {
+        case .string(let msg):
+            return msg
+        case .array(let arr):
+            return arr.joined(separator: "\n")
+        default:
+            return "Unknown error"
+        }
+    }
+}

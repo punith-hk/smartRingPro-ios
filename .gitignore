@@ -1,3 +1,20 @@
-Pods/
+# Xcode
 DerivedData/
-xcuserdata/
+*.xcuserstate
+*.xcuserdata
+*.xccheckout
+*.xcscmblueprint
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+# Build
+build/
+*.ipa
+
+# macOS
+.DS_Store
+
+# Logs
+*.log

@@ -3,16 +3,12 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		19914F0ACEF80BB6D38EE68F /* libPods-SwiftDemo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E870874FA04E877CD9D2884B /* libPods-SwiftDemo.a */; };
 		4BEF9B752DE93FE900439088 /* YCHenAIBloodPressureViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEF9B732DE93FE900439088 /* YCHenAIBloodPressureViewController.swift */; };
-		4BEF9B772DE9400700439088 /* BaseViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEF9B762DE9400700439088 /* BaseViewController.swift */; };
-		CA1581862754C6B20073C514 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1581852754C6B20073C514 /* AppDelegate.swift */; };
-		CA1581882754C6B20073C514 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1581872754C6B20073C514 /* SceneDelegate.swift */; };
-		CA15818A2754C6B20073C514 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1581892754C6B20073C514 /* ViewController.swift */; };
 		CA15818D2754C6B20073C514 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CA15818B2754C6B20073C514 /* Main.storyboard */; };
 		CA15818F2754C6B40073C514 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CA15818E2754C6B40073C514 /* Assets.xcassets */; };
 		CA1581922754C6B40073C514 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CA1581902754C6B40073C514 /* LaunchScreen.storyboard */; };
@@ -83,16 +79,12 @@
 
 /* Begin PBXFileReference section */
 		4BEF9B732DE93FE900439088 /* YCHenAIBloodPressureViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YCHenAIBloodPressureViewController.swift; sourceTree = "<group>"; };
-		4BEF9B762DE9400700439088 /* BaseViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseViewController.swift; sourceTree = "<group>"; };
 		4C2F049961345F7E6ADAEF7A /* Pods-SwiftDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SwiftDemo.debug.xcconfig"; path = "Target Support Files/Pods-SwiftDemo/Pods-SwiftDemo.debug.xcconfig"; sourceTree = "<group>"; };
 		6CDB37AFE12D152C32B6584F /* Pods_YCProductSDK.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_YCProductSDK.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A75B1B61EE37F0A3F5C14301 /* Pods-ObjcDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ObjcDemo.release.xcconfig"; path = "Target Support Files/Pods-ObjcDemo/Pods-ObjcDemo.release.xcconfig"; sourceTree = "<group>"; };
 		AA999FD1E4B8A9FF39FE17CC /* Pods-ObjcDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ObjcDemo.debug.xcconfig"; path = "Target Support Files/Pods-ObjcDemo/Pods-ObjcDemo.debug.xcconfig"; sourceTree = "<group>"; };
 		C8C475C791BC3BEBB8BE75EB /* Pods-SwiftDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SwiftDemo.release.xcconfig"; path = "Target Support Files/Pods-SwiftDemo/Pods-SwiftDemo.release.xcconfig"; sourceTree = "<group>"; };
 		CA1581832754C6B20073C514 /* SwiftDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		CA1581852754C6B20073C514 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		CA1581872754C6B20073C514 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
-		CA1581892754C6B20073C514 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		CA15818C2754C6B20073C514 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		CA15818E2754C6B40073C514 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		CA1581912754C6B40073C514 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -163,6 +155,17 @@
 		E870874FA04E877CD9D2884B /* libPods-SwiftDemo.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-SwiftDemo.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		FC4BECD21578C2F7BCABAF22 /* libPods-ObjcDemo.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-ObjcDemo.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		B22CF9052EF9986000EC2BE8 /* Controllers */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Controllers; sourceTree = "<group>"; };
+		B22CF9092EF998EB00EC2BE8 /* Network */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Network; sourceTree = "<group>"; };
+		B22CF9172EF9994400EC2BE8 /* Services */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Services; sourceTree = "<group>"; };
+		B22CF9242EF99DCC00EC2BE8 /* Models */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Models; sourceTree = "<group>"; };
+		B22CF9332EF9A0CC00EC2BE8 /* Utils */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Utils; sourceTree = "<group>"; };
+		B22CF95C2EF9CA0C00EC2BE8 /* App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = App; sourceTree = "<group>"; };
+		B22CF95E2EF9CA2D00EC2BE8 /* Base */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Base; sourceTree = "<group>"; };
+		B22CF9782EF9CB6A00EC2BE8 /* Views */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Views; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		CA1581802754C6B20073C514 /* Frameworks */ = {
@@ -247,16 +250,20 @@
 		CA1581842754C6B20073C514 /* SwiftDemo */ = {
 			isa = PBXGroup;
 			children = (
-				4BEF9B762DE9400700439088 /* BaseViewController.swift */,
-				CA1581852754C6B20073C514 /* AppDelegate.swift */,
-				CA1581872754C6B20073C514 /* SceneDelegate.swift */,
-				CA1581892754C6B20073C514 /* ViewController.swift */,
+				B22CF9782EF9CB6A00EC2BE8 /* Views */,
+				B22CF95C2EF9CA0C00EC2BE8 /* App */,
+				B22CF9332EF9A0CC00EC2BE8 /* Utils */,
+				B22CF9242EF99DCC00EC2BE8 /* Models */,
+				B22CF9172EF9994400EC2BE8 /* Services */,
+				B22CF9092EF998EB00EC2BE8 /* Network */,
+				B22CF9052EF9986000EC2BE8 /* Controllers */,
 				CA1581F52754C85B0073C514 /* Classes */,
 				CA15818B2754C6B20073C514 /* Main.storyboard */,
 				CA15818E2754C6B40073C514 /* Assets.xcassets */,
 				CA1581902754C6B40073C514 /* LaunchScreen.storyboard */,
 				CA1581932754C6B40073C514 /* Info.plist */,
 				CA15823A2754FD910073C514 /* SwiftDemo-Bridging-Header.h */,
+				B22CF95E2EF9CA2D00EC2BE8 /* Base */,
 			);
 			path = SwiftDemo;
 			sourceTree = "<group>";
@@ -553,6 +560,16 @@
 			);
 			dependencies = (
 			);
+			fileSystemSynchronizedGroups = (
+				B22CF9052EF9986000EC2BE8 /* Controllers */,
+				B22CF9092EF998EB00EC2BE8 /* Network */,
+				B22CF9172EF9994400EC2BE8 /* Services */,
+				B22CF9242EF99DCC00EC2BE8 /* Models */,
+				B22CF9332EF9A0CC00EC2BE8 /* Utils */,
+				B22CF95C2EF9CA0C00EC2BE8 /* App */,
+				B22CF95E2EF9CA2D00EC2BE8 /* Base */,
+				B22CF9782EF9CB6A00EC2BE8 /* Views */,
+			);
 			name = SwiftDemo;
 			productName = SwiftDemo;
 			productReference = CA1581832754C6B20073C514 /* SwiftDemo.app */;
@@ -709,17 +726,13 @@
 				CA8AB871288005B800B91963 /* YCECGPhotoViewCell.swift in Sources */,
 				CA1582482754FDE00073C514 /* YCECGMeasureViewController.swift in Sources */,
 				CA15824A2754FDE00073C514 /* YCGradientProgressView.swift in Sources */,
-				4BEF9B772DE9400700439088 /* BaseViewController.swift in Sources */,
 				CA8AB868288005B800B91963 /* YCECGReportViewController.swift in Sources */,
 				CAB7B83E27579D2B001B53A7 /* YCECGShowViewController.swift in Sources */,
-				CA15818A2754C6B20073C514 /* ViewController.swift in Sources */,
 				CA8AB86E288005B800B91963 /* YCECGReportBigPictureView.m in Sources */,
 				CA1582012754C85B0073C514 /* YCHealthDataViewController.swift in Sources */,
-				CA1581862754C6B20073C514 /* AppDelegate.swift in Sources */,
 				CA1582042754C85B0073C514 /* YCQueryViewController.swift in Sources */,
 				CA15824B2754FDE00073C514 /* YCECGDrawLineView.m in Sources */,
 				CA1581FF2754C85B0073C514 /* YCSearchDeviceViewController.swift in Sources */,
-				CA1581882754C6B20073C514 /* SceneDelegate.swift in Sources */,
 				CA8AB869288005B800B91963 /* YCHealthECGData.swift in Sources */,
 				CA1F854F275DC17F0060C475 /* YCSettingViewController.swift in Sources */,
 				CA5DB46D27564DE2008AFB6F /* YCWatchFaceViewController.swift in Sources */,
