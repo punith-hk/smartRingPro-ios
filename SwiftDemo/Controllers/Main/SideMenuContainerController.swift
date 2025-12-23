@@ -1,6 +1,6 @@
 import UIKit
 
-class SideMenuContainerController: UIViewController {
+class SideMenuContainerController: UIViewController, SideMenuDelegate {
 
     static weak var shared: SideMenuContainerController?
 
@@ -20,22 +20,25 @@ class SideMenuContainerController: UIViewController {
     // MARK: - Setup
     private func setupChildren() {
 
-        // 1️⃣ MAIN CONTENT (BOTTOM)
+        sideMenuVC.delegate = self
+
+        // MAIN CONTENT
         addChild(mainTabsVC)
         mainTabsVC.view.frame = view.bounds
         view.addSubview(mainTabsVC.view)
         mainTabsVC.didMove(toParent: self)
 
-        // 2️⃣ DIM BACKGROUND (MIDDLE)
+        // DIMMING VIEW
         dimmingView.frame = view.bounds
         dimmingView.backgroundColor = UIColor.black.withAlphaComponent(0.4)
         dimmingView.alpha = 0
+        dimmingView.isUserInteractionEnabled = false
         view.addSubview(dimmingView)
 
         let tap = UITapGestureRecognizer(target: self, action: #selector(closeMenu))
         dimmingView.addGestureRecognizer(tap)
 
-        // 3️⃣ SIDE MENU (TOP)
+        // SIDE MENU
         addChild(sideMenuVC)
         sideMenuVC.view.frame = CGRect(
             x: -menuWidth,
@@ -49,7 +52,7 @@ class SideMenuContainerController: UIViewController {
         setupPanGesture()
     }
 
-    // MARK: - Actions
+    // MARK: - Menu Control
     func toggleMenu() {
         isMenuOpen.toggle()
         animateMenu()
@@ -62,16 +65,21 @@ class SideMenuContainerController: UIViewController {
 
     // MARK: - Animation
     private func animateMenu() {
+
+        dimmingView.isUserInteractionEnabled = isMenuOpen
+
         UIView.animate(
             withDuration: 0.25,
             delay: 0,
-            options: [.curveEaseInOut]
-        ) {
-            self.sideMenuVC.view.frame.origin.x =
-                self.isMenuOpen ? 0 : -self.menuWidth
+            options: [.curveEaseInOut],
+            animations: {
+                self.sideMenuVC.view.frame.origin.x =
+                    self.isMenuOpen ? 0 : -self.menuWidth
 
-            self.dimmingView.alpha = self.isMenuOpen ? 1 : 0
-        }
+                self.dimmingView.alpha = self.isMenuOpen ? 1 : 0
+            },
+            completion: nil
+        )
     }
 
     // MARK: - Swipe Gesture
@@ -86,11 +94,9 @@ class SideMenuContainerController: UIViewController {
         switch gesture.state {
 
         case .changed:
-            if translationX > 0 { // swipe right
-                let x = min(0, -menuWidth + translationX)
-                sideMenuVC.view.frame.origin.x = x
-                dimmingView.alpha = min(1, translationX / menuWidth)
-            }
+            let x = min(0, max(-menuWidth, -menuWidth + translationX))
+            sideMenuVC.view.frame.origin.x = x
+            dimmingView.alpha = min(1, translationX / menuWidth)
 
         case .ended:
             let shouldOpen = translationX > menuWidth / 2
@@ -101,4 +107,74 @@ class SideMenuContainerController: UIViewController {
             break
         }
     }
+
+    // MARK: - SideMenuDelegate
+    func didSelectMenu(_ action: SideMenuAction) {
+
+        closeMenu()
+
+        switch action {
+
+        case .familyMembers:
+            let vc = FamilyMembersViewController()
+                mainTabsVC.pushScreen(vc, title: "Family Members")
+
+        case .appointmentSummary:
+            let vc = AppointmentsViewController()
+            mainTabsVC.pushScreen(vc, title: "Appointments")
+
+//        case .vitals:
+//            mainTabsVC.openScreen(.home, title: "Vitals")
+
+        case .profile:
+            let vc = ProfileViewController()
+            mainTabsVC.pushScreen(vc, title: "Profile")
+
+        case .referFriend:
+            let vc = ReferFriendViewController()
+                mainTabsVC.pushScreen(vc, title: "Refer a Friend")
+
+        case .logout:
+            showLogoutConfirmation()
+        }
+    }
+    
+    private func showLogoutConfirmation() {
+
+        let alert = UIAlertController(
+            title: "Logout",
+            message: "Are you sure you want to logout?",
+            preferredStyle: .alert
+        )
+
+        let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+
+        let logout = UIAlertAction(title: "Logout", style: .destructive) { _ in
+            self.performLogout()
+        }
+
+        alert.addAction(cancel)
+        alert.addAction(logout)
+
+        present(alert, animated: true)
+    }
+
+
+    private func performLogout() {
+
+        closeMenu()
+
+        // Clear user session
+        UserDefaults.standard.removeObject(forKey: "isLoggedIn")
+
+        let loginVC = LoginViewController()
+        let nav = UINavigationController(rootViewController: loginVC)
+
+        if let sceneDelegate = UIApplication.shared.connectedScenes
+            .first?.delegate as? SceneDelegate {
+
+            sceneDelegate.setRootViewController(nav)
+        }
+    }
+
 }

@@ -6,6 +6,10 @@ enum APIEndpoints {
     static let login = "login"
     static let register = "register"
     static let verifyOtp = "verifyotp"
+    
+    static func lastHealthData(userId: Int) -> String {
+            return "getLastRingData?user_id=\(userId)"
+        }
 
     static let departments = "departments"
     static func doctors(id: Int) -> String { "departments/\(id)" }

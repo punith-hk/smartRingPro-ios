@@ -1,5 +1,14 @@
 import UIKit
 
+enum AppScreen {
+    case home
+    case appointments
+    case familyMembers
+    case profile
+    case referFriend
+}
+
+
 class MainTabBarController: UITabBarController {
 
     override func viewDidLoad() {
@@ -35,7 +44,7 @@ class MainTabBarController: UITabBarController {
         )
 
         let profile = createNav(
-            vc: ProfileViewController(),
+            vc: CareViewController(),
             title: "Profile",
             icon: "person"
         )
@@ -65,4 +74,37 @@ class MainTabBarController: UITabBarController {
         tabBar.tintColor = .systemBlue
         tabBar.backgroundColor = .white
     }
+    
+    func openScreen(_ screen: AppScreen, title: String) {
+
+        selectedIndex = {
+            switch screen {
+            case .home: return 0
+            case .appointments: return 2
+            case .familyMembers: return 4
+            case .profile: return 4
+            case .referFriend: return 4
+            }
+        }()
+
+        if let nav = selectedViewController as? UINavigationController,
+           let baseVC = nav.viewControllers.first as? AppBaseViewController {
+
+            baseVC.setScreenTitle(title)
+            baseVC.showHamburger()
+        }
+    }
+    
+    func pushScreen(_ vc: AppBaseViewController, title: String) {
+
+        if let nav = selectedViewController as? UINavigationController {
+
+            vc.setScreenTitle(title)
+            // ❌ DO NOT call showHamburger()
+
+            nav.pushViewController(vc, animated: true)
+        }
+    }
+
+
 }

@@ -56,6 +56,44 @@ final class APIClient {
             }
         }.resume()
     }
+    
+    func get<T: Codable>(
+            endpoint: String,
+            responseType: T.Type,
+            completion: @escaping (Result<T, NetworkError>) -> Void
+        ) {
+
+            guard let url = URL(string: APIEndpoints.baseURL + endpoint) else {
+                completion(.failure(.invalidURL))
+                return
+            }
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+
+            logRequest(request)
+
+            session.dataTask(with: request) { data, response, error in
+                self.logResponse(data, response, error)
+
+                if let _ = error {
+                    completion(.failure(.network))
+                    return
+                }
+
+                guard let data = data else {
+                    completion(.failure(.noData))
+                    return
+                }
+
+                do {
+                    let decoded = try JSONDecoder().decode(T.self, from: data)
+                    completion(.success(decoded))
+                } catch {
+                    completion(.failure(.decoding))
+                }
+            }.resume()
+        }
 }
 
 // MARK: - Logging
