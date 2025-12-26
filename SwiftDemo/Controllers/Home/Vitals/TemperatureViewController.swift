@@ -1,7 +1,10 @@
-//
-//  TemperatureViewController.swift
-//  YCProductSDK
-//
-//  Created by admin1 on 23/12/25.
-//
+import UIKit
+
+class TemperatureViewController: AppBaseViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setScreenTitle("Temperature")
+        view.backgroundColor = .white
+    }
+}
 

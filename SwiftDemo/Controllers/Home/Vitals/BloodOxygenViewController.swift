@@ -1,7 +1,10 @@
-//
-//  BloodOxygenViewController.swift
-//  YCProductSDK
-//
-//  Created by admin1 on 23/12/25.
-//
+import UIKit
+
+class BloodOxygenViewController: AppBaseViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setScreenTitle("Blood Oxygen")
+        view.backgroundColor = .white
+    }
+}
 

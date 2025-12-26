@@ -1,7 +1,9 @@
-//
-//  BloodPressureViewController.swift
-//  YCProductSDK
-//
-//  Created by admin1 on 23/12/25.
-//
+import UIKit
 
+class BloodPressureViewController: AppBaseViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setScreenTitle("Blood Pressure")
+        view.backgroundColor = .white
+    }
+}

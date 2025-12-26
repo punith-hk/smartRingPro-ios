@@ -13,6 +13,8 @@ class StepProgressView: UIView {
 
     private let stepsLabel = UILabel()
     private let stepsTextLabel = UILabel()
+    
+    private var currentProgress: CGFloat = 0
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -35,8 +37,8 @@ class StepProgressView: UIView {
         layer.sublayers?.removeAll(where: { $0 is CAShapeLayer })
 
         let center = CGPoint(x: bounds.midX, y: bounds.midY - 18)
-        let radius: CGFloat = 42
-        let lineWidth: CGFloat = 12
+        let radius: CGFloat = 50
+        let lineWidth: CGFloat = 18
 
         let path = UIBezierPath(
             arcCenter: center,
@@ -60,13 +62,14 @@ class StepProgressView: UIView {
 
         layer.addSublayer(trackLayer)
         layer.addSublayer(progressLayer)
+        progressLayer.strokeEnd = currentProgress
     }
 
     // MARK: - Center Labels
     private func setupCenterLabels() {
 
         stepsLabel.text = "0"
-        stepsLabel.font = .boldSystemFont(ofSize: 30)
+        stepsLabel.font = .boldSystemFont(ofSize: 24)
         stepsLabel.textColor = .white
         stepsLabel.textAlignment = .center
 
@@ -92,7 +95,12 @@ class StepProgressView: UIView {
     // MARK: - Public
     func setProgress(current: Int, total: Int) {
         let progress = total == 0 ? 0 : CGFloat(current) / CGFloat(total)
-        progressLayer.strokeEnd = min(max(progress, 0), 1)
+
+        // ensure visible minimum
+        currentProgress = progress > 0 && progress < 0.03 ? 0.03 : progress
+
+        progressLayer.strokeEnd = min(max(currentProgress, 0), 1)
         stepsLabel.text = "\(current)"
     }
+
 }

@@ -1,10 +1,9 @@
 import UIKit
 
-class CaloriesViewController: AppBaseViewController {
+class HrvViewController: AppBaseViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
-        setScreenTitle("Calories")
+        setScreenTitle("HRV")
         view.backgroundColor = .white
     }
 }
-

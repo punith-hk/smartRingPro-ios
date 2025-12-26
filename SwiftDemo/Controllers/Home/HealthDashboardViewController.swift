@@ -2,14 +2,66 @@ import UIKit
 
 class HealthDashboardViewController: AppBaseViewController {
 
+    // MARK: - Scroll & Layout
     private let scrollView = UIScrollView()
     private let contentView = UIView()
     private let gridStack = UIStackView()
 
+    // MARK: - Top Card
     private let topCard = UIView()
     private let stepProgress = StepProgressView()
     private let bottomStatsStack = UIStackView()
 
+    // MARK: - Vital Cards (REFERENCES)
+    private lazy var bloodGlucoseCard = VitalCardView(
+        icon: UIImage(systemName: "drop"),
+        title: "Blood Glucose",
+        value: "0 mg/dL"
+    )
+
+    private lazy var bloodPressureCard = VitalCardView(
+        icon: UIImage(systemName: "waveform.path.ecg"),
+        title: "Blood Pressure",
+        value: "--/-- mmHg"
+    )
+
+    private lazy var ecgCard = VitalCardView(
+        icon: UIImage(systemName: "heart.text.square"),
+        title: "ECG",
+        value: ""
+    )
+
+    private lazy var sleepCard = VitalCardView(
+        icon: UIImage(systemName: "bed.double"),
+        title: "Sleep",
+        value: "--:--"
+    )
+
+    private lazy var heartRateCard = VitalCardView(
+        icon: UIImage(systemName: "heart"),
+        title: "Heart Rate",
+        value: "0 bpm"
+    )
+
+    private lazy var hrvCard = VitalCardView(
+        icon: UIImage(systemName: "waveform"),
+        title: "Heart Rate Variability",
+        value: "0 ms"
+    )
+
+    private lazy var temperatureCard = VitalCardView(
+        icon: UIImage(systemName: "thermometer"),
+        title: "Temperature",
+        value: "0°C"
+    )
+
+    private lazy var bloodOxygenCard = VitalCardView(
+        icon: UIImage(systemName: "drop.fill"),
+        title: "Blood Oxygen",
+        value: "0%"
+    )
+
+    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -20,14 +72,22 @@ class HealthDashboardViewController: AppBaseViewController {
         setupTopCard()
         setupBottomStats()
         setupVitals()
+        setupCardActions()
 
         stepProgress.setProgress(current: 0, total: 10000)
+
+        fetchLatestHealthData()
     }
 
     // MARK: - Base UI
     private func setupUI() {
 
-        view.backgroundColor = UIColor(red: 0.27, green: 0.60, blue: 0.96, alpha: 1)
+        view.backgroundColor = UIColor(
+            red: 0.27,
+            green: 0.60,
+            blue: 0.96,
+            alpha: 1
+        )
 
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         contentView.translatesAutoresizingMaskIntoConstraints = false
@@ -36,16 +96,24 @@ class HealthDashboardViewController: AppBaseViewController {
         scrollView.addSubview(contentView)
 
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            scrollView.topAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.topAnchor
+            ),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
 
             contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            contentView.leadingAnchor.constraint(
+                equalTo: scrollView.leadingAnchor
+            ),
+            contentView.trailingAnchor.constraint(
+                equalTo: scrollView.trailingAnchor
+            ),
+            contentView.bottomAnchor.constraint(
+                equalTo: scrollView.bottomAnchor
+            ),
+            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
         ])
 
         gridStack.axis = .vertical
@@ -55,39 +123,77 @@ class HealthDashboardViewController: AppBaseViewController {
         contentView.addSubview(gridStack)
 
         NSLayoutConstraint.activate([
-            gridStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            gridStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            gridStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24)
+            gridStack.leadingAnchor.constraint(
+                equalTo: contentView.leadingAnchor,
+                constant: 16
+            ),
+            gridStack.trailingAnchor.constraint(
+                equalTo: contentView.trailingAnchor,
+                constant: -16
+            ),
+            gridStack.bottomAnchor.constraint(
+                equalTo: contentView.bottomAnchor,
+                constant: -24
+            ),
         ])
     }
 
     // MARK: - Top Card
     private func setupTopCard() {
 
-        topCard.backgroundColor = UIColor(red: 0.40, green: 0.80, blue: 0.85, alpha: 1)
+        topCard.backgroundColor = UIColor(
+            red: 0.40,
+            green: 0.80,
+            blue: 0.85,
+            alpha: 1
+        )
         topCard.layer.cornerRadius = 20
         topCard.translatesAutoresizingMaskIntoConstraints = false
 
         contentView.addSubview(topCard)
 
         NSLayoutConstraint.activate([
-            topCard.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            topCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            topCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            topCard.heightAnchor.constraint(equalToConstant: 160)
+            topCard.topAnchor.constraint(
+                equalTo: contentView.topAnchor,
+                constant: 16
+            ),
+            topCard.leadingAnchor.constraint(
+                equalTo: contentView.leadingAnchor,
+                constant: 16
+            ),
+            topCard.trailingAnchor.constraint(
+                equalTo: contentView.trailingAnchor,
+                constant: -16
+            ),
+            topCard.heightAnchor.constraint(equalToConstant: 160),
         ])
 
         stepProgress.translatesAutoresizingMaskIntoConstraints = false
         topCard.addSubview(stepProgress)
+        
+        let tap = UITapGestureRecognizer(
+            target: self,
+            action: #selector(openCalories)
+        )
+        topCard.isUserInteractionEnabled = true
+        topCard.addGestureRecognizer(tap)
 
         NSLayoutConstraint.activate([
-            stepProgress.centerXAnchor.constraint(equalTo: topCard.centerXAnchor),
-            stepProgress.topAnchor.constraint(equalTo: topCard.topAnchor, constant: 18),
+            stepProgress.centerXAnchor.constraint(
+                equalTo: topCard.centerXAnchor
+            ),
+            stepProgress.topAnchor.constraint(
+                equalTo: topCard.topAnchor,
+                constant: 18
+            ),
             stepProgress.widthAnchor.constraint(equalToConstant: 140),
-            stepProgress.heightAnchor.constraint(equalToConstant: 140)
+            stepProgress.heightAnchor.constraint(equalToConstant: 140),
         ])
 
-        gridStack.topAnchor.constraint(equalTo: topCard.bottomAnchor, constant: 24).isActive = true
+        gridStack.topAnchor.constraint(
+            equalTo: topCard.bottomAnchor,
+            constant: 24
+        ).isActive = true
     }
 
     // MARK: - Bottom Stats (FIXED SPACING)
@@ -98,31 +204,46 @@ class HealthDashboardViewController: AppBaseViewController {
         bottomStatsStack.alignment = .center
         bottomStatsStack.translatesAutoresizingMaskIntoConstraints = false
 
-        bottomStatsStack.addArrangedSubview(statView(
-            icon: "flame.fill",
-            text: "0 Kcal",
-            align: .left
-        ))
+        bottomStatsStack.addArrangedSubview(
+            statView(
+                icon: "flame.fill",
+                text: "0 Kcal",
+                align: .left
+            )
+        )
 
-        bottomStatsStack.addArrangedSubview(statView(
-            icon: "flag.checkered",
-            text: "10000",
-            align: .center
-        ))
+        bottomStatsStack.addArrangedSubview(
+            statView(
+                icon: "flag.checkered",
+                text: "10000",
+                align: .center
+            )
+        )
 
-        bottomStatsStack.addArrangedSubview(statView(
-            icon: "figure.walk",
-            text: "0.00 km",
-            align: .right
-        ))
+        bottomStatsStack.addArrangedSubview(
+            statView(
+                icon: "figure.walk",
+                text: "0.00 km",
+                align: .right
+            )
+        )
 
         topCard.addSubview(bottomStatsStack)
 
         NSLayoutConstraint.activate([
-            bottomStatsStack.leadingAnchor.constraint(equalTo: topCard.leadingAnchor, constant: 24),
-            bottomStatsStack.trailingAnchor.constraint(equalTo: topCard.trailingAnchor, constant: -24),
-            bottomStatsStack.bottomAnchor.constraint(equalTo: topCard.bottomAnchor, constant: -12),
-            bottomStatsStack.heightAnchor.constraint(equalToConstant: 24)
+            bottomStatsStack.leadingAnchor.constraint(
+                equalTo: topCard.leadingAnchor,
+                constant: 24
+            ),
+            bottomStatsStack.trailingAnchor.constraint(
+                equalTo: topCard.trailingAnchor,
+                constant: -24
+            ),
+            bottomStatsStack.bottomAnchor.constraint(
+                equalTo: topCard.bottomAnchor,
+                constant: -4
+            ),
+            bottomStatsStack.heightAnchor.constraint(equalToConstant: 24),
         ])
     }
 
@@ -137,7 +258,7 @@ class HealthDashboardViewController: AppBaseViewController {
 
         let label = UILabel()
         label.text = text
-        label.font = .systemFont(ofSize: 12, weight: .medium)
+        label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = .white
         label.numberOfLines = 1
 
@@ -167,41 +288,23 @@ class HealthDashboardViewController: AppBaseViewController {
 
         case .right:
             NSLayoutConstraint.activate([
-                stack.trailingAnchor.constraint(equalTo: container.trailingAnchor)
+                stack.trailingAnchor.constraint(
+                    equalTo: container.trailingAnchor
+                )
             ])
         }
 
         return container
     }
 
-
-    // MARK: - Vitals Grid (UNCHANGED)
     private func setupVitals() {
 
-        let rows = [
-
-            createRow(
-                left: VitalCardView(icon: UIImage(systemName: "drop"), title: "Blood Glucose", value: "0 mg/dL"),
-                right: VitalCardView(icon: UIImage(systemName: "waveform.path.ecg"), title: "Blood Pressure", value: "--/-- mmHg")
-            ),
-
-            createRow(
-                left: VitalCardView(icon: UIImage(systemName: "heart.text.square"), title: "ECG", value: ""),
-                right: VitalCardView(icon: UIImage(systemName: "bed.double"), title: "Sleep", value: "0h 0m")
-            ),
-
-            createRow(
-                left: VitalCardView(icon: UIImage(systemName: "heart"), title: "Heart Rate", value: "0 bpm"),
-                right: VitalCardView(icon: UIImage(systemName: "waveform"), title: "Heart Rate Variability", value: "0 ms")
-            ),
-
-            createRow(
-                left: VitalCardView(icon: UIImage(systemName: "thermometer"), title: "Temperature", value: "0°C"),
-                right: VitalCardView(icon: UIImage(systemName: "drop.fill"), title: "Blood Oxygen", value: "0%")
-            )
-        ]
-
-        rows.forEach { gridStack.addArrangedSubview($0) }
+        [
+            createRow(left: bloodGlucoseCard, right: bloodPressureCard),
+            createRow(left: ecgCard, right: sleepCard),
+            createRow(left: heartRateCard, right: hrvCard),
+            createRow(left: temperatureCard, right: bloodOxygenCard),
+        ].forEach { gridStack.addArrangedSubview($0) }
     }
 
     private func createRow(left: UIView, right: UIView) -> UIStackView {
@@ -212,71 +315,136 @@ class HealthDashboardViewController: AppBaseViewController {
         return row
     }
     
-//    private func fetchLatestHealthData() {
-//
-//        guard let userId = UserDefaultsManager.shared.userId else {
-//            print("❌ User ID not found")
-//            return
-//        }
-//
-//        HealthService.shared.getLastHealthData(userId: userId) { [weak self] result in
-//            DispatchQueue.main.async {
-//
-//                switch result {
-//
-//                case .success(let response):
-//                    if response.data.isEmpty {
-//                        print("⚠️ No health data found")
-//                    } else {
-//                        self?.setData(response)
-//                    }
-//
-//                case .failure(let error):
-//                    print("❌ API failed:", error)
-//                }
-//            }
-//        }
-//    }
-//    
-//    private func setData(_ response: GetLastUserHealthDataResponse) {
-//
-//        let dataMap = Dictionary(uniqueKeysWithValues:
-//            response.data.map { ($0.type, $0) }
-//        )
-//
-//        // Temperature
-//        if let temp = dataMap["temperature"]?.value {
-//            // temperatureLabel.text = "\(temp) °C"
-//        }
-//
-//        // Heart Rate
-//        if let hr = dataMap["heart_rate"]?.value {
-//            // heartRateLabel.text = "\(hr) times/min"
-//        }
-//
-//        // Blood Oxygen
-//        if let spo2 = dataMap["blood_oxygen"]?.value {
-//            // bloodOxygenLabel.text = "\(spo2) %"
-//        }
-//
-//        // Blood Pressure
-//        let bp = dataMap["blood_pressure"]?.value ?? "--/--"
-//        let parts = bp.split(separator: "/")
-//        let sys = parts.first ?? "--"
-//        let dia = parts.count > 1 ? parts[1] : "--"
-//        // bloodPressureLabel.text = "\(sys)/\(dia) mmHg"
-//
-//        // Blood Sugar
-//        if let sugar = dataMap["blood_sugar"]?.value {
-//            // bloodSugarLabel.text = "\(sugar) mg/dL"
-//        }
-//
-//        // HRV
-//        if let hrv = dataMap["hrv"]?.value {
-//            // hrvLabel.text = "\(hrv) times"
-//        }
-//
-//        print("✅ UI updated with latest health data")
-//    }
+    @objc private func openCalories() {
+        let vc = CaloriesViewController()
+        navigationController?.pushViewController(vc, animated: true)
+    }
+    
+    private func setupCardActions() {
+
+        bloodGlucoseCard.onTap = { [weak self] in
+            let vc = BloodGlucoseViewController()
+            self?.navigationController?.pushViewController(vc, animated: true)
+        }
+        
+        bloodPressureCard.onTap = { [weak self] in
+            let vc = BloodPressureViewController()
+            self?.navigationController?.pushViewController(vc, animated: true)
+        }
+
+        sleepCard.onTap = { [weak self] in
+            let vc = SleepViewController()
+            self?.navigationController?.pushViewController(vc, animated: true)
+        }
+        
+        heartRateCard.onTap = { [weak self] in
+            let vc = HeartRateViewController()
+            self?.navigationController?.pushViewController(vc, animated: true)
+        }
+        
+        hrvCard.onTap = { [weak self] in
+            let vc = HrvViewController()
+            self?.navigationController?.pushViewController(vc, animated: true)
+        }
+        
+        temperatureCard.onTap = { [weak self] in
+            let vc = TemperatureViewController()
+            self?.navigationController?.pushViewController(vc, animated: true)
+        }
+        
+        bloodOxygenCard.onTap = { [weak self] in
+            let vc = BloodOxygenViewController()
+            self?.navigationController?.pushViewController(vc, animated: true)
+        }
+        
+        
+    }
+
+    // MARK: - API
+    private func fetchLatestHealthData() {
+
+        let userId = UserDefaults.standard.integer(forKey: "id")
+        guard userId > 0 else { return }
+
+        HealthService.shared.getLastHealthData(userId: userId) {
+            [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+
+                if case .success(let response) = result {
+                    self.applyHealthData(response)
+                }
+            }
+        }
+    }
+
+    private func applyHealthData(_ response: GetLastUserHealthDataResponse) {
+
+        let map = Dictionary(
+            uniqueKeysWithValues: response.data.map { ($0.type, $0.value) }
+        )
+
+        bloodGlucoseCard.updateValue("\(map["blood_sugar"] ?? "--") mg/dL")
+        bloodPressureCard.updateValue(map["blood_pressure"] ?? "--/-- mmHg")
+        heartRateCard.updateValue("\(map["heart_rate"] ?? "--") bpm")
+        bloodOxygenCard.updateValue("\(map["blood_oxygen"] ?? "--") %")
+        hrvCard.updateValue("\(map["hrv"] ?? "--") ms")
+        temperatureCard.updateValue("\(map["temperature"] ?? "--") °C")
+        
+        // ---- STEPS / CALORIES / DISTANCE ----
+            let steps = Int(map["steps"] ?? "0") ?? 0
+            let calories = Int(map["calories"] ?? "0") ?? 0
+
+            // simple distance formula (adjust later if needed)
+            let distanceKm = Double(steps) * 0.0008
+
+            updateStepStats(
+                steps: steps,
+                calories: calories,
+                distanceKm: distanceKm
+            )
+
+        applySleepData()
+    }
+
+    private func applySleepData() {
+
+        let minutes = UserDefaults.standard.integer(
+            forKey: "last_day_sleep_minutes"
+        )
+        guard minutes > 0 else {
+            sleepCard.updateValue("--:--")
+            return
+        }
+
+        sleepCard.updateValue("\(minutes / 60)h \(minutes % 60)m")
+    }
+    
+    private func updateStepStats(
+        steps: Int,
+        calories: Int,
+        distanceKm: Double
+    ) {
+        // Update circular progress
+        stepProgress.setProgress(current: steps, total: 10000)
+
+        // Update bottom stats labels
+        updateBottomStat(index: 0, text: "\(calories) Kcal")
+        updateBottomStat(index: 2, text: String(format: "%.2f km", distanceKm))
+    }
+    
+    private func updateBottomStat(index: Int, text: String) {
+
+        guard
+            bottomStatsStack.arrangedSubviews.indices.contains(index),
+            let container = bottomStatsStack.arrangedSubviews[index] as? UIView,
+            let stack = container.subviews.first as? UIStackView,
+            let label = stack.arrangedSubviews.last as? UILabel
+        else { return }
+
+        label.text = text
+    }
+
+
 
 }

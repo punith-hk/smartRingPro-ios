@@ -1,9 +1,9 @@
 import UIKit
 
-class CaloriesViewController: AppBaseViewController {
+class BloodGlucoseViewController: AppBaseViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
-        setScreenTitle("Calories")
+        setScreenTitle("Blood Glucose")
         view.backgroundColor = .white
     }
 }
