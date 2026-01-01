@@ -6,7 +6,7 @@ final class MultiSelectPopupViewController: UIViewController {
     private let titleText: String
     private let options: [String]
     private let maxSelection: Int?
-    private var selectedItems: [String]   // 🔥 ARRAY (ORDERED)
+    private var selectedItems: [String]
 
     var onConfirm: (([String]) -> Void)?
     var onCancel: (() -> Void)?
@@ -47,6 +47,7 @@ final class MultiSelectPopupViewController: UIViewController {
         setupHeader()
         setupTable()
         setupFooter()
+        applyPreselection()
     }
 
     // MARK: - Background
@@ -91,7 +92,7 @@ final class MultiSelectPopupViewController: UIViewController {
         tableView.register(MultiSelectCell.self, forCellReuseIdentifier: MultiSelectCell.reuseId)
         tableView.dataSource = self
         tableView.delegate = self
-        tableView.allowsMultipleSelection = true
+        tableView.allowsMultipleSelection = false   // 🔥 IMPORTANT
         tableView.tableFooterView = UIView()
 
         containerView.addSubview(tableView)
@@ -133,6 +134,10 @@ final class MultiSelectPopupViewController: UIViewController {
         ])
     }
 
+    private func applyPreselection() {
+        tableView.reloadData()
+    }
+
     // MARK: - Actions
     @objc private func cancelTapped() {
         dismiss(animated: true) { self.onCancel?() }
@@ -160,20 +165,12 @@ extension MultiSelectPopupViewController: UITableViewDataSource, UITableViewDele
             for: indexPath
         ) as! MultiSelectCell
 
-        let value = options[indexPath.row]
-        let isSelected = selectedItems.contains(value)
-
-        // ✅ Disable ONLY for multi-select mode
-        let isDisabled =
-            maxSelection != nil &&
-            maxSelection! > 1 &&
-            selectedItems.count >= maxSelection! &&
-            !isSelected
+        let option = options[indexPath.row]
 
         cell.configure(
-            title: value,
-            selected: isSelected,
-            disabled: isDisabled
+            title: option,
+            selected: selectedItems.contains(option),
+            disabled: isDisabled(option)
         )
 
         return cell
@@ -183,18 +180,20 @@ extension MultiSelectPopupViewController: UITableViewDataSource, UITableViewDele
 
         let value = options[indexPath.row]
 
-        // ✅ SINGLE SELECT MODE
+        // 🔹 SINGLE SELECT
         if maxSelection == 1 {
             selectedItems = [value]
-
+            tableView.reloadData()
             dismiss(animated: true) {
                 self.onConfirm?(self.selectedItems)
             }
             return
         }
 
-        // ✅ MULTI SELECT MODE
-        if !selectedItems.contains(value) {
+        // 🔹 MULTI SELECT TOGGLE
+        if selectedItems.contains(value) {
+            selectedItems.removeAll { $0 == value }
+        } else {
             if let limit = maxSelection, selectedItems.count >= limit {
                 return
             }
@@ -204,9 +203,8 @@ extension MultiSelectPopupViewController: UITableViewDataSource, UITableViewDele
         tableView.reloadData()
     }
 
-    func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
-        let value = options[indexPath.row]
-        selectedItems.removeAll { $0 == value }
-        tableView.reloadData()
+    private func isDisabled(_ option: String) -> Bool {
+        guard let limit = maxSelection, limit > 1 else { return false }
+        return selectedItems.count >= limit && !selectedItems.contains(option)
     }
 }

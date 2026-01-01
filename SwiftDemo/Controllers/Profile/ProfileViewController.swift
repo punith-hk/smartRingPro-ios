@@ -1,6 +1,10 @@
 import UIKit
 
 class ProfileViewController: AppBaseViewController {
+    
+    private var userResId: Int = 0      // patient_id
+    private var loggedInUserId: Int = 0 // user_id
+
 
     // MARK: - Scroll
     private let scrollView = UIScrollView()
@@ -12,7 +16,9 @@ class ProfileViewController: AppBaseViewController {
     private let uploadHintLabel = UILabel()
 
     // MARK: - Fields
-    private let nameField = UITextField()
+//    private let nameField = UITextField()
+    private let firstNameField = UITextField()
+    private let lastNameField = UITextField()
     private let emailField = UITextField()
     private let mobileField = UITextField()
     private let dobField = UITextField()
@@ -81,323 +87,18 @@ class ProfileViewController: AppBaseViewController {
 
         setupScroll()
         setupProfileHeader()
-        
-        let imageTap = UITapGestureRecognizer(
-            target: self,
-            action: #selector(showImageSourcePicker)
-        )
-        profileImageView.isUserInteractionEnabled = true
-        profileImageView.addGestureRecognizer(imageTap)
-
-        uploadButton.addTarget(
-            self,
-            action: #selector(showImageSourcePicker),
-            for: .touchUpInside
-        )
-
-        
+        setUpImageTab()
         setupForm()
-        configureKeyboards()
-        
-        [
-            nameField,
-            emailField,
-            mobileField,
-            heightField,
-            weightField,
-            addressField,
-            countryField,
-            stateField,
-            cityField,
-            zipField,
-            medicationField
-        ].forEach {
-            addDoneToolbar(to: $0)
-        }
-        
-        heightField.addTarget(
-            self,
-            action: #selector(removeHeightUnit),
-            for: .editingDidBegin
-        )
-
-        heightField.addTarget(
-            self,
-            action: #selector(formatHeightField),
-            for: .editingDidEnd
-        )
-
-        weightField.addTarget(
-            self,
-            action: #selector(removeWeightUnit),
-            for: .editingDidBegin
-        )
-
-        weightField.addTarget(
-            self,
-            action: #selector(formatWeightField),
-            for: .editingDidEnd
-        )
-
-
+        configureTapAndKeyboards()
 
         setupDropdowns()
         setupDOBPicker()
-
         setupSaveButton()
         
-        let tapGesture = UITapGestureRecognizer(
-            target: self,
-            action: #selector(dismissKeyboard)
-        )
-        tapGesture.cancelsTouchesInView = false // VERY IMPORTANT
-        view.addGestureRecognizer(tapGesture)
+        fetchUserProfile()
 
     }
     
-    @objc private func removeHeightUnit() {
-        heightField.text = extractNumericValue(from: heightField.text)
-    }
-
-    @objc private func removeWeightUnit() {
-        weightField.text = extractNumericValue(from: weightField.text)
-    }
-
-    
-    @objc private func formatHeightField() {
-
-        guard let value = extractNumericValue(from: heightField.text),
-              !value.isEmpty else { return }
-
-        heightField.attributedText = formattedValue(
-            value,
-            unit: "cm"
-        )
-    }
-
-    @objc private func formatWeightField() {
-
-        guard let value = extractNumericValue(from: weightField.text),
-              !value.isEmpty else { return }
-
-        weightField.attributedText = formattedValue(
-            value,
-            unit: "kg"
-        )
-    }
-    
-    private func extractNumericValue(from text: String?) -> String? {
-        return text?
-            .components(separatedBy: CharacterSet.decimalDigits.inverted)
-            .joined()
-    }
-    
-    private func formattedValue(
-        _ value: String,
-        unit: String
-    ) -> NSAttributedString {
-
-        let valueAttr = NSAttributedString(
-            string: value,
-            attributes: [
-                .font: UIFont.systemFont(ofSize: 16),
-                .foregroundColor: UIColor.black
-            ]
-        )
-
-        let unitAttr = NSAttributedString(
-            string: " (\(unit))",
-            attributes: [
-                .font: UIFont.italicSystemFont(ofSize: 12),
-                .foregroundColor: UIColor.lightGray
-            ]
-        )
-
-        let finalText = NSMutableAttributedString()
-        finalText.append(valueAttr)
-        finalText.append(unitAttr)
-
-        return finalText
-    }
-    
-    private func configureKeyboards() {
-        emailField.keyboardType = .emailAddress
-        mobileField.keyboardType = .numberPad
-        heightField.keyboardType = .numberPad
-        weightField.keyboardType = .numberPad
-        zipField.keyboardType = .numberPad
-    }
-
-    
-    @objc private func dismissKeyboard() {
-        view.endEditing(true)
-    }
-    
-    private func addDoneToolbar(to textField: UITextField) {
-
-        let toolbar = UIToolbar()
-        toolbar.sizeToFit()
-
-        let spacer = UIBarButtonItem(
-            barButtonSystemItem: .flexibleSpace,
-            target: nil,
-            action: nil
-        )
-
-        let doneButton = UIBarButtonItem(
-            title: "Done",
-            style: .done,
-            target: self,
-            action: #selector(dismissKeyboard)
-        )
-
-        toolbar.items = [spacer, doneButton]
-        textField.inputAccessoryView = toolbar
-    }
-    
-    private func setupDOBPicker() {
-
-        dobPicker.datePickerMode = .date
-        dobPicker.maximumDate = Date() // no future DOB
-
-        if #available(iOS 13.4, *) {
-            dobPicker.preferredDatePickerStyle = .wheels
-        }
-
-        let toolbar = UIToolbar()
-        toolbar.sizeToFit()
-
-        let spacer = UIBarButtonItem(
-            barButtonSystemItem: .flexibleSpace,
-            target: nil,
-            action: nil
-        )
-
-        let doneButton = UIBarButtonItem(
-            title: "Done",
-            style: .done,
-            target: self,
-            action: #selector(didSelectDOB)
-        )
-
-        toolbar.setItems([spacer, doneButton], animated: false)
-
-        dobField.inputView = dobPicker
-        dobField.inputAccessoryView = toolbar
-
-        // UX polish
-        dobField.tintColor = .clear // hide cursor
-    }
-
-    @objc private func didSelectDOB() {
-
-        let selectedDate = dobPicker.date
-        let formatted = dobFormatter.string(from: selectedDate)
-
-        // Normal date text
-        let dateAttr = NSAttributedString(
-            string: formatted,
-            attributes: [
-                .font: UIFont.systemFont(ofSize: 16),
-                .foregroundColor: UIColor.black
-            ]
-        )
-
-        // Italic format hint
-        let hintAttr = NSAttributedString(
-            string: " (dd-MM-yyyy)",
-            attributes: [
-                .font: UIFont.italicSystemFont(ofSize: 12),
-                .foregroundColor: UIColor.lightGray
-            ]
-        )
-
-        let finalText = NSMutableAttributedString()
-        finalText.append(dateAttr)
-        finalText.append(hintAttr)
-
-        dobField.attributedText = finalText
-        dobField.resignFirstResponder()
-    }
-
-
-    
-    @objc private func showImageSourcePicker() {
-
-        let sheet = UIAlertController(
-            title: "Upload Profile Photo",
-            message: nil,
-            preferredStyle: .actionSheet
-        )
-
-        if UIImagePickerController.isSourceTypeAvailable(.camera) {
-            sheet.addAction(
-                UIAlertAction(title: "Camera", style: .default) { _ in
-                    self.openImagePicker(source: .camera)
-                }
-            )
-        }
-
-        sheet.addAction(
-            UIAlertAction(title: "Photo Library", style: .default) { _ in
-                self.openImagePicker(source: .photoLibrary)
-            }
-        )
-
-        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-
-        // ✅ iPad safety
-        if let popover = sheet.popoverPresentationController {
-            popover.sourceView = uploadButton
-            popover.sourceRect = uploadButton.bounds
-        }
-
-        present(sheet, animated: true)
-    }
-
-    
-    private func openImagePicker(source: UIImagePickerController.SourceType) {
-
-        let picker = UIImagePickerController()
-        picker.sourceType = source
-        picker.delegate = self
-        picker.allowsEditing = false // default crop OFF (Android parity)
-
-        present(picker, animated: true)
-    }
-
-
-    
-    private func setupDropdowns() {
-
-        configureDropdown(
-            field: diseasesField,
-            action: #selector(openDiseaseSelector)
-        )
-
-        configureDropdown(
-            field: genderField,
-            action: #selector(openGenderSelector)
-        )
-
-        configureDropdown(
-            field: bloodGroupField,
-            action: #selector(openBloodGroupSelector)
-        )
-    }
-    
-    private func configureDropdown(
-        field: UITextField,
-        action: Selector
-    ) {
-        field.inputView = UIView() // disable keyboard
-        field.isUserInteractionEnabled = true
-
-        let tap = UITapGestureRecognizer(target: self, action: action)
-        field.addGestureRecognizer(tap)
-    }
-
-
     // MARK: - Scroll Setup
     private func setupScroll() {
 
@@ -484,85 +185,482 @@ class ProfileViewController: AppBaseViewController {
             headerContainer.bottomAnchor.constraint(equalTo: profileImageView.bottomAnchor),
         ])
     }
+    
+    private func setUpImageTab() {
+        let imageTap = UITapGestureRecognizer(
+            target: self,
+            action: #selector(showImageSourcePicker)
+        )
+        profileImageView.isUserInteractionEnabled = true
+        profileImageView.addGestureRecognizer(imageTap)
+
+        uploadButton.addTarget(
+            self,
+            action: #selector(showImageSourcePicker),
+            for: .touchUpInside
+        )
+    }
 
     // MARK: - Form
     private func setupForm() {
 
-        let fields = [
-            createField(nameField, "Name"),
-            createField(emailField, "Email id"),
-            createField(mobileField, "Mobile number"),
-            createField(dobField, "Date of birth (dd-MM-yyyy)", rightIcon: "calendar"),
-            createField(genderField, "Gender", rightIcon: "chevron.down"),
-            createField(bloodGroupField, "Blood group", rightIcon: "chevron.down"),
-            createField(heightField, "Height (cm)"),
-            createField(weightField, "Weight (kg)"),
-            createField(addressField, "Address"),
-            createField(countryField, "Country"),
-            createField(stateField, "State"),
-            createField(cityField, "City"),
-            createField(zipField, "Zip code"),
-            createField(diseasesField, "Existing diseases", rightIcon: "chevron.down"),
-            createField(medicationField, "Existing medication"),
+        let fields: [UIView] = [
+
+            createLabeledField(
+                labelText: "First Name",
+                textField: firstNameField,
+                placeholder: "Enter first name"
+            ),
+            createLabeledField(
+                labelText: "Last Name",
+                textField: lastNameField,
+                placeholder: "Enter last name"
+            ),
+
+            createLabeledField(
+                labelText: "Email ID",
+                textField: emailField,
+                placeholder: "example@email.com"
+            ),
+
+            createLabeledField(
+                labelText: "Mobile Number",
+                textField: mobileField,
+                placeholder: "10 digit number"
+            ),
+
+            createLabeledField(
+                labelText: "Date of Birth (yyyy-mm-dd)",
+                textField: dobField,
+                placeholder: "dd-mm-yyyy",
+                rightIcon: "calendar"
+            ),
+
+            createLabeledField(
+                labelText: "Gender",
+                textField: genderField,
+                placeholder: "Select gender",
+                rightIcon: "chevron.down"
+            ),
+
+            createLabeledField(
+                labelText: "Blood Group",
+                textField: bloodGroupField,
+                placeholder: "Select blood group",
+                rightIcon: "chevron.down"
+            ),
+
+            createLabeledField(
+                labelText: "Height in CM",
+                textField: heightField,
+                placeholder: "in cm"
+            ),
+
+            createLabeledField(
+                labelText: "Weight in KG",
+                textField: weightField,
+                placeholder: "in kg"
+            ),
+
+            createLabeledField(
+                labelText: "Address",
+                textField: addressField,
+                placeholder: "House no, street, area"
+            ),
+
+            createLabeledField(
+                labelText: "Country",
+                textField: countryField,
+                placeholder: "Country"
+            ),
+
+            createLabeledField(
+                labelText: "State",
+                textField: stateField,
+                placeholder: "State"
+            ),
+
+            createLabeledField(
+                labelText: "City",
+                textField: cityField,
+                placeholder: "City"
+            ),
+
+            createLabeledField(
+                labelText: "Zip Code",
+                textField: zipField,
+                placeholder: "Pincode"
+            ),
+
+            createLabeledField(
+                labelText: "Existing Diseases",
+                textField: diseasesField,
+                placeholder: "Select diseases",
+                rightIcon: "chevron.down"
+            ),
+
+            createLabeledField(
+                labelText: "Existing Medication",
+                textField: medicationField,
+                placeholder: "Enter medication"
+            )
         ]
 
         var topAnchor = uploadHintLabel.bottomAnchor
 
         for field in fields {
             contentView.addSubview(field)
+
             NSLayoutConstraint.activate([
                 field.topAnchor.constraint(equalTo: topAnchor, constant: 16),
                 field.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-                field.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-                field.heightAnchor.constraint(equalToConstant: 48),
+                field.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
             ])
+
             topAnchor = field.bottomAnchor
         }
     }
 
-    private func createField(
-        _ textField: UITextField,
-        _ placeholder: String,
+    private func createLabeledField(
+        labelText: String,
+        textField: UITextField,
+        placeholder: String,
         rightIcon: String? = nil
     ) -> UIView {
 
         let container = UIView()
-        container.backgroundColor = .white
-        container.layer.cornerRadius = 10
         container.translatesAutoresizingMaskIntoConstraints = false
+
+        // Label
+        let label = UILabel()
+        label.text = labelText
+        label.font = .systemFont(ofSize: 13, weight: .medium)
+        label.textColor = .white
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        // Field container (your existing style)
+        let fieldContainer = UIView()
+        fieldContainer.backgroundColor = .white
+        fieldContainer.layer.cornerRadius = 10
+        fieldContainer.translatesAutoresizingMaskIntoConstraints = false
 
         textField.placeholder = placeholder
         textField.borderStyle = .none
         textField.translatesAutoresizingMaskIntoConstraints = false
 
-        container.addSubview(textField)
+        fieldContainer.addSubview(textField)
 
         NSLayoutConstraint.activate([
-            textField.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
-            textField.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            textField.leadingAnchor.constraint(equalTo: fieldContainer.leadingAnchor, constant: 16),
+            textField.centerYAnchor.constraint(equalTo: fieldContainer.centerYAnchor)
         ])
 
         if let icon = rightIcon {
             let imageView = UIImageView(image: UIImage(systemName: icon))
             imageView.tintColor = .lightGray
             imageView.translatesAutoresizingMaskIntoConstraints = false
-            container.addSubview(imageView)
+            fieldContainer.addSubview(imageView)
 
             NSLayoutConstraint.activate([
-                imageView.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
-                imageView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                imageView.trailingAnchor.constraint(equalTo: fieldContainer.trailingAnchor, constant: -16),
+                imageView.centerYAnchor.constraint(equalTo: fieldContainer.centerYAnchor),
                 imageView.widthAnchor.constraint(equalToConstant: 16),
                 imageView.heightAnchor.constraint(equalToConstant: 16),
 
-                textField.trailingAnchor.constraint(equalTo: imageView.leadingAnchor, constant: -8),
+                textField.trailingAnchor.constraint(equalTo: imageView.leadingAnchor, constant: -8)
             ])
         } else {
-            textField.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16).isActive = true
+            textField.trailingAnchor
+                .constraint(equalTo: fieldContainer.trailingAnchor, constant: -16)
+                .isActive = true
         }
+
+        container.addSubview(label)
+        container.addSubview(fieldContainer)
+
+        NSLayoutConstraint.activate([
+            label.topAnchor.constraint(equalTo: container.topAnchor),
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            label.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+
+            fieldContainer.topAnchor.constraint(equalTo: label.bottomAnchor, constant: 6),
+            fieldContainer.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            fieldContainer.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            fieldContainer.heightAnchor.constraint(equalToConstant: 48),
+
+            fieldContainer.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+        ])
 
         return container
     }
+    
+    private func configureTapAndKeyboards() {
+        emailField.keyboardType = .emailAddress
+        mobileField.keyboardType = .numberPad
+        heightField.keyboardType = .numberPad
+        weightField.keyboardType = .numberPad
+        zipField.keyboardType = .numberPad
+        
+        let tapGesture = UITapGestureRecognizer(
+            target: self,
+            action: #selector(dismissKeyboard)
+        )
+        tapGesture.cancelsTouchesInView = false // VERY IMPORTANT
+        view.addGestureRecognizer(tapGesture)
+        
+        [
+            firstNameField,
+            lastNameField,
+            emailField,
+            mobileField,
+            heightField,
+            weightField,
+            addressField,
+            countryField,
+            stateField,
+            cityField,
+            zipField,
+            medicationField,
+        ].forEach {
+            addDoneToolbar(to: $0)
+        }
+    }
+    
+    @objc private func dismissKeyboard() {
+        view.endEditing(true)
+    }
+    
+    private func addDoneToolbar(to textField: UITextField) {
 
+        let toolbar = UIToolbar()
+        toolbar.sizeToFit()
+
+        let spacer = UIBarButtonItem(
+            barButtonSystemItem: .flexibleSpace,
+            target: nil,
+            action: nil
+        )
+
+        let doneButton = UIBarButtonItem(
+            title: "Done",
+            style: .done,
+            target: self,
+            action: #selector(dismissKeyboard)
+        )
+
+        toolbar.items = [spacer, doneButton]
+        textField.inputAccessoryView = toolbar
+    }
+    
+    
+    private func setupDOBPicker() {
+
+        dobPicker.datePickerMode = .date
+        dobPicker.maximumDate = Date() // no future DOB
+
+        if #available(iOS 13.4, *) {
+            dobPicker.preferredDatePickerStyle = .wheels
+        }
+
+        let toolbar = UIToolbar()
+        toolbar.sizeToFit()
+
+        let spacer = UIBarButtonItem(
+            barButtonSystemItem: .flexibleSpace,
+            target: nil,
+            action: nil
+        )
+
+        let doneButton = UIBarButtonItem(
+            title: "Done",
+            style: .done,
+            target: self,
+            action: #selector(didSelectDOB)
+        )
+
+        toolbar.setItems([spacer, doneButton], animated: false)
+
+        dobField.inputView = dobPicker
+        dobField.inputAccessoryView = toolbar
+
+        // UX polish
+        dobField.tintColor = .clear // hide cursor
+    }
+
+    @objc private func didSelectDOB() {
+
+        let selectedDate = dobPicker.date
+        let formatted = dobFormatter.string(from: selectedDate)
+
+        // Normal date text
+        let dateAttr = NSAttributedString(
+            string: formatted,
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 16),
+                .foregroundColor: UIColor.black
+            ]
+        )
+
+        // Italic format hint
+        let hintAttr = NSAttributedString(
+            string: " (dd-MM-yyyy)",
+            attributes: [
+                .font: UIFont.italicSystemFont(ofSize: 12),
+                .foregroundColor: UIColor.lightGray
+            ]
+        )
+
+        let finalText = NSMutableAttributedString()
+        finalText.append(dateAttr)
+        finalText.append(hintAttr)
+
+        dobField.attributedText = dateAttr
+        dobField.resignFirstResponder()
+    }
+    
+    
+    private func setupDropdowns() {
+
+        configureDropdown(
+            field: diseasesField,
+            action: #selector(openDiseaseSelector)
+        )
+
+        configureDropdown(
+            field: genderField,
+            action: #selector(openGenderSelector)
+        )
+
+        configureDropdown(
+            field: bloodGroupField,
+            action: #selector(openBloodGroupSelector)
+        )
+    }
+    
+    private func configureDropdown(
+        field: UITextField,
+        action: Selector
+    ) {
+        field.inputView = UIView() // disable keyboard
+        field.isUserInteractionEnabled = true
+
+        let tap = UITapGestureRecognizer(target: self, action: action)
+        field.addGestureRecognizer(tap)
+    }
+
+    
+    private func fetchUserProfile() {
+        
+        Loader.shared.show(on: view)
+
+        loggedInUserId = UserDefaults.standard.integer(forKey: "id") // USER ID
+        guard loggedInUserId > 0 else { return }
+
+        ProfileService.shared.getUserProfile(
+            userId: loggedInUserId
+        ) { [weak self] result in
+
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                
+                Loader.shared.hide()
+
+                switch result {
+
+                case .success(let response):
+                    self.bindProfileData(response.data)
+
+                case .failure:
+                    Toast.show(message: "Failed to fetch profile data", in: self.view)
+                }
+            }
+        }
+    }
+    
+    private func bindProfileData(_ data: ProfileDataResponse.ProfileData) {
+
+        userResId = data.user_id
+        
+        firstNameField.text = data.first_name ?? ""
+        lastNameField.text = data.last_name ?? ""
+
+        emailField.text = data.email ?? ""
+        mobileField.text = data.phone_number
+        dobField.text = data.dob ?? ""
+
+        if data.gender == "M" {
+            genderField.text = "Male"
+        } else if data.gender == "F" {
+            genderField.text = "Female"
+        }
+
+        bloodGroupField.text = data.blood_group ?? ""
+        heightField.text = data.height
+        weightField.text = data.weight
+
+        addressField.text = data.address ?? ""
+        countryField.text = data.country ?? ""
+        stateField.text = data.state ?? ""
+        cityField.text = data.city ?? ""
+        zipField.text = data.pincode ?? ""
+
+        diseasesField.text = data.existing_diseases ?? ""
+        medicationField.text = data.existing_medications ?? ""
+
+        if let imageUrl = data.patient_image_url,
+           let url = URL(string: imageUrl) {
+
+            profileImageView.loadImage(from: url)
+        }
+    }
+    
+
+
+    
+    @objc private func showImageSourcePicker() {
+
+        let sheet = UIAlertController(
+            title: "Upload Profile Photo",
+            message: nil,
+            preferredStyle: .actionSheet
+        )
+
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            sheet.addAction(
+                UIAlertAction(title: "Camera", style: .default) { _ in
+                    self.openImagePicker(source: .camera)
+                }
+            )
+        }
+
+        sheet.addAction(
+            UIAlertAction(title: "Photo Library", style: .default) { _ in
+                self.openImagePicker(source: .photoLibrary)
+            }
+        )
+
+        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        // ✅ iPad safety
+        if let popover = sheet.popoverPresentationController {
+            popover.sourceView = uploadButton
+            popover.sourceRect = uploadButton.bounds
+        }
+
+        present(sheet, animated: true)
+    }
+
+    
+    private func openImagePicker(source: UIImagePickerController.SourceType) {
+
+        let picker = UIImagePickerController()
+        picker.sourceType = source
+        picker.delegate = self
+        picker.allowsEditing = false // default crop OFF (Android parity)
+
+        present(picker, animated: true)
+    }
+    
     // MARK: - Save Button
     private func setupSaveButton() {
 
@@ -590,18 +688,105 @@ class ProfileViewController: AppBaseViewController {
         )
 
     }
-    
-    @objc private func saveProfileTapped() {
 
-        view.endEditing(true) // hide keyboard
+    private func buildProfileParams() -> [String: String] {
 
-        guard validateMandatoryFields() else {
-            return
+        var params: [String: String] = [:]
+        
+        params["user_id"] = String(userResId)
+        params["id"] = String(loggedInUserId)
+
+        params["first_name"] = firstNameField.text
+        params["last_name"] = lastNameField.text
+        params["email"] = emailField.text
+        params["phone_number"] = mobileField.text
+        params["emergency_phone"] = ""
+        params["dob"] = apiDOB(from: dobField.text)
+
+        // Gender mapping
+        if genderField.text == "Male" {
+            params["gender"] = "M"
+        } else if genderField.text == "Female" {
+            params["gender"] = "F"
         }
 
-        // ✅ At this point mandatory data is valid
-        // Later: build params & call API
-        Toast.show(message: "Profile data is valid. Ready to save.", in: self.view)
+        params["blood_group"] = bloodGroupField.text
+        params["address"] = addressField.text
+        params["city"] = cityField.text
+        params["state"] = stateField.text
+        params["country"] = countryField.text
+        params["pincode"] = zipField.text
+
+        params["height"] = cleanNumericValue(heightField.text)
+        params["weight"] = cleanNumericValue(weightField.text)
+        
+        params["existing_diseases"] =
+            diseasesField.text?.trimmingCharacters(in: .whitespaces) ?? ""
+
+        params["existing_medications"] =
+            medicationField.text?.trimmingCharacters(in: .whitespaces) ?? ""
+
+
+        params["status"] = "1"
+        params["allergy"] = "0"
+
+        return params.compactMapValues { value in
+            value.isEmpty ? nil : value
+        }
+
+    }
+    
+    private func cleanNumericValue(_ text: String?) -> String? {
+
+        guard let text = text, !text.isEmpty else { return nil }
+
+        // Remove anything that is NOT a number or dot
+        let cleaned = text
+            .replacingOccurrences(of: "[^0-9.]", with: "", options: .regularExpression)
+
+        return cleaned.isEmpty ? nil : cleaned
+    }
+
+    
+    @objc private func saveProfileTapped() {
+        
+        Loader.shared.show(on: view)
+
+        view.endEditing(true)
+
+        guard validateMandatoryFields() else { return }
+
+        let params = buildProfileParams()
+        
+//        print("URL patient id:", userResId)
+//        print("Body user_id:", loggedInUserId)
+//        
+//        print("➡️ POST /patients/\(loggedInUserId)")
+//        params.forEach { print("\($0.key): \($0.value)") }
+
+
+        ProfileService.shared.saveUserProfile(
+            userId: loggedInUserId,
+            params: params,
+            profileImage: compressedImageData
+        ) { [weak self] result in
+
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                
+                Loader.shared.hide()
+
+                switch result {
+
+                case .success(let response):
+                    Toast.show(message: response.message, in: self.view)
+                    self.scrollView.setContentOffset(.zero, animated: true)
+
+                case .failure:
+                    Toast.show(message: "Failed to save profile", in: self.view)
+                }
+            }
+        }
     }
 
     
@@ -614,14 +799,31 @@ class ProfileViewController: AppBaseViewController {
         return mobile.count == 10 && mobile.allSatisfy { $0.isNumber }
     }
     
+    private func apiDOB(from displayDOB: String?) -> String? {
+        guard let displayDOB = displayDOB, !displayDOB.isEmpty else { return nil }
+
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateFormat = "dd-MM-yyyy"
+
+        let apiFormatter = DateFormatter()
+        apiFormatter.dateFormat = "yyyy-MM-dd"
+
+        guard let date = displayFormatter.date(from: displayDOB) else {
+            return nil
+        }
+
+        return apiFormatter.string(from: date)
+    }
+
+    
     private func validateMandatoryFields() -> Bool {
 
-        let name = nameField.text?.trimmingCharacters(in: .whitespaces) ?? ""
+        let firstName = firstNameField.text?.trimmingCharacters(in: .whitespaces) ?? ""
         let email = emailField.text?.trimmingCharacters(in: .whitespaces) ?? ""
         let mobile = mobileField.text?.trimmingCharacters(in: .whitespaces) ?? ""
 
-        if name.isEmpty {
-            Toast.show(message: "Please enter your name", in: self.view)
+        if firstName.isEmpty {
+            Toast.show(message: "Please enter your first name", in: self.view)
             return false
         }
 
@@ -647,7 +849,6 @@ class ProfileViewController: AppBaseViewController {
 
         return true
     }
-
 
     
     @objc private func openDiseaseSelector() {
@@ -714,8 +915,6 @@ class ProfileViewController: AppBaseViewController {
 
         present(popup, animated: true)
     }
-
-
 
 }
 
@@ -797,3 +996,41 @@ extension ProfileViewController: UIImagePickerControllerDelegate, UINavigationCo
 
 }
 
+extension UIImageView {
+
+    func loadImage(from url: URL) {
+
+        let activity = UIActivityIndicatorView(style: .medium)
+        activity.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(activity)
+
+        NSLayoutConstraint.activate([
+            activity.centerXAnchor.constraint(equalTo: centerXAnchor),
+            activity.centerYAnchor.constraint(equalTo: centerYAnchor)
+        ])
+
+        activity.startAnimating()
+
+        URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+            DispatchQueue.main.async {
+                activity.removeFromSuperview()
+
+                guard
+                    let self = self,
+                    let data = data,
+                    let image = UIImage(data: data)
+                else { return }
+
+                self.image = image
+                self.contentMode = .scaleAspectFill
+                self.clipsToBounds = true
+
+                // ✅ Force layout before rounding
+                self.layoutIfNeeded()
+
+                // ✅ Correct circular mask
+                self.layer.cornerRadius = self.bounds.width / 2
+            }
+        }.resume()
+    }
+}

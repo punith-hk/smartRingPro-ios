@@ -22,8 +22,8 @@ struct FamilyMember: Codable {
     let image: String?
     let dependent_image_url: String?
 
-    let dob: String
-    let age: Int
+    let dob: String?
+    let age: Int?
 
     let status: Int
 

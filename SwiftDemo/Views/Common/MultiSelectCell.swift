@@ -39,20 +39,24 @@ final class MultiSelectCell: UITableViewCell {
             checkBox.heightAnchor.constraint(equalToConstant: 22),
         ])
     }
-
+    
     func configure(
         title: String,
         selected: Bool,
         disabled: Bool
     ) {
         titleLabel.text = title
-        titleLabel.textColor = disabled ? .lightGray : .black
 
         let imageName = selected ? "checkmark.square.fill" : "square"
         checkBox.image = UIImage(systemName: imageName)
         checkBox.tintColor = selected ? .systemTeal : .lightGray
 
-        isUserInteractionEnabled = !disabled
+        titleLabel.textColor = disabled ? .lightGray : .black
         contentView.alpha = disabled ? 0.5 : 1.0
+
+        // 🚫 DO NOT disable interaction
+        isUserInteractionEnabled = true
     }
+
+
 }
