@@ -60,6 +60,55 @@ final class APIClient {
             }
         }.resume()
     }
+    
+    // MARK: - POST (JSON)
+    func postJSON<T: Codable, B: Codable>(
+        endpoint: String,
+        body: B,
+        responseType: T.Type,
+        completion: @escaping (Result<T, NetworkError>) -> Void
+    ) {
+
+        guard let url = URL(string: APIEndpoints.baseURL + endpoint) else {
+            completion(.failure(.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONEncoder().encode(body)
+        } catch {
+            completion(.failure(.encoding))
+            return
+        }
+
+        logRequest(request)
+
+        session.dataTask(with: request) { data, response, error in
+            self.logResponse(data, response, error)
+
+            if error != nil {
+                completion(.failure(.network))
+                return
+            }
+
+            guard let data else {
+                completion(.failure(.noData))
+                return
+            }
+
+            do {
+                let decoded = try JSONDecoder().decode(T.self, from: data)
+                completion(.success(decoded))
+            } catch {
+                completion(.failure(.decoding))
+            }
+        }.resume()
+    }
+
 
     // MARK: - GET
     func get<T: Codable>(

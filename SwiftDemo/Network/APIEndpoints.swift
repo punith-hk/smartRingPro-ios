@@ -49,6 +49,16 @@ enum APIEndpoints {
     ) -> String {
         return "patients/\(userId)/dependents/\(dependentId)"
     }
+    
+    // Linked accounts
+        static func getLinkedAccounts(userId: Int) -> String {
+            return "caretaker/\(userId)"
+        }
+
+        static let addLinkedAccount = "caretaker/request"
+        static let verifyCaretakerOtp = "caretaker/verify"
+
+        static let getLastRingData = "getLastRingData"
 
     // MARK: - Symptoms
     static let getAllSymptoms = "getAllSymptoms"
