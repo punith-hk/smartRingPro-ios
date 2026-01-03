@@ -1,4 +1,5 @@
 import UIKit
+import YCProductSDK
 
 class SideMenuContainerController: UIViewController, SideMenuDelegate {
 
@@ -164,6 +165,12 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
 
         closeMenu()
 
+        // 🔥 BLE CLEANUP
+        YCProduct.disconnectDevice { _, _ in }
+        YCProduct.shared.isReconnectEnable = false
+
+        DeviceSessionManager.shared.clearDevice()
+
         // Clear user session
         UserDefaults.standard.removeObject(forKey: "isLoggedIn")
 
@@ -176,5 +183,6 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
             sceneDelegate.setRootViewController(nav)
         }
     }
+
 
 }

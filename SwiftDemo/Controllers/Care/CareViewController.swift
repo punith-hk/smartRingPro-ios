@@ -15,10 +15,23 @@ final class CareViewController: AppBaseViewController,
 
     private let addAssociationButton = UIButton(type: .system)
     private let tableView = UITableView()
+    
+    // ✅ EMPTY STATE LABEL
+        private let emptyLabel: UILabel = {
+            let label = UILabel()
+            label.text = "No associations found.\nTap “Add Association” to continue."
+            label.textAlignment = .center
+            label.numberOfLines = 0
+            label.font = .systemFont(ofSize: 15, weight: .medium)
+            label.textColor = .white.withAlphaComponent(0.9)
+            label.isHidden = true
+            label.translatesAutoresizingMaskIntoConstraints = false
+            return label
+        }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Caring Mode"
+        title = "Caring"
         setupUI()
         fetchLinkedAccounts()
     }
@@ -51,8 +64,15 @@ final class CareViewController: AppBaseViewController,
 
         tableView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(tableView)
+        
+        view.addSubview(emptyLabel)
 
         NSLayoutConstraint.activate([
+            emptyLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                emptyLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+                emptyLabel.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 32),
+                emptyLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -32),
+            
             addAssociationButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
             addAssociationButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             addAssociationButton.heightAnchor.constraint(equalToConstant: 30),
@@ -70,11 +90,19 @@ final class CareViewController: AppBaseViewController,
             DispatchQueue.main.async {
                 if case .success(let list) = result {
                     self?.linkedAccounts = list
-                    self?.tableView.reloadData()
+                    self?.updateUIForDataState()
                 }
             }
         }
     }
+    
+    // ✅ SINGLE PLACE TO TOGGLE UI
+        private func updateUIForDataState() {
+            let hasData = !linkedAccounts.isEmpty
+            tableView.isHidden = !hasData
+            emptyLabel.isHidden = hasData
+            tableView.reloadData()
+        }
     
     @objc private func addAssociationTapped() {
 

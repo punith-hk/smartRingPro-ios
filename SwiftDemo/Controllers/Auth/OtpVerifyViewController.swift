@@ -1,4 +1,5 @@
 import UIKit
+import YCProductSDK
 
 class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
 
@@ -235,6 +236,10 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
 
                         // 🔥 SWITCH ROOT CONTROLLER CORRECTLY
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                            
+                            // 🔥 BLE INIT
+                                    YCProduct.setLogLevel(.normal, saveLevel: .error)
+                                    _ = YCProduct.shared
 
                             let rootVC = SideMenuContainerController()
 
@@ -256,52 +261,6 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
             }
         }
     }
-
-
-
-
-//    @objc private func submitTapped() {
-//        hideKeyboard()
-//
-//        let otp = otpField.text ?? ""
-//        guard otp.count == 6 else {
-//            showAlert("OTP must be 6 digits")
-//            return
-//        }
-//
-//        Loader.shared.show(on: view)
-//
-//        AuthService.shared.verifyOtp(userId: userId, otp: otp) { [weak self] result in
-//            DispatchQueue.main.async {
-//                guard let self = self else { return }
-//                Loader.shared.hide()
-//
-//                switch result {
-//                case .success(let response):
-//
-//                    if response.response == 0 {
-//                        UserDefaultsManager.shared.saveOtpResponse(response)
-//
-//                            Toast.show(message: "OTP verified successfully", in: self.view)
-//
-//                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-//                                let storyboard = UIStoryboard(name: "Main", bundle: nil)
-//                                let homeVC = storyboard.instantiateViewController(
-//                                    withIdentifier: "ViewController"
-//                                )
-//                                self.navigationController?.setViewControllers([homeVC], animated: true)
-//                            }
-//
-//                    } else {
-//                        self.showAlert(response.message ?? "OTP verification failed")
-//                    }
-//
-//                case .failure:
-//                    self.showAlert("Something went wrong. Please try again.")
-//                }
-//            }
-//        }
-//    }
 
     // MARK: - Keyboard
     private func setupKeyboardDismiss() {

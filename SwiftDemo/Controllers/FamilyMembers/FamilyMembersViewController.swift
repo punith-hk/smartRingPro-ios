@@ -9,6 +9,19 @@ final class FamilyMembersViewController: AppBaseViewController {
     // MARK: - UI
     private let addButton = UIButton(type: .system)
     private let tableView = UITableView()
+    
+    // ✅ EMPTY STATE LABEL
+        private let emptyLabel: UILabel = {
+            let label = UILabel()
+            label.text = "No family members found.\nTap “Add Association” to continue."
+            label.textAlignment = .center
+            label.numberOfLines = 0
+            label.font = .systemFont(ofSize: 15, weight: .medium)
+            label.textColor = .white.withAlphaComponent(0.9)
+            label.isHidden = true
+            label.translatesAutoresizingMaskIntoConstraints = false
+            return label
+        }()
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -42,8 +55,14 @@ final class FamilyMembersViewController: AppBaseViewController {
         tableView.dataSource = self
         tableView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(tableView)
+        view.addSubview(emptyLabel)
 
         NSLayoutConstraint.activate([
+            emptyLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                emptyLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+                emptyLabel.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 32),
+                emptyLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -32),
+            
             addButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
                 addButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
                 addButton.heightAnchor.constraint(equalToConstant: 30),
@@ -63,6 +82,7 @@ final class FamilyMembersViewController: AppBaseViewController {
                 switch result {
                 case .success(let response):
                     self?.familyMembers = response.data
+                    self?.updateUIForDataState()
                     self?.tableView.reloadData()
 
                 case .failure:
@@ -71,6 +91,14 @@ final class FamilyMembersViewController: AppBaseViewController {
             }
         }
     }
+    
+    // ✅ SINGLE PLACE TO TOGGLE UI
+        private func updateUIForDataState() {
+            let hasData = !familyMembers.isEmpty
+            tableView.isHidden = !hasData
+            emptyLabel.isHidden = hasData
+            tableView.reloadData()
+        }
 
     // MARK: - Actions
     @objc private func addDependentTapped() {

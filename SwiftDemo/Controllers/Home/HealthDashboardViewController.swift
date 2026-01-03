@@ -40,19 +40,19 @@ class HealthDashboardViewController: AppBaseViewController {
     private lazy var heartRateCard = VitalCardView(
         icon: UIImage(systemName: "heart"),
         title: "Heart Rate",
-        value: "0 bpm"
+        value: "0 times/min"
     )
 
     private lazy var hrvCard = VitalCardView(
         icon: UIImage(systemName: "waveform"),
         title: "Heart Rate Variability",
-        value: "0 ms"
+        value: "0 times/min"
     )
 
     private lazy var temperatureCard = VitalCardView(
         icon: UIImage(systemName: "thermometer"),
         title: "Temperature",
-        value: "0°C"
+        value: AppSettingsManager.shared.getTemperatureUnit() == .fahrenheit ? "--°F" : "--°C"
     )
 
     private lazy var bloodOxygenCard = VitalCardView(
@@ -60,6 +60,8 @@ class HealthDashboardViewController: AppBaseViewController {
         title: "Blood Oxygen",
         value: "0%"
     )
+    
+    private var lastHealthResponse: GetLastUserHealthDataResponse?
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -77,7 +79,23 @@ class HealthDashboardViewController: AppBaseViewController {
         stepProgress.setProgress(current: 0, total: 10000)
 
         fetchLatestHealthData()
+        observeSettings()
     }
+    
+    private func observeSettings() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(onTemperatureUnitChanged),
+            name: .temperatureUnitChanged,
+            object: nil
+        )
+    }
+    
+    @objc private func onTemperatureUnitChanged() {
+        guard let lastResponse = lastHealthResponse else { return }
+        applyHealthData(lastResponse)
+    }
+
 
     // MARK: - Base UI
     private func setupUI() {
@@ -372,6 +390,7 @@ class HealthDashboardViewController: AppBaseViewController {
                 guard let self = self else { return }
 
                 if case .success(let response) = result {
+                    self.lastHealthResponse = response
                     self.applyHealthData(response)
                 }
             }
@@ -386,10 +405,12 @@ class HealthDashboardViewController: AppBaseViewController {
 
         bloodGlucoseCard.updateValue("\(map["blood_sugar"] ?? "--") mg/dL")
         bloodPressureCard.updateValue(map["blood_pressure"] ?? "--/-- mmHg")
-        heartRateCard.updateValue("\(map["heart_rate"] ?? "--") bpm")
+        heartRateCard.updateValue("\(map["heart_rate"] ?? "--") times/min")
         bloodOxygenCard.updateValue("\(map["blood_oxygen"] ?? "--") %")
-        hrvCard.updateValue("\(map["hrv"] ?? "--") ms")
-        temperatureCard.updateValue("\(map["temperature"] ?? "--") °C")
+        hrvCard.updateValue("\(map["hrv"] ?? "--") times/min")
+        
+        let tempValue = Double(map["temperature"] ?? "")
+        temperatureCard.updateValue(formatBodyTemperature(tempValue))
         
         // ---- STEPS / CALORIES / DISTANCE ----
             let steps = Int(map["steps"] ?? "0") ?? 0
@@ -406,6 +427,25 @@ class HealthDashboardViewController: AppBaseViewController {
 
         applySleepData()
     }
+    
+    private func formatBodyTemperature(_ value: Double?) -> String {
+
+        let unit = AppSettingsManager.shared.getTemperatureUnit()
+
+        guard let value = value, value > 0 else {
+            return unit == .fahrenheit ? "--°F" : "--°C"
+        }
+
+        switch unit {
+        case .celsius:
+            return String(format: "%.1f°C", value)
+
+        case .fahrenheit:
+            let f = TemperatureConverter.celsiusToFahrenheit(value)
+            return String(format: "%.1f°F", f)
+        }
+    }
+
 
     private func applySleepData() {
 
