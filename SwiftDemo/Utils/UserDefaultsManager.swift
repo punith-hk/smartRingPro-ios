@@ -6,7 +6,7 @@ final class UserDefaultsManager {
     private let defaults = UserDefaults.standard
     private init() {}
 
-    // ✅ SAVE SESSION (already correct)
+    // MARK: - SAVE SESSION (Already correct)
     func saveOtpResponse(_ response: OtpResponse) {
         defaults.set(response.accessToken, forKey: "accessToken")
         defaults.set(response.user, forKey: "user")
@@ -17,12 +17,12 @@ final class UserDefaultsManager {
         defaults.set(true, forKey: "isLoggedIn")
     }
 
-    // ✅ ADD THIS (AUTO LOGIN CHECK)
+    // MARK: - SESSION CHECK
     func isLoggedIn() -> Bool {
         return defaults.bool(forKey: "isLoggedIn")
     }
 
-    // ✅ ADD THIS (FOR LOGOUT – LATER)
+    // MARK: - LOGOUT
     func clearSession() {
         defaults.removeObject(forKey: "accessToken")
         defaults.removeObject(forKey: "user")
@@ -31,5 +31,33 @@ final class UserDefaultsManager {
         defaults.removeObject(forKey: "mobileNumber")
         defaults.removeObject(forKey: "id")
         defaults.set(false, forKey: "isLoggedIn")
+    }
+
+    // =====================================================
+    // ✅ HELPER GETTERS (THIS IS THE IMPORTANT PART)
+    // =====================================================
+
+    var userId: Int {
+        defaults.integer(forKey: "id")
+    }
+
+    var accessToken: String? {
+        defaults.string(forKey: "accessToken")
+    }
+
+    var email: String? {
+        defaults.string(forKey: "email")
+    }
+
+    var mobileNumber: String? {
+        defaults.string(forKey: "mobileNumber")
+    }
+
+    var roleCode: String? {
+        defaults.string(forKey: "roleCode")
+    }
+
+    var userName: String? {
+        defaults.string(forKey: "user")
     }
 }

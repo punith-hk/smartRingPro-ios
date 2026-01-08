@@ -66,6 +66,24 @@ enum APIEndpoints {
     static func saveSymptoms(userId: Int) -> String {
         return "patients/\(userId)/symptoms"
     }
+    
+    // MARK: - Ring Data (History)
+    static func getRingDataByType(
+        userId: Int,
+        type: String,
+        selectedDate: String
+    ) -> String {
+        return "getRingDataByType?user_id=\(userId)&type=\(type)&selectedDate=\(selectedDate)"
+    }
+
+    /// Get day-wise ring data for a user and type
+    /// Example: getRingDataByDay?user_id=2&type=heart_rate
+    static func getRingDataByDay(
+        userId: Int,
+        type: String
+    ) -> String {
+        return "getRingDataByDay?user_id=\(userId)&type=\(type)"
+    }
 
     // MARK: - Diseases
     static let getDiseaseList = "diseases/list"
