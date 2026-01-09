@@ -139,7 +139,7 @@ final class HeartRateViewController: AppBaseViewController {
 
     private func showDeviceNotConnectedToast() {
         print("🟡 HeartRateVC - Showing device not connected toast")
-        Toast.show(message: "Device not connected. Please connect a device first.", in: self.view)
+        Toast.show(message: "Device not connected", in: self.view)
     }
 
     // MARK: - UI Setup
@@ -245,7 +245,7 @@ final class HeartRateViewController: AppBaseViewController {
             statsStack.trailingAnchor.constraint(equalTo: chartCard.trailingAnchor),
             statsStack.heightAnchor.constraint(equalToConstant: 90),
 
-            actionButton.topAnchor.constraint(equalTo: statsStack.bottomAnchor, constant: 24),
+            actionButton.topAnchor.constraint(equalTo: statsStack.bottomAnchor, constant: 60),
             actionButton.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             actionButton.widthAnchor.constraint(equalToConstant: 100),
             actionButton.heightAnchor.constraint(equalToConstant: 100),
@@ -592,12 +592,32 @@ final class HeartRateViewController: AppBaseViewController {
     
 
     // MARK: - Measurement
+    // Track whether stop was requested by user (vs timer completion)
+    private var isUserRequestedStop = false
+
     @objc private func actionTapped() {
-        isMeasuring ? stopMeasurement() : startMeasurement()
+        if isMeasuring {
+            // ask for confirmation before stopping
+            presentStopConfirmation()
+        } else {
+            startMeasurement()
+        }
     }
 
     private func startMeasurement() {
+        // Check device connection using centralized manager
+        let connected = BLEStateManager.shared.hasConnectedDevice() || BLEStateManager.shared.isConnected
+        if !connected {
+            print("🔴 Start requested but device not connected")
+            Toast.show(message: "Device not connected", in: self.view)
+            return
+        }
+
+        print("🟢 Starting measurement")
+        Toast.show(message: "Starting test", in: self.view)
+
         isMeasuring = true
+        isUserRequestedStop = false
         remainingSeconds = 60
         updateActionUI()
 
@@ -607,21 +627,47 @@ final class HeartRateViewController: AppBaseViewController {
     }
 
     private func stopMeasurement() {
+        // stopping measurement (either by user confirmation or timer completion)
         isMeasuring = false
         timer?.invalidate()
         timer = nil
         updateActionUI()
+
+        if isUserRequestedStop {
+            print("🟡 User stopped the test")
+            Toast.show(message: "Test stopped", in: self.view)
+        } else if remainingSeconds <= 0 {
+            print("✅ Test completed (60s)")
+            Toast.show(message: "Test completed", in: self.view)
+        }
+
+        // reset the user stop flag
+        isUserRequestedStop = false
     }
 
     private func tick() {
         remainingSeconds -= 1
         countdownLabel.text = "Remaining \(remainingSeconds) s"
-        if remainingSeconds <= 0 { stopMeasurement() }
+        if remainingSeconds <= 0 {
+            // timer finished naturally -> treat as completion
+            stopMeasurement()
+        }
     }
 
     private func updateActionUI() {
         actionButton.setTitle(isMeasuring ? "Stop" : "Start", for: .normal)
         countdownLabel.text = isMeasuring ? "Remaining \(remainingSeconds) s" : "Remaining 0 s"
+    }
+
+    private func presentStopConfirmation() {
+        let alert = UIAlertController(title: "Stop Test", message: "Are you sure you want to stop the test?", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        alert.addAction(UIAlertAction(title: "Stop", style: .destructive, handler: { [weak self] _ in
+            guard let self = self else { return }
+            self.isUserRequestedStop = true
+            self.stopMeasurement()
+        }))
+        present(alert, animated: true, completion: nil)
     }
 
     // MARK: - API
@@ -713,7 +759,6 @@ final class HeartRateViewController: AppBaseViewController {
             let latestValue = latestPair.1
             timeLabel.text = weekdayFormatter.string(from: latestDate)
             valueLabel.text = "\(latestValue) times/min"
-            heartRateTestValue.text = "\(latestValue) times/min"
         }
 
         // Populate chart with week/month data
@@ -729,7 +774,6 @@ final class HeartRateViewController: AppBaseViewController {
         avgCard.updateValue("\(values.reduce(0, +) / values.count)")
 
         if let latest = data.first, let latestValue = Int(latest.value) {
-            heartRateTestValue.text = "\(latestValue) times/min"
             valueLabel.text = "\(latestValue) times/min"
 
             // Show time for latest entry
