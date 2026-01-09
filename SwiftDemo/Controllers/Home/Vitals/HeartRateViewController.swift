@@ -1,4 +1,6 @@
 import UIKit
+import Charts
+import YCProductSDK
 
 enum HeartRateRange {
     case day
@@ -35,6 +37,7 @@ final class HeartRateViewController: AppBaseViewController {
     private let segmentedControl = UISegmentedControl(items: ["Day", "Week", "Month"])
 
     private let chartCard = UIView()
+    private let healthDataChart = LineChartView()
 
     // Date header UI
     private let prevButton = UIButton(type: .system)
@@ -66,9 +69,77 @@ final class HeartRateViewController: AppBaseViewController {
         view.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
 
         setupUI()
+        setupDailyChart()
         updateDateUI()
         updateActionUI()
-        fetchHeartRateData()
+        
+        print("🟡 HeartRateVC - viewDidLoad")
+        print(BLEStateManager.shared.debugInfo())
+        
+        // Check initial BLE connection state from manager
+        checkInitialBLEConnection()
+        
+       fetchHeartRateData()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        print("🟡 HeartRateVC - viewWillAppear")
+        
+        // Listen for BLE state changes
+        BLEStateManager.shared.onStateChanged = { [weak self] state in
+            print("🔵 HeartRateVC received state change: \(state)")
+            self?.handleBLEStateChange(state)
+        }
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        // Clear the state change listener
+        BLEStateManager.shared.onStateChanged = nil
+    }
+
+    // MARK: - BLE Connection Check
+    private func checkInitialBLEConnection() {
+        print("🟡 HeartRateVC - Checking initial BLE connection")
+        
+        let hasPeripheral = BLEStateManager.shared.hasConnectedDevice()
+        let isConnected = BLEStateManager.shared.isConnected
+        let currentState = BLEStateManager.shared.currentState
+        
+        print("  - BLEStateManager current state: \(currentState)")
+        print("  - Has peripheral: \(hasPeripheral)")
+        print("  - Is connected: \(isConnected)")
+        print("  - YCProduct.currentPeripheral: \(YCProduct.shared.currentPeripheral != nil ? "EXISTS" : "NIL")")
+        
+        if !isConnected {
+            print("🔴 Device NOT connected - Showing toast")
+            showDeviceNotConnectedToast()
+        } else {
+            print("✅ Device IS connected")
+        }
+    }
+    
+    private func handleBLEStateChange(_ state: YCProductState) {
+        print("🟡 HeartRateVC - Handling BLE state change: \(state)")
+        
+        switch state {
+        case .disconnected, .connectedFailed:
+            print("❌ Device disconnected/failed - Showing toast")
+            showDeviceNotConnectedToast()
+        case .connected:
+            print("✅ Device connected - Can fetch data")
+            // fetchHeartRateData()
+        default:
+            print("ℹ️ Other BLE state: \(state)")
+        }
+    }
+
+    private func showDeviceNotConnectedToast() {
+        print("🟡 HeartRateVC - Showing device not connected toast")
+        Toast.show(message: "Device not connected. Please connect a device first.", in: self.view)
     }
 
     // MARK: - UI Setup
@@ -111,7 +182,19 @@ final class HeartRateViewController: AppBaseViewController {
         chartCard.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(chartCard)
 
+        // Setup date header first so labels are in place before chart
         setupDateHeader()
+
+        // Health data chart - sit directly below valueLabel with no gap
+        healthDataChart.translatesAutoresizingMaskIntoConstraints = false
+        chartCard.addSubview(healthDataChart)
+        
+        NSLayoutConstraint.activate([
+            healthDataChart.topAnchor.constraint(equalTo: valueLabel.bottomAnchor, constant: -12),
+            healthDataChart.leadingAnchor.constraint(equalTo: chartCard.leadingAnchor, constant: 6),
+            healthDataChart.trailingAnchor.constraint(equalTo: chartCard.trailingAnchor, constant: -12),
+            healthDataChart.bottomAnchor.constraint(equalTo: chartCard.bottomAnchor, constant: 0)
+        ])
 
         // Stats stack
         statsStack.axis = .horizontal
@@ -218,7 +301,7 @@ final class HeartRateViewController: AppBaseViewController {
             nextButton.centerYAnchor.constraint(equalTo: dateLabel.centerYAnchor),
             nextButton.leadingAnchor.constraint(equalTo: dateLabel.trailingAnchor, constant: 12),
 
-            timeLabel.topAnchor.constraint(equalTo: dateLabel.bottomAnchor, constant: 6),
+            timeLabel.topAnchor.constraint(equalTo: dateLabel.bottomAnchor, constant: 2),
             timeLabel.centerXAnchor.constraint(equalTo: chartCard.centerXAnchor),
 
             valueLabel.topAnchor.constraint(equalTo: timeLabel.bottomAnchor, constant: 2),
@@ -233,6 +316,7 @@ final class HeartRateViewController: AppBaseViewController {
 
         case 0:
             selectedRange = .day
+            resetChartForDailyView()
 
         case 1:
             selectedRange = .week
@@ -242,6 +326,7 @@ final class HeartRateViewController: AppBaseViewController {
 
         default:
             selectedRange = .day
+            resetChartForDailyView()
         }
 
         // 🔥 Reset base date when switching tabs
@@ -252,6 +337,88 @@ final class HeartRateViewController: AppBaseViewController {
 
         // 🔥 Reload data for selected range
         fetchHeartRateData()
+    }
+
+    // MARK: - Chart Setup
+    private func setupDailyChart() {
+        healthDataChart.chartDescription.enabled = false
+        healthDataChart.dragEnabled = true
+        healthDataChart.setScaleEnabled(true)
+        healthDataChart.pinchZoomEnabled = true
+        healthDataChart.scaleXEnabled = true
+        healthDataChart.scaleYEnabled = false
+
+        healthDataChart.leftAxis.drawGridLinesEnabled = false
+        healthDataChart.rightAxis.drawGridLinesEnabled = false
+        healthDataChart.xAxis.drawGridLinesEnabled = false
+        healthDataChart.leftAxis.drawAxisLineEnabled = false
+
+        healthDataChart.dragDecelerationEnabled = true
+        healthDataChart.dragDecelerationFrictionCoef = 0.9
+
+        // Add value selection listener
+        healthDataChart.delegate = self
+
+        // Configure X-axis
+        let xAxis = healthDataChart.xAxis
+        xAxis.labelPosition = .bottom
+        xAxis.drawGridLinesEnabled = false
+        xAxis.granularity = 1.0
+        xAxis.labelCount = 5
+
+        xAxis.axisMinimum = 0
+        xAxis.axisMaximum = 24
+
+        xAxis.valueFormatter = TimeValueFormatter()
+
+        // Set visible range based on selected range
+        switch selectedRange {
+        case .day:
+            healthDataChart.setVisibleXRangeMaximum(5)
+        case .week:
+            healthDataChart.setVisibleXRangeMaximum(7)
+        case .month:
+            healthDataChart.setVisibleXRangeMaximum(10)
+        }
+
+        // Configure Y-axis
+        let leftAxis = healthDataChart.leftAxis
+        leftAxis.axisMinimum = 0
+
+        healthDataChart.rightAxis.enabled = false
+    }
+
+    private func resetChartForDailyView() {
+        // Reset X-axis to daily format (time labels)
+        let xAxis = healthDataChart.xAxis
+        xAxis.valueFormatter = TimeValueFormatter()
+        xAxis.granularity = 1.0
+        xAxis.labelCount = 5
+        xAxis.axisMinimum = 0
+        xAxis.axisMaximum = 24
+        
+        // Reset visible range for daily view
+        healthDataChart.setVisibleXRangeMaximum(5)
+        
+        // Enable zoom/drag
+        healthDataChart.dragEnabled = true
+        healthDataChart.setScaleEnabled(true)
+        healthDataChart.pinchZoomEnabled = true
+        healthDataChart.scaleXEnabled = true
+        healthDataChart.scaleYEnabled = false
+    }
+
+    private func updateXAxisLabels() {
+        let xAxis = healthDataChart.xAxis
+        let visibleRange = healthDataChart.highestVisibleX - healthDataChart.lowestVisibleX
+
+        if visibleRange > 6 {
+            xAxis.granularity = 1.0
+        } else {
+            xAxis.granularity = 0.5
+        }
+
+        healthDataChart.setNeedsDisplay()
     }
 
     
@@ -521,14 +688,15 @@ final class HeartRateViewController: AppBaseViewController {
             return
         }
 
-        // Filter data within range
-        let filtered = heartRateDayData.compactMap { dayData -> Int? in
-            guard let date = dateFormatter.date(from: dayData.vDate) else { return nil }
+        // Filter data within range and keep date/value pairs
+        let filteredPairs = heartRateDayData.compactMap { dayData -> (Date, Int)? in
+            guard let date = dateFormatter.date(from: dayData.vDate), let val = Int(dayData.value) else { return nil }
             if date >= start && date <= end {
-                return Int(dayData.value)
+                return (date, val)
             }
             return nil
         }
+        let filtered = filteredPairs.map { $0.1 }
 
         guard !filtered.isEmpty else {
             resetHeartRateUI()
@@ -540,11 +708,17 @@ final class HeartRateViewController: AppBaseViewController {
         avgCard.updateValue("\(filtered.reduce(0, +) / filtered.count)")
 
         // Show latest (most recent in range)
-        if let latest = filtered.last {
-            valueLabel.text = "\(latest) times/min"
+        if let latestPair = filteredPairs.sorted(by: { $0.0 < $1.0 }).last {
+            let latestDate = latestPair.0
+            let latestValue = latestPair.1
+            timeLabel.text = weekdayFormatter.string(from: latestDate)
+            valueLabel.text = "\(latestValue) times/min"
+            heartRateTestValue.text = "\(latestValue) times/min"
         }
-    }
 
+        // Populate chart with week/month data
+        populateWeekMonthChart()
+    }
     private func processHeartRateData(_ data: [GetRingDataByTypeResponse.RingData]) {
 
         let values = data.compactMap { Int($0.value) }
@@ -554,9 +728,187 @@ final class HeartRateViewController: AppBaseViewController {
         maxCard.updateValue("\(values.max()!)")
         avgCard.updateValue("\(values.reduce(0, +) / values.count)")
 
-        if let latest = values.first {
-            valueLabel.text = "\(latest) times/min"
+        if let latest = data.first, let latestValue = Int(latest.value) {
+            heartRateTestValue.text = "\(latestValue) times/min"
+            valueLabel.text = "\(latestValue) times/min"
+
+            // Show time for latest entry
+            let ts = TimeInterval(latest.timestamp)
+            let date = Date(timeIntervalSince1970: ts)
+            let timeFormatter = DateFormatter()
+            timeFormatter.dateFormat = "HH:mm"
+            timeLabel.text = timeFormatter.string(from: date)
         }
+        
+        // Populate chart with day data
+        populateDailyChart(data)
+    }
+
+    // MARK: - Chart Population
+    private func populateDailyChart(_ data: [GetRingDataByTypeResponse.RingData]) {
+        var entries: [ChartDataEntry] = []
+
+        data.forEach { healthData in
+            let timestamp = Int(healthData.timestamp)
+            let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+            let calendar = Calendar.current
+            let components = calendar.dateComponents([.hour, .minute], from: date)
+            
+            let hour = Float(components.hour ?? 0)
+            let minute = Float(components.minute ?? 0)
+            let hourFraction = hour + (minute / 60.0)
+            
+            if let value = Float(healthData.value) {
+                entries.append(ChartDataEntry(x: Double(hourFraction), y: Double(value)))
+            }
+        }
+
+        let sortedEntries = entries.sorted { $0.x < $1.x }
+        
+        guard !sortedEntries.isEmpty else {
+            healthDataChart.data = nil
+            healthDataChart.setNeedsDisplay()
+            return
+        }
+
+        // Create line dataset
+        let dataSet = LineChartDataSet(entries: sortedEntries, label: "Heart Rate")
+        dataSet.drawValuesEnabled = false
+        dataSet.setColor(.systemRed)
+        dataSet.setCircleColor(.systemBlue)
+        dataSet.circleRadius = 4
+
+        // Set Y-axis maximum
+        if let maxValue = sortedEntries.map({ $0.y }).max() {
+            healthDataChart.leftAxis.axisMaximum = maxValue + 30
+        }
+
+        // Create line data and set to chart
+        let lineData = LineChartData(dataSets: [dataSet])
+        healthDataChart.data = lineData
+
+        // Move to latest data point
+        if let lastEntry = sortedEntries.last {
+            healthDataChart.moveViewToX(lastEntry.x)
+        }
+
+        healthDataChart.xAxis.axisMaximum = (sortedEntries.last?.x ?? 0) + 1
+        healthDataChart.setNeedsDisplay()
+    }
+
+    private func populateWeekMonthChart() {
+        var entries: [ChartDataEntry] = []
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        var dayCount = 0
+        var dayLabels: [String] = []
+
+        switch selectedRange {
+        case .week:
+            guard let startDate = weekStartDate else { return }
+            let weekDays = ["M", "T", "W", "T", "F", "S", "S"]
+            let calendar = Calendar.current
+            
+            for i in 0..<7 {
+                let currentDate = calendar.date(byAdding: .day, value: i, to: startDate)!
+                let dateString = dateFormatter.string(from: currentDate)
+                
+                // Find data for this date
+                if let dayData = heartRateDayData.first(where: { $0.vDate == dateString }) {
+                    if let value = Float(dayData.value) {
+                        entries.append(ChartDataEntry(x: Double(i), y: Double(value)))
+                    }
+                }
+                
+                // Add day label
+                let weekdayComponent = calendar.component(.weekday, from: currentDate)
+                dayLabels.append(weekDays[(weekdayComponent + 5) % 7])
+            }
+            
+            // Configure X-axis for week
+            let xAxis = healthDataChart.xAxis
+            xAxis.valueFormatter = WeekValueFormatter(dayLabels: dayLabels)
+            xAxis.granularity = 1.0
+            xAxis.labelCount = 7
+            xAxis.axisMinimum = -0.5
+            xAxis.axisMaximum = 6.5
+            
+            // Enable dragging and zooming for week chart (only horizontal zoom)
+            healthDataChart.dragEnabled = true
+            healthDataChart.setScaleEnabled(true)
+            healthDataChart.pinchZoomEnabled = true
+            healthDataChart.scaleXEnabled = true
+            healthDataChart.scaleYEnabled = false
+            
+            // Set visible range to show all 7 days at once
+            healthDataChart.setVisibleXRangeMaximum(7.5)
+            healthDataChart.fitScreen()
+
+        case .month:
+            guard let startDate = monthStartDate else { return }
+            let calendar = Calendar.current
+            let range = calendar.range(of: .day, in: .month, for: startDate)!
+            let daysInMonth = range.count
+            
+            for i in 0..<daysInMonth {
+                let currentDate = calendar.date(byAdding: .day, value: i, to: startDate)!
+                let dateString = dateFormatter.string(from: currentDate)
+                
+                // Find data for this date
+                if let dayData = heartRateDayData.first(where: { $0.vDate == dateString }) {
+                    if let value = Float(dayData.value) {
+                        entries.append(ChartDataEntry(x: Double(i), y: Double(value)))
+                    }
+                }
+            }
+            
+            // Configure X-axis for month
+            let xAxis = healthDataChart.xAxis
+            xAxis.valueFormatter = MonthValueFormatter(daysInMonth: daysInMonth)
+            xAxis.granularity = 1.0
+            xAxis.labelCount = min(6, daysInMonth)
+            xAxis.axisMinimum = 0
+            xAxis.axisMaximum = Double(daysInMonth - 1)
+            // Ensure only horizontal scaling
+            healthDataChart.dragEnabled = true
+            healthDataChart.setScaleEnabled(true)
+            healthDataChart.pinchZoomEnabled = true
+            healthDataChart.scaleXEnabled = true
+            healthDataChart.scaleYEnabled = false
+
+        default:
+            return
+        }
+
+        guard !entries.isEmpty else {
+            healthDataChart.data = nil
+            healthDataChart.setNeedsDisplay()
+            return
+        }
+
+        // Create line dataset
+        let dataSet = LineChartDataSet(entries: entries, label: "Heart Rate")
+        dataSet.drawValuesEnabled = false
+        dataSet.setColor(.systemRed)
+        dataSet.setCircleColor(.systemBlue)
+        dataSet.circleRadius = 4
+
+        // Set Y-axis maximum
+        if let maxValue = entries.map({ $0.y }).max() {
+            healthDataChart.leftAxis.axisMaximum = maxValue + 30
+        }
+
+        // Create line data and set to chart
+        let lineData = LineChartData(dataSets: [dataSet])
+        healthDataChart.data = lineData
+        
+        // Move to latest data point (focused on last entry)
+        if let lastEntry = entries.last {
+            healthDataChart.moveViewToX(lastEntry.x)
+        }
+        
+        healthDataChart.setNeedsDisplay()
     }
 
     private func resetHeartRateUI() {
@@ -565,5 +917,83 @@ final class HeartRateViewController: AppBaseViewController {
         avgCard.updateValue("--")
         heartRateTestValue.text = "-- times/min"
         valueLabel.text = "-- times/min"
+        timeLabel.text = "--:--"
+        // Clear chart data when there is no data to display
+        healthDataChart.data = nil
+        healthDataChart.setNeedsDisplay()
+    }
+}
+
+// MARK: - ChartViewDelegate
+extension HeartRateViewController: ChartViewDelegate {
+    func chartValueSelected(_ chartView: ChartViewBase, entry: ChartDataEntry, highlight: Highlight) {
+        let heartRate = Int(entry.y)
+
+        switch selectedRange {
+        case .day:
+            let hour = Int(entry.x)
+            let minute = Int((entry.x - Double(hour)) * 60)
+            let timeFormatted = String(format: "%02d:%02d", hour, minute)
+            timeLabel.text = timeFormatted
+            valueLabel.text = "\(heartRate) times/min"
+
+        case .week:
+            guard let start = weekStartDate else { return }
+            let index = Int(round(entry.x))
+            if let date = calendar.date(byAdding: .day, value: index, to: start) {
+                timeLabel.text = weekdayFormatter.string(from: date)
+                valueLabel.text = "\(heartRate) times/min"
+            }
+
+        case .month:
+            guard let start = monthStartDate else { return }
+            let index = Int(round(entry.x))
+            if let date = calendar.date(byAdding: .day, value: index, to: start) {
+                timeLabel.text = weekdayFormatter.string(from: date)
+                valueLabel.text = "\(heartRate) times/min"
+            }
+        }
+    }
+
+    func chartValueNothingSelected(_ chartView: ChartViewBase) {
+        // Handle when nothing is selected
+    }
+}
+
+// MARK: - TimeValueFormatter
+class TimeValueFormatter: AxisValueFormatter {
+    func stringForValue(_ value: Double, axis: AxisBase?) -> String {
+        let hour = Int(value)
+        let minute = Int((value - Double(hour)) * 60)
+        return String(format: "%02d:%02d", hour, minute)
+    }
+}
+
+// MARK: - WeekValueFormatter
+class WeekValueFormatter: AxisValueFormatter {
+    let dayLabels: [String]
+    
+    init(dayLabels: [String]) {
+        self.dayLabels = dayLabels
+    }
+    
+    func stringForValue(_ value: Double, axis: AxisBase?) -> String {
+        let index = Int(value)
+        guard index >= 0 && index < dayLabels.count else { return "" }
+        return dayLabels[index]
+    }
+}
+
+// MARK: - MonthValueFormatter
+class MonthValueFormatter: AxisValueFormatter {
+    let daysInMonth: Int
+    
+    init(daysInMonth: Int) {
+        self.daysInMonth = daysInMonth
+    }
+    
+    func stringForValue(_ value: Double, axis: AxisBase?) -> String {
+        let day = Int(value) + 1
+        return String(day)
     }
 }

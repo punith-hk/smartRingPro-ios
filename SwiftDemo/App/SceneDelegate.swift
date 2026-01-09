@@ -53,8 +53,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         // 🔥 FORCE SDK + BLE INIT
         _ = YCProduct.shared
+        
+        // ✅ Initialize centralized BLE state manager (triggers notification listener)
+        _ = BLEStateManager.shared
 
-        // 🔔 Observe BLE state globally
+        // 🔔 Observe BLE state globally (for backward compatibility with existing code)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(deviceStateChanged(_:)),
@@ -63,7 +66,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         )
 
         bleInitialized = true
-        print("✅ BLE SDK initialized after login")
+        print("✅ BLE SDK + State Manager initialized after login")
     }
 
     // MARK: - Global BLE State Listener
