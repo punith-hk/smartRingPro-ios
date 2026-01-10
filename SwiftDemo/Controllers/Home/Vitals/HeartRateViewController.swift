@@ -60,6 +60,9 @@ final class HeartRateViewController: AppBaseViewController {
     private var heartRateValues: [Int] = []
     // Store all day-wise data for week/month
     private var heartRateDayData: [GetRingDataByDayResponse.DayData] = []
+    
+    // MARK: - BLE Sync
+    private var syncHelper: HeartRateSyncHelper?
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -74,12 +77,7 @@ final class HeartRateViewController: AppBaseViewController {
         updateActionUI()
         
         print("🟡 HeartRateVC - viewDidLoad")
-        print(BLEStateManager.shared.debugInfo())
-        
-        // Check initial BLE connection state from manager
-        checkInitialBLEConnection()
-        
-       fetchHeartRateData()
+//       fetchHeartRateData()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -87,10 +85,25 @@ final class HeartRateViewController: AppBaseViewController {
         
         print("🟡 HeartRateVC - viewWillAppear")
         
-        // Listen for BLE state changes
-        BLEStateManager.shared.onStateChanged = { [weak self] state in
-            print("🔵 HeartRateVC received state change: \(state)")
-            self?.handleBLEStateChange(state)
+        // Check if device is connected before running BLE logic
+        if DeviceSessionManager.shared.isDeviceConnected() {
+            print("✅ HeartRateVC - Device connected, setting up BLE listeners and syncing data")
+            print(BLEStateManager.shared.debugInfo())
+            
+            // Check initial BLE connection state
+            checkInitialBLEConnection()
+            
+            // Auto-sync heart rate data from ring when tab opens
+            syncHelper = HeartRateSyncHelper(listener: self)
+            syncHelper?.startSync()
+            
+            // Listen for BLE state changes
+            BLEStateManager.shared.onStateChanged = { [weak self] state in
+                print("🔵 HeartRateVC received state change: \(state)")
+                self?.handleBLEStateChange(state)
+            }
+        } else {
+            print("❌ HeartRateVC - No device connected, skipping BLE logic")
         }
     }
 
@@ -1039,5 +1052,19 @@ class MonthValueFormatter: AxisValueFormatter {
     func stringForValue(_ value: Double, axis: AxisBase?) -> String {
         let day = Int(value) + 1
         return String(day)
+    }
+}
+
+// MARK: - Heart Rate Sync
+extension HeartRateViewController: HeartRateSyncHelper.HeartRateSyncListener {
+    func onHeartRateDataFetched(_ data: [YCHealthDataHeartRate]) {
+        print("✅ HeartRateVC - Received \(data.count) heart rate entries from ring")
+        // Phase 2: Process and sync to API
+        // Phase 3: Display in UI
+    }
+    
+    func onSyncFailed(error: String) {
+        print("❌ HeartRateVC - Sync failed: \(error)")
+        // Optional: Show toast to user
     }
 }

@@ -76,10 +76,25 @@ class ConnectedDeviceViewController: AppBaseViewController {
             name: YCProduct.deviceStateNotification,
             object: nil
         )
+
+        // Listen for temperature unit changes (others may change this)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(temperatureUnitChangedNotification(_:)),
+            name: .temperatureUnitChanged,
+            object: nil
+        )
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func temperatureUnitChangedNotification(_ notification: Notification) {
+        // Show a friendly toast describing the newly selected temperature unit
+        let unit = AppSettingsManager.shared.getTemperatureUnit()
+        let name = unit == .fahrenheit ? "Fahrenheit (°F)" : "Celsius (°C)"
+        Toast.show(message: "Temperature unit set to \(name)", in: self.view)
     }
     
     private func populateCachedDeviceInfo() {
@@ -286,6 +301,9 @@ class ConnectedDeviceViewController: AppBaseViewController {
 
             // 2️⃣ Push to ring
             self.updateRingHealthMonitoring(interval)
+
+            // Show a user-friendly toast informing user of new interval
+            Toast.show(message: "Health monitor interval set to \(interval.rawValue)", in: self.view)
         }
 
         present(popup, animated: true)
@@ -443,9 +461,24 @@ class ConnectedDeviceViewController: AppBaseViewController {
             fetchAndUpdateDeviceBasicInfo()
 
         case .disconnected:
-            // 🔥 DO NOT show "Disconnected"
-            // 🔥 Keep user confidence: just reconnecting
-            startBlinking()
+            // Sometimes the SDK emits transient 'disconnected' while the peripheral object
+            // is still available. If the current peripheral matches the saved device,
+            // treat this as a transient event and keep the connected UI (update battery).
+            if let peripheral = YCProduct.shared.currentPeripheral {
+                let currentMac = peripheral.macAddress.uppercased()
+                let savedMac = DeviceSessionManager.shared.connectedDeviceMac()?.uppercased()
+                if let saved = savedMac, saved == currentMac {
+                    print("⚠️ Received disconnected for same peripheral (\(currentMac)). Preserving connected UI and refreshing info.")
+                    populateConnectedDeviceInfo()
+                    fetchAndUpdateDeviceBasicInfo()
+                } else {
+                    print("❌ Device disconnected (different peripheral) - start blinking")
+                    startBlinking()
+                }
+            } else {
+                print("❌ Device disconnected (no currentPeripheral) - start blinking")
+                startBlinking()
+            }
 
         default:
             break
