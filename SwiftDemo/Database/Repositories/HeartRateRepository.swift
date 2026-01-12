@@ -17,16 +17,26 @@ class HeartRateRepository {
     /// Save new batch of heart rate readings from BLE device
     /// Equivalent to Android's saveNewBatch(readings: List<Pair<Long, String>>)
     func saveNewBatch(readings: [(timestamp: Int64, bpm: Int)], completion: @escaping (Bool, Int) -> Void) {
+        print("[\(TAG)] 🔵 saveNewBatch called with \(readings.count) readings")
+        
         guard !readings.isEmpty else {
             print("[\(TAG)] ⚠️ No readings to save")
             completion(true, 0)
             return
         }
         
+        print("[\(TAG)] 🔄 Starting background task...")
+        
         CoreDataManager.shared.performBackgroundTask { [weak self] backgroundContext in
-            guard let self = self else { return }
+            guard let self = self else {
+                print("[HeartRateRepository] ⚠️ Self is nil in background task")
+                return
+            }
+            
+            print("[\(self.TAG)] 🔵 Background task started")
             
             let batchTime = Int64(Date().timeIntervalSince1970)
+            print("[\(self.TAG)] 📅 Batch time: \(batchTime)")
             
             // Get existing timestamps to check for duplicates
             let existingTimestamps = self.getExistingTimestamps(in: backgroundContext)
@@ -178,5 +188,53 @@ class HeartRateRepository {
             print("[\(TAG)] ❌ Failed to fetch existing timestamps: \(error)")
             return []
         }
+    }
+    
+    // MARK: - Debug Methods
+    
+    /// Print all saved heart rate data (for debugging)
+    func printAllData() {
+        let all = getAll()
+        print("[\(TAG)] 📊 Total records in database: \(all.count)")
+        print("[\(TAG)] 📋 Printing all entries:")
+        print("----------------------------------------")
+        
+        for (index, entry) in all.enumerated() {
+            let date = Date(timeIntervalSince1970: TimeInterval(entry.timestamp))
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+            let dateStr = formatter.string(from: date)
+            
+            print("  \(index + 1). BPM: \(entry.bpm) | Time: \(dateStr) | Timestamp: \(entry.timestamp)")
+        }
+        print("----------------------------------------")
+    }
+    
+    /// Print summary statistics
+    func printSummary() {
+        let all = getAll()
+        guard !all.isEmpty else {
+            print("[\(TAG)] ℹ️ Database is empty")
+            return
+        }
+        
+        let bpmValues = all.map { Int($0.bpm) }
+        let minBpm = bpmValues.min() ?? 0
+        let maxBpm = bpmValues.max() ?? 0
+        let avgBpm = bpmValues.reduce(0, +) / bpmValues.count
+        
+        let oldestDate = all.last?.timestampAsDate ?? Date()
+        let newestDate = all.first?.timestampAsDate ?? Date()
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        
+        print("[\(TAG)] 📊 Database Summary:")
+        print("  Total entries: \(all.count)")
+        print("  Min BPM: \(minBpm)")
+        print("  Max BPM: \(maxBpm)")
+        print("  Avg BPM: \(avgBpm)")
+        print("  Oldest: \(formatter.string(from: oldestDate))")
+        print("  Newest: \(formatter.string(from: newestDate))")
     }
 }

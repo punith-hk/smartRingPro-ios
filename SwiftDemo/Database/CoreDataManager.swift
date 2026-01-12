@@ -89,4 +89,28 @@ final class CoreDataManager {
             print("❌ Failed to delete \(entityName) data: \(error)")
         }
     }
+    
+    // MARK: - Debug Helpers
+    
+    /// Print database file location (for manual inspection)
+    func printDatabaseLocation() {
+        if let storeURL = persistentContainer.persistentStoreDescriptions.first?.url {
+            print("📂 Database location: \(storeURL.path)")
+            print("💡 Copy this path and open in DB Browser for SQLite")
+            print("💡 Or use: sqlite3 '\(storeURL.path)'")
+        }
+    }
+    
+    /// Get count of records in an entity
+    func getRecordCount(for entityName: String) -> Int {
+        let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: entityName)
+        do {
+            let count = try context.count(for: fetchRequest)
+            print("📊 \(entityName): \(count) records")
+            return count
+        } catch {
+            print("❌ Failed to count \(entityName): \(error)")
+            return 0
+        }
+    }
 }

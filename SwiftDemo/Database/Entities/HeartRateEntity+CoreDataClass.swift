@@ -85,7 +85,7 @@ extension HeartRateEntity {
     }
     
     /// Debug description
-    var debugDescription: String {
+    public override var debugDescription: String {
         return "HeartRate(timestamp: \(timestamp), bpm: \(bpm), date: \(formattedTimestamp))"
     }
 }

@@ -77,7 +77,7 @@ final class HeartRateViewController: AppBaseViewController {
         updateActionUI()
         
         print("🟡 HeartRateVC - viewDidLoad")
-//       fetchHeartRateData()
+//       fetchHeartRateData() // Removed: Will be called in viewWillAppear after syncHelper is created
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -85,16 +85,19 @@ final class HeartRateViewController: AppBaseViewController {
         
         print("🟡 HeartRateVC - viewWillAppear")
         
-        // Check if device is connected before running BLE logic
+        // Always create syncHelper and fetch from local DB (works offline)
+        syncHelper = HeartRateSyncHelper(listener: self)
+        fetchHeartRateData() // Load from local DB
+        
+        // Check if device is connected before running BLE sync logic
         if DeviceSessionManager.shared.isDeviceConnected() {
-            print("✅ HeartRateVC - Device connected, setting up BLE listeners and syncing data")
+            print("✅ HeartRateVC - Device connected, syncing from BLE")
             print(BLEStateManager.shared.debugInfo())
             
             // Check initial BLE connection state
             checkInitialBLEConnection()
             
             // Auto-sync heart rate data from ring when tab opens
-            syncHelper = HeartRateSyncHelper(listener: self)
             syncHelper?.startSync()
             
             // Listen for BLE state changes
@@ -103,7 +106,7 @@ final class HeartRateViewController: AppBaseViewController {
                 self?.handleBLEStateChange(state)
             }
         } else {
-            print("❌ HeartRateVC - No device connected, skipping BLE logic")
+            print("❌ HeartRateVC - No device connected, showing local data only")
         }
     }
 
@@ -690,20 +693,10 @@ final class HeartRateViewController: AppBaseViewController {
 
         switch selectedRange {
         case .day:
-            HealthService.shared.getRingDataByType(
-                userId: userId,
-                type: "heart_rate",
-                selectedDate: selectedDateString()
-            ) { [weak self] result in
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    if case .success(let response) = result {
-                        self.processHeartRateData(response.data)
-                    } else {
-                        self.resetHeartRateUI()
-                    }
-                }
-            }
+            // 🔄 NEW: Fetch from local database instead of API
+            print("📱 Fetching heart rate data for day from LOCAL DB")
+            syncHelper?.fetchDataForDate(userId: userId, date: selectedDate)
+            
         case .week, .month:
             HealthService.shared.getRingDataByDay(
                 userId: userId,
@@ -1058,13 +1051,43 @@ class MonthValueFormatter: AxisValueFormatter {
 // MARK: - Heart Rate Sync
 extension HeartRateViewController: HeartRateSyncHelper.HeartRateSyncListener {
     func onHeartRateDataFetched(_ data: [YCHealthDataHeartRate]) {
-        print("✅ HeartRateVC - Received \(data.count) heart rate entries from ring")
-        // Phase 2: Process and sync to API
-        // Phase 3: Display in UI
+        print("✅ HeartRateVC - Received \(data.count) heart rate entries from ring and saved to DB")
+        
+        // 🔄 Reload graph with updated local DB data
+        print("🔄 HeartRateVC - Reloading graph with fresh data from local DB")
+        fetchHeartRateData()
     }
     
     func onSyncFailed(error: String) {
         print("❌ HeartRateVC - Sync failed: \(error)")
-        // Optional: Show toast to user
+    }
+    
+    func onLocalDataFetched(_ data: [(timestamp: Int64, bpm: Int)]) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            print("📊 HeartRateVC - Received \(data.count) entries from local DB")
+            
+            // Convert local DB format to API format for chart compatibility
+            let chartData: [GetRingDataByTypeResponse.RingData] = data.map { item in
+                GetRingDataByTypeResponse.RingData(
+                    id: 0,
+                    user_id: 0,
+                    type: "heart_rate",
+                    value: String(item.bpm),
+                    timestamp: Int(item.timestamp),
+                    created_at: "",
+                    updated_at: ""
+                )
+            }
+            
+            // Use existing processHeartRateData method
+            if !chartData.isEmpty {
+                self.processHeartRateData(chartData)
+            } else {
+                print("ℹ️ No data found for selected date in local DB")
+                self.resetHeartRateUI()
+            }
+        }
     }
 }
