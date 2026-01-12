@@ -13,111 +13,72 @@ class HeartRateSyncHelper {
     private let TAG = "HeartRateSyncHelper"
     private let repository: HeartRateRepository
     
+    // Track last uploaded date to prevent duplicate uploads
+    private var lastUploadedDateString: String?
+    
     init(listener: HeartRateSyncListener) {
         self.listener = listener
         self.repository = HeartRateRepository()
-        print("[HeartRateSyncHelper] ✅ Initialized with repository")
     }
     
     func startSync() {
         guard BLEStateManager.shared.hasConnectedDevice() else {
-            print("[\(TAG)] ❌ No BLE device connected, skipping heart rate sync")
             listener?.onSyncFailed(error: "No device connected")
             return
         }
         
-        print("[\(TAG)] 🟢 Starting heart rate sync from BLE device")
+        print("[\(TAG)] 🔄 Starting BLE sync...")
         fetchHeartRateFromRing()
     }
     
     private func fetchHeartRateFromRing() {
         YCProduct.queryHealthData(dataType: YCQueryHealthDataType.heartRate) { [weak self] state, datas in
-            guard let self = self else { 
-                print("[HeartRateSyncHelper] ⚠️ Self is nil in completion handler")
-                return 
-            }
-            
-            print("[\(self.TAG)] 🔵 Completion handler called")
-            print("[\(self.TAG)] 📦 State received: \(state)")
-            print("[\(self.TAG)] 📦 Data type: \(type(of: datas))")
-            print("[\(self.TAG)] 📦 Data: \(String(describing: datas))")
+            guard let self = self else { return }
             
             switch state {
             case .succeed:
-                print("[\(self.TAG)] ✅ State is .succeed")
                 if let heartRateDatas = datas as? [YCHealthDataHeartRate] {
-                    print("[\(self.TAG)] ✅ Successfully cast to [YCHealthDataHeartRate], count: \(heartRateDatas.count)")
+                    print("[\(self.TAG)] ✅ Fetched \(heartRateDatas.count) entries from BLE")
                     self.processHeartRateData(heartRateDatas)
                 } else {
-                    print("[\(self.TAG)] ❌ Failed to cast data to [YCHealthDataHeartRate]")
-                    print("[\(self.TAG)] ❌ Actual data type: \(type(of: datas))")
+                    print("[\(self.TAG)] ❌ Invalid data format")
                     self.listener?.onSyncFailed(error: "Data type mismatch")
                 }
             case .noRecord:
-                print("[\(self.TAG)] ℹ️ No heart rate data found on device")
+                print("[\(self.TAG)] ℹ️ No data on device")
                 self.listener?.onHeartRateDataFetched([])
-            case .unavailable:
-                print("[\(self.TAG)] ⚠️ Heart rate data unavailable")
-                self.listener?.onSyncFailed(error: "Data unavailable")
-            case .failed:
-                print("[\(self.TAG)] ❌ Failed to fetch heart rate data")
+            case .unavailable, .failed:
+                print("[\(self.TAG)] ❌ BLE fetch failed: \(state)")
                 self.listener?.onSyncFailed(error: "Fetch failed")
             @unknown default:
-                print("[\(self.TAG)] ❓ Unknown state received: \(state)")
                 self.listener?.onSyncFailed(error: "Unknown error")
             }
         }
     }
     
     private func processHeartRateData(_ datas: [YCHealthDataHeartRate]) {
-        print("[\(TAG)] 📊 Total entries fetched from BLE: \(datas.count)")
-        
-        // Print last 5 entries for debugging
-        if !datas.isEmpty {
-            printLast5Entries(datas)
-        }
-        
-        // Phase 2: Save to local database (deduplication happens in repository)
-        // Notification to listener will happen AFTER save completes
         saveToLocalDatabase(datas)
     }
     
     private func saveToLocalDatabase(_ datas: [YCHealthDataHeartRate]) {
-        print("[\(TAG)] 💾 Saving to local database...")
-        
-        // Convert BLE data to repository format
         let readings: [(timestamp: Int64, bpm: Int)] = datas.map { data in
-            // Extract timestamp and heart rate from YCHealthDataHeartRate
-            let timestamp = Int64(data.startTimeStamp)
-            let bpm = Int(data.heartRate)
-            return (timestamp, bpm)
+            (timestamp: Int64(data.startTimeStamp), bpm: Int(data.heartRate))
         }
         
-        print("[\(TAG)] 📝 Prepared \(readings.count) readings for DB insertion")
-        
-        // Save to database using instance repository
         repository.saveNewBatch(readings: readings) { [weak self] success, savedCount in
             guard let self = self else { return }
             
             if success {
-                print("[\(self.TAG)] ✅ Database save complete: \(savedCount) new entries saved")
-                print("[\(self.TAG)] 🔄 Duplicates filtered: \(readings.count - savedCount)")
+                print("[\(self.TAG)] 💾 Saved \(savedCount) new, \(readings.count - savedCount) duplicates")
                 
-                // Print database summary
-                self.repository.printSummary()
+                // Clear upload flag when new data is saved
+                if savedCount > 0 {
+                    self.lastUploadedDateString = nil
+                }
                 
-                // Print database file location for manual inspection
-                CoreDataManager.shared.printDatabaseLocation()
-                
-                // ✅ Notify listener AFTER save is complete (on main thread)
                 DispatchQueue.main.async {
                     self.listener?.onHeartRateDataFetched(datas)
                 }
-                
-                // Phase 3: Later sync new entries to API
-                // if savedCount > 0 {
-                //     self.syncToAPI(newEntries)
-                // }
             } else {
                 print("[\(self.TAG)] ❌ Database save failed")
                 DispatchQueue.main.async {
@@ -127,46 +88,26 @@ class HeartRateSyncHelper {
         }
     }
     
-    private func printLast5Entries(_ datas: [YCHealthDataHeartRate]) {
-        let last5 = Array(datas.suffix(5))
-        print("[\(TAG)] 🔥 Last 5 Heart Rate Entries:")
-        for (index, entry) in last5.enumerated() {
-            print("  \(index + 1). \(entry.toString)")
-        }
-    }
-    
     // MARK: - Fetch Data from Local DB
     
     /// Fetch heart rate data for a specific date from local database
     /// Also triggers API comparison in background
     func fetchDataForDate(userId: Int, date: Date) {
-        print("[\(TAG)] 📅 Fetching data from local DB for date: \(date)")
-        
-        // Calculate start and end of day
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
         guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
-            print("[\(TAG)] ❌ Failed to calculate end of day")
             listener?.onLocalDataFetched([])
             return
         }
         
-        // Fetch from repository
         let entries = repository.getByDateRange(start: startOfDay, end: endOfDay)
-        print("[\(TAG)] 📊 Found \(entries.count) entries for selected date")
+        let sortedData = entries.map { (timestamp: $0.timestamp, bpm: Int($0.bpm)) }
+            .sorted { $0.timestamp < $1.timestamp }
         
-        // Convert to simple format for chart
-        let data: [(timestamp: Int64, bpm: Int)] = entries.map { entry in
-            (timestamp: entry.timestamp, bpm: Int(entry.bpm))
-        }
-        
-        // Sort by timestamp ascending (oldest first, for chart)
-        let sortedData = data.sorted { $0.timestamp < $1.timestamp }
-        
-        print("[\(TAG)] ✅ Returning \(sortedData.count) entries to listener")
+        print("[\(TAG)] 📊 Loaded \(sortedData.count) entries from local DB")
         listener?.onLocalDataFetched(sortedData)
         
-        // 🔄 Simultaneously compare with API data in background
+        // Compare with API in background
         compareAndSyncWithAPI(userId: userId, date: date, localData: sortedData)
     }
     
@@ -178,7 +119,10 @@ class HeartRateSyncHelper {
         dateFormatter.dateFormat = "M/d/yyyy"
         let dateString = dateFormatter.string(from: date)
         
-        print("[\(TAG)] 🔄 Comparing local data with API for date: \(dateString)")
+        // Skip if already uploaded this date
+        if lastUploadedDateString == dateString {
+            return
+        }
         
         HealthService.shared.getRingDataByType(
             userId: userId,
@@ -190,48 +134,65 @@ class HeartRateSyncHelper {
             switch result {
             case .success(let response):
                 let apiData = response.data
-                print("[\(self.TAG)] 📊 Comparison - Local: \(localData.count) | API: \(apiData.count)")
-                
-                // Compare counts
                 let countMatches = localData.count == apiData.count
                 
-                // Compare last entry (timestamp + value) if both have data
-                var lastEntryMatches = true
-                if let localLast = localData.last, let apiLast = apiData.last {
-                    let apiTimestamp = Int64(apiLast.timestamp)
-                    let apiBpm = Int(apiLast.value) ?? 0
-                    
-                    lastEntryMatches = (localLast.timestamp == apiTimestamp && localLast.bpm == apiBpm)
-                    
-                    print("[\(self.TAG)] 🔍 Last Entry - Local: [\(localLast.timestamp), \(localLast.bpm)] | API: [\(apiTimestamp), \(apiBpm)]")
+                // Compare latest entry (API returns descending, local is ascending)
+                var latestMatches = true
+                if let localLatest = localData.last, let apiLatest = apiData.first {
+                    let apiTimestamp = Int64(apiLatest.timestamp)
+                    let apiBpm = Int(apiLatest.value) ?? 0
+                    latestMatches = (localLatest.timestamp == apiTimestamp && localLatest.bpm == apiBpm)
                 }
                 
-                // If mismatch detected, upload local data to API
-                if !countMatches || !lastEntryMatches {
-                    print("[\(self.TAG)] ⚠️ Mismatch detected! Uploading local data to API...")
+                if !countMatches || !latestMatches {
+                    print("[\(self.TAG)] ⚠️ API mismatch - Local: \(localData.count), API: \(apiData.count)")
                     self.uploadHeartRateDataToAPI(userId: userId, date: date, data: localData)
                 } else {
-                    print("[\(self.TAG)] ✅ Local and API data match, no upload needed")
+                    print("[\(self.TAG)] ✅ API synced")
                 }
                 
             case .failure(let error):
-                print("[\(self.TAG)] ❌ API fetch failed: \(error) - Skipping comparison")
+                print("[\(self.TAG)] ❌ API comparison failed: \(error)")
             }
         }
     }
     
     /// Upload heart rate data to API for a specific date
-    /// TODO: Implement with POST API endpoint and payload structure
     private func uploadHeartRateDataToAPI(userId: Int, date: Date, data: [(timestamp: Int64, bpm: Int)]) {
-        print("[\(TAG)] 🚀 uploadHeartRateDataToAPI called")
-        print("[\(TAG)] 📤 User ID: \(userId)")
-        print("[\(TAG)] 📤 Date: \(date)")
-        print("[\(TAG)] 📤 Total entries to upload: \(data.count)")
+        guard !data.isEmpty else { return }
         
-        // TODO: Implement POST API call with payload
-        // Payload structure to be provided by user
-        // Format: { userId, date, heartRateData: [...] }
+        let values: [RingValueEntry] = data.map { RingValueEntry(value: String($0.bpm), timestamp: $0.timestamp) }
+        let latestEntry = data.last
         
-        print("[\(TAG)] ⏳ Upload function not yet implemented - waiting for API details")
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "M/d/yyyy"
+        let dateString = dateFormatter.string(from: date)
+        
+        print("[\(TAG)] 📤 Uploading \(values.count) entries to API...")
+        
+        HealthService.shared.saveHealthDataBatch(
+            userId: userId,
+            type: "heart_rate",
+            values: values
+        ) { [weak self] result in
+            guard let self = self else { return }
+            
+            switch result {
+            case .success(let response):
+                print("[\(self.TAG)] ✅ Upload successful: \(response.message)")
+                
+                // Save last uploaded entry
+                if let latest = latestEntry {
+                    UserDefaults.standard.set(latest.timestamp, forKey: "last_uploaded_heart_rate_timestamp")
+                    UserDefaults.standard.set(latest.bpm, forKey: "last_uploaded_heart_rate_value")
+                }
+                
+                // Mark date as uploaded
+                self.lastUploadedDateString = dateString
+                
+            case .failure(let error):
+                print("[\(self.TAG)] ❌ Upload failed: \(error)")
+            }
+        }
     }
 }

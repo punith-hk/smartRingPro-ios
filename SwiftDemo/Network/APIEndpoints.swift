@@ -84,6 +84,19 @@ enum APIEndpoints {
     ) -> String {
         return "getRingDataByDay?user_id=\(userId)&type=\(type)"
     }
+    
+    // MARK: - Create/Upload Ring Data
+    static let createRingValues = "CreateRingValues"
+    
+    /// Upload single ring value
+    static func createRingValue(
+        userId: Int,
+        type: String,
+        value: String,
+        timestamp: Int64
+    ) -> String {
+        return "CreateRingValue?user_id=\(userId)&type=\(type)&value=\(value)&timestamp=\(timestamp)"
+    }
 
     // MARK: - Diseases
     static let getDiseaseList = "diseases/list"

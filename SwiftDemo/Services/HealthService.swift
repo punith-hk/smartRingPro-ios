@@ -58,3 +58,61 @@ extension HealthService {
     }
 }
 
+// MARK: - Upload Ring Data
+extension HealthService {
+    
+    /// Upload batch of health data values to API
+    /// - Parameters:
+    ///   - userId: User ID
+    ///   - type: Type of health data (e.g., "heart_rate", "blood_pressure")
+    ///   - values: Array of ring value entries (value + timestamp)
+    ///   - completion: Callback with result
+    func saveHealthDataBatch(
+        userId: Int,
+        type: String,
+        values: [RingValueEntry],
+        completion: @escaping (Result<BatchUploadResponse, NetworkError>) -> Void
+    ) {
+        let request = CreateRingValuesRequest(
+            user_id: userId,
+            type: type,
+            values: values
+        )
+        
+        APIClient.shared.postJSON(
+            endpoint: APIEndpoints.createRingValues,
+            body: request,
+            responseType: BatchUploadResponse.self,
+            completion: completion
+        )
+    }
+    
+    /// Upload single health data value to API
+    /// - Parameters:
+    ///   - userId: User ID
+    ///   - type: Type of health data (e.g., "heart_rate", "blood_pressure")
+    ///   - value: Value as string
+    ///   - timestamp: Unix timestamp in seconds
+    ///   - completion: Callback with result
+    func saveHealthData(
+        userId: Int,
+        type: String,
+        value: String,
+        timestamp: Int64,
+        completion: @escaping (Result<AddUserHealthDataResponse, NetworkError>) -> Void
+    ) {
+        // For GET-style POST (parameters in URL), use empty dictionary
+        APIClient.shared.post(
+            endpoint: APIEndpoints.createRingValue(
+                userId: userId,
+                type: type,
+                value: value,
+                timestamp: timestamp
+            ),
+            body: [:],
+            responseType: AddUserHealthDataResponse.self,
+            completion: completion
+        )
+    }
+}
+

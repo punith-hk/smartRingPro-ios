@@ -1053,7 +1053,7 @@ extension HeartRateViewController: HeartRateSyncHelper.HeartRateSyncListener {
     func onHeartRateDataFetched(_ data: [YCHealthDataHeartRate]) {
         print("✅ HeartRateVC - Received \(data.count) heart rate entries from ring and saved to DB")
         
-        // 🔄 Reload graph with updated local DB data
+        // 🔄 Reload graph with updated local DB data (from BLE sync only)
         print("🔄 HeartRateVC - Reloading graph with fresh data from local DB")
         fetchHeartRateData()
     }
