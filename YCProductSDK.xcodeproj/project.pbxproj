@@ -9,11 +9,14 @@
 /* Begin PBXBuildFile section */
 		19914F0ACEF80BB6D38EE68F /* libPods-SwiftDemo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E870874FA04E877CD9D2884B /* libPods-SwiftDemo.a */; };
 		4BEF9B752DE93FE900439088 /* YCHenAIBloodPressureViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEF9B732DE93FE900439088 /* YCHenAIBloodPressureViewController.swift */; };
-		B2C3D29D2F13EA4300F87124 /* MannaHealData.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D29B2F13EA4300F87124 /* MannaHealData.xcdatamodeld */; };
-		B2FF1BE22F124D36006C8779 /* HeartRateEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FF1BDB2F124D36006C8779 /* HeartRateEntity+CoreDataClass.swift */; };
-		B2FF1BE32F124D36006C8779 /* HeartRateEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FF1BDC2F124D36006C8779 /* HeartRateEntity+CoreDataProperties.swift */; };
-		B2FF1BE42F124D36006C8779 /* HeartRateRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FF1BDE2F124D36006C8779 /* HeartRateRepository.swift */; };
-		B2FF1BE52F124D36006C8779 /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FF1BE02F124D36006C8779 /* CoreDataManager.swift */; };
+		B29AE7672F17EF2B0080E203 /* HeartRateEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE75E2F17EF2B0080E203 /* HeartRateEntity+CoreDataProperties.swift */; };
+		B29AE7682F17EF2B0080E203 /* HeartRateDailyStatsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE7602F17EF2B0080E203 /* HeartRateDailyStatsRepository.swift */; };
+		B29AE7692F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE75C2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataProperties.swift */; };
+		B29AE76A2F17EF2B0080E203 /* HeartRateEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE75D2F17EF2B0080E203 /* HeartRateEntity+CoreDataClass.swift */; };
+		B29AE76B2F17EF2B0080E203 /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE7632F17EF2B0080E203 /* CoreDataManager.swift */; };
+		B29AE76C2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE75B2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataClass.swift */; };
+		B29AE76D2F17EF2B0080E203 /* MannaHealData.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = B29AE7642F17EF2B0080E203 /* MannaHealData.xcdatamodeld */; };
+		B29AE76E2F17EF2B0080E203 /* HeartRateRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE7612F17EF2B0080E203 /* HeartRateRepository.swift */; };
 		CA15818D2754C6B20073C514 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CA15818B2754C6B20073C514 /* Main.storyboard */; };
 		CA15818F2754C6B40073C514 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CA15818E2754C6B40073C514 /* Assets.xcassets */; };
 		CA1581922754C6B40073C514 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CA1581902754C6B40073C514 /* LaunchScreen.storyboard */; };
@@ -88,11 +91,14 @@
 		6CDB37AFE12D152C32B6584F /* Pods_YCProductSDK.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_YCProductSDK.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A75B1B61EE37F0A3F5C14301 /* Pods-ObjcDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ObjcDemo.release.xcconfig"; path = "Target Support Files/Pods-ObjcDemo/Pods-ObjcDemo.release.xcconfig"; sourceTree = "<group>"; };
 		AA999FD1E4B8A9FF39FE17CC /* Pods-ObjcDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ObjcDemo.debug.xcconfig"; path = "Target Support Files/Pods-ObjcDemo/Pods-ObjcDemo.debug.xcconfig"; sourceTree = "<group>"; };
-		B2C3D29C2F13EA4300F87124 /* MannaHealData.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = MannaHealData.xcdatamodel; sourceTree = "<group>"; };
-		B2FF1BDB2F124D36006C8779 /* HeartRateEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HeartRateEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
-		B2FF1BDC2F124D36006C8779 /* HeartRateEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HeartRateEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		B2FF1BDE2F124D36006C8779 /* HeartRateRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateRepository.swift; sourceTree = "<group>"; };
-		B2FF1BE02F124D36006C8779 /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
+		B29AE75B2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HeartRateDailyStatsEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
+		B29AE75C2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HeartRateDailyStatsEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		B29AE75D2F17EF2B0080E203 /* HeartRateEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HeartRateEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
+		B29AE75E2F17EF2B0080E203 /* HeartRateEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HeartRateEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		B29AE7602F17EF2B0080E203 /* HeartRateDailyStatsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateDailyStatsRepository.swift; sourceTree = "<group>"; };
+		B29AE7612F17EF2B0080E203 /* HeartRateRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateRepository.swift; sourceTree = "<group>"; };
+		B29AE7632F17EF2B0080E203 /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
+		B29AE7662F17EF2B0080E203 /* MannaHealData.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = MannaHealData.xcdatamodel; sourceTree = "<group>"; };
 		C8C475C791BC3BEBB8BE75EB /* Pods-SwiftDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SwiftDemo.release.xcconfig"; path = "Target Support Files/Pods-SwiftDemo/Pods-SwiftDemo.release.xcconfig"; sourceTree = "<group>"; };
 		CA1581832754C6B20073C514 /* SwiftDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CA15818C2754C6B20073C514 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -236,30 +242,33 @@
 			path = Pods;
 			sourceTree = "<group>";
 		};
-		B2FF1BDD2F124D36006C8779 /* Entities */ = {
+		B29AE75F2F17EF2B0080E203 /* Entities */ = {
 			isa = PBXGroup;
 			children = (
-				B2FF1BDB2F124D36006C8779 /* HeartRateEntity+CoreDataClass.swift */,
-				B2FF1BDC2F124D36006C8779 /* HeartRateEntity+CoreDataProperties.swift */,
+				B29AE75B2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataClass.swift */,
+				B29AE75C2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataProperties.swift */,
+				B29AE75D2F17EF2B0080E203 /* HeartRateEntity+CoreDataClass.swift */,
+				B29AE75E2F17EF2B0080E203 /* HeartRateEntity+CoreDataProperties.swift */,
 			);
 			path = Entities;
 			sourceTree = "<group>";
 		};
-		B2FF1BDF2F124D36006C8779 /* Repositories */ = {
+		B29AE7622F17EF2B0080E203 /* Repositories */ = {
 			isa = PBXGroup;
 			children = (
-				B2FF1BDE2F124D36006C8779 /* HeartRateRepository.swift */,
+				B29AE7602F17EF2B0080E203 /* HeartRateDailyStatsRepository.swift */,
+				B29AE7612F17EF2B0080E203 /* HeartRateRepository.swift */,
 			);
 			path = Repositories;
 			sourceTree = "<group>";
 		};
-		B2FF1BE12F124D36006C8779 /* Database */ = {
+		B29AE7652F17EF2B0080E203 /* Database */ = {
 			isa = PBXGroup;
 			children = (
-				B2FF1BDD2F124D36006C8779 /* Entities */,
-				B2FF1BDF2F124D36006C8779 /* Repositories */,
-				B2FF1BE02F124D36006C8779 /* CoreDataManager.swift */,
-				B2C3D29B2F13EA4300F87124 /* MannaHealData.xcdatamodeld */,
+				B29AE75F2F17EF2B0080E203 /* Entities */,
+				B29AE7622F17EF2B0080E203 /* Repositories */,
+				B29AE7632F17EF2B0080E203 /* CoreDataManager.swift */,
+				B29AE7642F17EF2B0080E203 /* MannaHealData.xcdatamodeld */,
 			);
 			path = Database;
 			sourceTree = "<group>";
@@ -302,7 +311,7 @@
 				CA1581932754C6B40073C514 /* Info.plist */,
 				CA15823A2754FD910073C514 /* SwiftDemo-Bridging-Header.h */,
 				B22CF95E2EF9CA2D00EC2BE8 /* Base */,
-				B2FF1BE12F124D36006C8779 /* Database */,
+				B29AE7652F17EF2B0080E203 /* Database */,
 			);
 			path = SwiftDemo;
 			sourceTree = "<group>";
@@ -773,15 +782,18 @@
 				CA15824B2754FDE00073C514 /* YCECGDrawLineView.m in Sources */,
 				CA1581FF2754C85B0073C514 /* YCSearchDeviceViewController.swift in Sources */,
 				CA8AB869288005B800B91963 /* YCHealthECGData.swift in Sources */,
-				B2C3D29D2F13EA4300F87124 /* MannaHealData.xcdatamodeld in Sources */,
 				CA1F854F275DC17F0060C475 /* YCSettingViewController.swift in Sources */,
-				B2FF1BE22F124D36006C8779 /* HeartRateEntity+CoreDataClass.swift in Sources */,
-				B2FF1BE32F124D36006C8779 /* HeartRateEntity+CoreDataProperties.swift in Sources */,
-				B2FF1BE42F124D36006C8779 /* HeartRateRepository.swift in Sources */,
-				B2FF1BE52F124D36006C8779 /* CoreDataManager.swift in Sources */,
 				CA5DB46D27564DE2008AFB6F /* YCWatchFaceViewController.swift in Sources */,
 				CA1F854A275DB4640060C475 /* YCAppControlViewController.swift in Sources */,
 				CA5DB45F27562F36008AFB6F /* YCCollectDataViewController.swift in Sources */,
+				B29AE7672F17EF2B0080E203 /* HeartRateEntity+CoreDataProperties.swift in Sources */,
+				B29AE7682F17EF2B0080E203 /* HeartRateDailyStatsRepository.swift in Sources */,
+				B29AE7692F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataProperties.swift in Sources */,
+				B29AE76A2F17EF2B0080E203 /* HeartRateEntity+CoreDataClass.swift in Sources */,
+				B29AE76B2F17EF2B0080E203 /* CoreDataManager.swift in Sources */,
+				B29AE76C2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataClass.swift in Sources */,
+				B29AE76D2F17EF2B0080E203 /* MannaHealData.xcdatamodeld in Sources */,
+				B29AE76E2F17EF2B0080E203 /* HeartRateRepository.swift in Sources */,
 				CA8AB86F288005B800B91963 /* YCECGReportPictureView.m in Sources */,
 				CA8AB86C288005B800B91963 /* YCECGDiseaseScreeningViewCell.swift in Sources */,
 				4BEF9B752DE93FE900439088 /* YCHenAIBloodPressureViewController.swift in Sources */,
@@ -1122,12 +1134,12 @@
 /* End XCConfigurationList section */
 
 /* Begin XCVersionGroup section */
-		B2C3D29B2F13EA4300F87124 /* MannaHealData.xcdatamodeld */ = {
+		B29AE7642F17EF2B0080E203 /* MannaHealData.xcdatamodeld */ = {
 			isa = XCVersionGroup;
 			children = (
-				B2C3D29C2F13EA4300F87124 /* MannaHealData.xcdatamodel */,
+				B29AE7662F17EF2B0080E203 /* MannaHealData.xcdatamodel */,
 			);
-			currentVersion = B2C3D29C2F13EA4300F87124 /* MannaHealData.xcdatamodel */;
+			currentVersion = B29AE7662F17EF2B0080E203 /* MannaHealData.xcdatamodel */;
 			path = MannaHealData.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

@@ -190,11 +190,23 @@ class VitalChartView: UIView {
     
     // MARK: - Data Fetching
     private func fetchAndDisplayData() {
+        // Calculate date ranges BEFORE fetching data
+        switch selectedRange {
+        case .week:
+            calculateWeekRange(from: selectedDate)
+        case .month:
+            calculateMonthRange(from: selectedDate)
+        case .day:
+            break
+        }
+        
+        // Update date UI immediately with calculated ranges
+        updateDateUI()
+        
         dataSource?.fetchChartData(for: selectedRange, date: selectedDate) { [weak self] dataPoints in
             guard let self = self else { return }
             self.currentDataPoints = dataPoints
             self.populateChart(with: dataPoints)
-            self.updateDateUI()
             
             // Update labels with latest value
             if !dataPoints.isEmpty {
@@ -239,7 +251,6 @@ class VitalChartView: UIView {
             
         case .week:
             // X-axis: day index (0-6)
-            calculateWeekRange(from: selectedDate)
             guard let startDate = weekStartDate else { return }
             
             let calendar = Calendar.current
@@ -273,7 +284,6 @@ class VitalChartView: UIView {
             
         case .month:
             // X-axis: day of month (0-30)
-            calculateMonthRange(from: selectedDate)
             guard let startDate = monthStartDate else { return }
             
             let calendar = Calendar.current
@@ -364,20 +374,26 @@ class VitalChartView: UIView {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy.MM.dd"
         
+        let calendar = Calendar.current
+        let today = Date()
+        
         switch selectedRange {
         case .day:
             dateLabel.text = formatter.string(from: selectedDate)
-            nextButton.isEnabled = !Calendar.current.isDateInToday(selectedDate)
+            // Enable next if selected date is before today
+            nextButton.isEnabled = !calendar.isDate(selectedDate, inSameDayAs: today)
             
         case .week:
             guard let start = weekStartDate, let end = weekEndDate else { return }
             dateLabel.text = "\(formatter.string(from: start)) - \(formatter.string(from: end))"
-            nextButton.isEnabled = end < Date()
+            // Enable next if week end is before today
+            nextButton.isEnabled = calendar.compare(end, to: today, toGranularity: .day) == .orderedAscending
             
         case .month:
             guard let start = monthStartDate, let end = monthEndDate else { return }
             dateLabel.text = "\(formatter.string(from: start)) - \(formatter.string(from: end))"
-            nextButton.isEnabled = end < Date()
+            // Enable next if month end is before today
+            nextButton.isEnabled = calendar.compare(end, to: today, toGranularity: .day) == .orderedAscending
         }
         
         nextButton.alpha = nextButton.isEnabled ? 1.0 : 0.3
@@ -398,8 +414,7 @@ class VitalChartView: UIView {
         let calendar = Calendar.current
         let components = calendar.dateComponents([.year, .month], from: date)
         let start = calendar.date(from: components)!
-        let range = calendar.range(of: .day, in: .month, for: start)!
-        let end = calendar.date(byAdding: .day, value: range.count - 1, to: start)!
+        let end = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: start)!
         
         monthStartDate = start
         monthEndDate = end
@@ -407,6 +422,9 @@ class VitalChartView: UIView {
     
     // MARK: - Actions
     @objc private func rangeChanged() {
+        // Reset to current date when switching tabs
+        selectedDate = Date()
+        
         switch segmentedControl.selectedSegmentIndex {
         case 0: selectedRange = .day
         case 1: selectedRange = .week

@@ -40,9 +40,11 @@ final class HeartRateViewController: AppBaseViewController {
     
     // MARK: - BLE Sync
     private var syncHelper: HeartRateSyncHelper?
+    private var dailySyncHelper: HeartRateDailySyncHelper?
     
     // Store completion for day view
     private var dayDataCompletion: (([VitalDataPoint]) -> Void)?
+    private var weekMonthDataCompletion: (([VitalDataPoint]) -> Void)?
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -60,6 +62,15 @@ final class HeartRateViewController: AppBaseViewController {
         
         // Always create syncHelper
         syncHelper = HeartRateSyncHelper(listener: self)
+        dailySyncHelper = HeartRateDailySyncHelper(listener: self)
+        
+        // Sync daily data once on launch (updates local DB from API)
+        if userId > 0 {
+            dailySyncHelper?.fetchDailyData(userId: userId) { _ in
+                // Data synced to local DB, will be used for week/month views
+            }
+        }
+        
         chartView.reloadData()
         
         // Check if device is connected
@@ -301,22 +312,10 @@ extension HeartRateViewController: VitalChartDataSource {
             syncHelper?.fetchDataForDate(userId: userId, date: date)
             
         case .week, .month:
-            HealthService.shared.getRingDataByDay(
-                userId: userId,
-                type: "heart_rate"
-            ) { [weak self] result in
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    
-                    if case .success(let response) = result {
-                        let dataPoints = self.convertToDataPoints(response.data)
-                        completion(dataPoints)
-                        self.updateStats(with: dataPoints)
-                    } else {
-                        completion([])
-                        self.resetStats()
-                    }
-                }
+            // Query local DB for the selected date range (no API call)
+            dailySyncHelper?.loadDataForDateRange(userId: userId, range: range, selectedDate: date) { [weak self] dataPoints in
+                completion(dataPoints)
+                self?.updateStats(with: dataPoints)
             }
         }
     }
@@ -387,5 +386,27 @@ extension HeartRateViewController: HeartRateSyncHelper.HeartRateSyncListener {
             self.dayDataCompletion?(dataPoints)
             self.dayDataCompletion = nil
         }
+    }
+}
+
+// MARK: - Daily Stats Sync
+extension HeartRateViewController: HeartRateDailySyncHelper.HeartRateDailySyncListener {
+    func onLocalDailyDataFetched(_ data: [VitalDataPoint]) {
+        print("📊 Loaded \(data.count) daily entries from local DB")
+        // Data already sent via completion in fetchDailyData
+    }
+    
+    func onAPIDailyDataFetched(_ data: [VitalDataPoint]) {
+        print("🔄 Received \(data.count) updated daily entries from API")
+        
+        // API sync completed - local DB is now up to date
+        // Reload chart if currently viewing week/month tab
+        DispatchQueue.main.async { [weak self] in
+            self?.chartView.reloadData()
+        }
+    }
+    
+    func onDailySyncFailed(error: String) {
+        print("❌ Daily sync failed: \(error)")
     }
 }
