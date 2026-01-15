@@ -83,8 +83,8 @@ class TemperatureRepository {
     // MARK: - Fetch Operations
     
     /// Get all heart rates ordered by timestamp descending
-    func getAll() -> [HeartRateEntity] {
-        let request = HeartRateEntity.fetchAll()
+    func getAll() -> [TemperatureEntity] {
+        let request = TemperatureEntity.fetchAll()
         
         do {
             let results = try context.fetch(request)
@@ -110,8 +110,8 @@ class TemperatureRepository {
     }
     
     /// Get latest batch of synced data
-    func getLatestBatch() -> [HeartRateEntity] {
-        let request = HeartRateEntity.fetchAll()
+    func getLatestBatch() -> [TemperatureEntity] {
+        let request = TemperatureEntity.fetchAll()
         
         do {
             let allResults = try context.fetch(request)
@@ -129,7 +129,7 @@ class TemperatureRepository {
     }
     
     /// Get heart rates for today
-    func getTodayLatestEntry() -> HeartRateEntity? {
+    func getTodayLatestEntry() -> TemperatureEntity? {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: Date())
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
@@ -137,7 +137,7 @@ class TemperatureRepository {
         let startTimestamp = Int64(startOfDay.timeIntervalSince1970)
         let endTimestamp = Int64(endOfDay.timeIntervalSince1970)
         
-        let request = HeartRateEntity.fetchByDateRange(start: startTimestamp, end: endTimestamp)
+        let request = TemperatureEntity.fetchByDateRange(start: startTimestamp, end: endTimestamp)
         request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
         request.fetchLimit = 1
         
@@ -151,11 +151,11 @@ class TemperatureRepository {
     }
     
     /// Get heart rates for specific date range
-    func getByDateRange(start: Date, end: Date) -> [HeartRateEntity] {
+    func getByDateRange(start: Date, end: Date) -> [TemperatureEntity] {
         let startTimestamp = Int64(start.timeIntervalSince1970)
         let endTimestamp = Int64(end.timeIntervalSince1970)
         
-        let request = HeartRateEntity.fetchByDateRange(start: startTimestamp, end: endTimestamp)
+        let request = TemperatureEntity.fetchByDateRange(start: startTimestamp, end: endTimestamp)
         
         do {
             let results = try context.fetch(request)
@@ -178,7 +178,7 @@ class TemperatureRepository {
     
     /// Get all existing timestamps (for duplicate checking)
     private func getExistingTimestamps(in context: NSManagedObjectContext) -> Set<Int64> {
-        let request = NSFetchRequest<HeartRateEntity>(entityName: "HeartRateEntity")
+        let request = NSFetchRequest<TemperatureEntity>(entityName: "TemperatureEntity")
         request.propertiesToFetch = ["timestamp"]
         
         do {
@@ -205,7 +205,7 @@ class TemperatureRepository {
             formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
             let dateStr = formatter.string(from: date)
             
-            print("  \(index + 1). BPM: \(entry.bpm) | Time: \(dateStr) | Timestamp: \(entry.timestamp)")
+            print("  \(index + 1). Temp: \(entry.temperatureValue)°C | Time: \(dateStr) | Timestamp: \(entry.timestamp)")
         }
         print("----------------------------------------")
     }
@@ -218,10 +218,10 @@ class TemperatureRepository {
             return
         }
         
-        let bpmValues = all.map { Int($0.bpm) }
-        let minBpm = bpmValues.min() ?? 0
-        let maxBpm = bpmValues.max() ?? 0
-        let avgBpm = bpmValues.reduce(0, +) / bpmValues.count
+        let tempValues = all.map { $0.temperatureValue }
+        let minTemp = tempValues.min() ?? 0
+        let maxTemp = tempValues.max() ?? 0
+        let avgTemp = tempValues.reduce(0, +) / Double(tempValues.count)
         
         let oldestDate = all.last?.timestampAsDate ?? Date()
         let newestDate = all.first?.timestampAsDate ?? Date()
@@ -231,9 +231,9 @@ class TemperatureRepository {
         
         print("[\(TAG)] 📊 Database Summary:")
         print("  Total entries: \(all.count)")
-        print("  Min BPM: \(minBpm)")
-        print("  Max BPM: \(maxBpm)")
-        print("  Avg BPM: \(avgBpm)")
+        print("  Min Temp: \(String(format: "%.1f", minTemp))°C")
+        print("  Max Temp: \(String(format: "%.1f", maxTemp))°C")
+        print("  Avg Temp: \(String(format: "%.1f", avgTemp))°C")
         print("  Oldest: \(formatter.string(from: oldestDate))")
         print("  Newest: \(formatter.string(from: newestDate))")
     }

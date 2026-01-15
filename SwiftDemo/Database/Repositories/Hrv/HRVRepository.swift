@@ -56,7 +56,7 @@ class HrvRepository {
             
             // Insert new entries
             for reading in newReadings {
-                HrvEntity.create(
+                HRVEntity.create(
                     timestamp: reading.timestamp,
                     hrvValue: Int16(reading.hrvValue),
                     batchTime: batchTime,
@@ -83,8 +83,8 @@ class HrvRepository {
     // MARK: - Fetch Operations
     
     /// Get all HRV values ordered by timestamp descending
-    func getAll() -> [HrvEntity] {
-        let request = HrvEntity.fetchAll()
+    func getAll() -> [HRVEntity] {
+        let request = HRVEntity.fetchAll()
         
         do {
             let results = try context.fetch(request)
@@ -97,8 +97,8 @@ class HrvRepository {
     }
     
     /// Get latest HRV entry
-    func getLatestEntry() -> HrvEntity? {
-        let request = HrvEntity.fetchLatest()
+    func getLatestEntry() -> HRVEntity? {
+        let request = HRVEntity.fetchLatest()
         
         do {
             let results = try context.fetch(request)
@@ -110,8 +110,8 @@ class HrvRepository {
     }
     
     /// Get latest batch of synced data
-    func getLatestBatch() -> [HrvEntity] {
-        let request = HrvEntity.fetchAll()
+    func getLatestBatch() -> [HRVEntity] {
+        let request = HRVEntity.fetchAll()
         
         do {
             let allResults = try context.fetch(request)
@@ -129,7 +129,7 @@ class HrvRepository {
     }
     
     /// Get HRV values for today
-    func getTodayLatestEntry() -> HrvEntity? {
+    func getTodayLatestEntry() -> HRVEntity? {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: Date())
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
@@ -137,7 +137,7 @@ class HrvRepository {
         let startTimestamp = Int64(startOfDay.timeIntervalSince1970)
         let endTimestamp = Int64(endOfDay.timeIntervalSince1970)
         
-        let request = HrvEntity.fetchByDateRange(start: startTimestamp, end: endTimestamp)
+        let request = HRVEntity.fetchByDateRange(start: startTimestamp, end: endTimestamp)
         request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
         request.fetchLimit = 1
         
@@ -151,11 +151,11 @@ class HrvRepository {
     }
     
     /// Get HRV values for specific date range
-    func getByDateRange(start: Date, end: Date) -> [HrvEntity] {
+    func getByDateRange(start: Date, end: Date) -> [HRVEntity] {
         let startTimestamp = Int64(start.timeIntervalSince1970)
         let endTimestamp = Int64(end.timeIntervalSince1970)
         
-        let request = HrvEntity.fetchByDateRange(start: startTimestamp, end: endTimestamp)
+        let request = HRVEntity.fetchByDateRange(start: startTimestamp, end: endTimestamp)
         
         do {
             let results = try context.fetch(request)
@@ -178,7 +178,7 @@ class HrvRepository {
     
     /// Get all existing timestamps (for duplicate checking)
     private func getExistingTimestamps(in context: NSManagedObjectContext) -> Set<Int64> {
-        let request = NSFetchRequest<HrvEntity>(entityName: "HrvEntity")
+        let request = NSFetchRequest<HRVEntity>(entityName: "HrvEntity")
         request.propertiesToFetch = ["timestamp"]
         
         do {

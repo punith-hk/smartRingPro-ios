@@ -3,7 +3,7 @@ import CoreData
 
 /// HRV Core Data entity extension
 /// Provides helper methods and computed properties
-extension HrvEntity {
+extension HRVEntity {
     
     // MARK: - Convenience Initializer
     
@@ -14,8 +14,8 @@ extension HrvEntity {
         hrvValue: Int16,
         batchTime: Int64,
         in context: NSManagedObjectContext
-    ) -> HrvEntity {
-        let entity = HrvEntity(context: context)
+    ) -> HRVEntity {
+        let entity = HRVEntity(context: context)
         entity.id = UUID()
         entity.timestamp = timestamp
         entity.hrvValue = hrvValue
@@ -28,31 +28,31 @@ extension HrvEntity {
     // MARK: - Fetch Requests
     
     /// Fetch all HRV values ordered by timestamp descending
-    static func fetchAll() -> NSFetchRequest<HrvEntity> {
-        let request = NSFetchRequest<HrvEntity>(entityName: "HrvEntity")
+    static func fetchAll() -> NSFetchRequest<HRVEntity> {
+        let request = NSFetchRequest<HRVEntity>(entityName: "HrvEntity")
         request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
         return request
     }
     
     /// Fetch HRV values for a specific date range
-    static func fetchByDateRange(start: Int64, end: Int64) -> NSFetchRequest<HrvEntity> {
-        let request = NSFetchRequest<HrvEntity>(entityName: "HrvEntity")
+    static func fetchByDateRange(start: Int64, end: Int64) -> NSFetchRequest<HRVEntity> {
+        let request = NSFetchRequest<HRVEntity>(entityName: "HrvEntity")
         request.predicate = NSPredicate(format: "timestamp >= %lld AND timestamp < %lld", start, end)
         request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: true)]
         return request
     }
     
     /// Fetch latest entry
-    static func fetchLatest() -> NSFetchRequest<HrvEntity> {
-        let request = NSFetchRequest<HrvEntity>(entityName: "HrvEntity")
+    static func fetchLatest() -> NSFetchRequest<HRVEntity> {
+        let request = NSFetchRequest<HRVEntity>(entityName: "HrvEntity")
         request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
         request.fetchLimit = 1
         return request
     }
     
     /// Fetch latest batch (by batchTime)
-    static func fetchLatestBatch() -> NSFetchRequest<HrvEntity> {
-        let request = NSFetchRequest<HrvEntity>(entityName: "HrvEntity")
+    static func fetchLatestBatch() -> NSFetchRequest<HRVEntity> {
+        let request = NSFetchRequest<HRVEntity>(entityName: "HrvEntity")
         
         // First find max batchTime, then fetch all entries with that batchTime
         let subquery = "batchTime == (SELECT MAX(batchTime) FROM HrvEntity)"
@@ -63,8 +63,8 @@ extension HrvEntity {
     }
     
     /// Fetch all existing timestamps (for duplicate checking)
-    static func fetchAllTimestamps() -> NSFetchRequest<HrvEntity> {
-        let request = NSFetchRequest<HrvEntity>(entityName: "HrvEntity")
+    static func fetchAllTimestamps() -> NSFetchRequest<HRVEntity> {
+        let request = NSFetchRequest<HRVEntity>(entityName: "HrvEntity")
         request.propertiesToFetch = ["timestamp"]
         request.resultType = .dictionaryResultType
         return request

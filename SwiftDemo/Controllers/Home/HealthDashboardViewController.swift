@@ -341,14 +341,14 @@ class HealthDashboardViewController: AppBaseViewController {
     private func setupCardActions() {
 
         bloodGlucoseCard.onTap = { [weak self] in
-            let vc = BloodGlucoseViewController()
+            let vc = HealthVitalsViewController(vitalType: .bloodGlucose)
             self?.navigationController?.pushViewController(vc, animated: true)
         }
         
-        bloodPressureCard.onTap = { [weak self] in
-            let vc = BloodPressureViewController()
-            self?.navigationController?.pushViewController(vc, animated: true)
-        }
+        // bloodPressureCard.onTap = { [weak self] in
+        //     let vc = HealthVitalsViewController(vitalType: .bloodPressure)
+        //     self?.navigationController?.pushViewController(vc, animated: true)
+        // }
 
         sleepCard.onTap = { [weak self] in
             let vc = SleepViewController()

@@ -44,6 +44,15 @@ final class HealthVitalsViewController: AppBaseViewController {
     private var heartRateSyncHelper: HeartRateSyncHelper?
     private var heartRateDailySyncHelper: HeartRateDailySyncHelper?
     
+    // Combined data sync helper (for HRV, Temperature, Blood Glucose, Blood Oxygen)
+    private var combinedDataSyncHelper: CombinedDataSyncHelper?
+    
+    // Daily sync helpers for each vital
+    private var hrvDailySyncHelper: HRVDailySyncHelper?
+    private var bloodOxygenDailySyncHelper: BloodOxygenDailySyncHelper?
+    private var bloodGlucoseDailySyncHelper: BloodGlucoseDailySyncHelper?
+    private var temperatureDailySyncHelper: TemperatureDailySyncHelper?
+    
     // Store completion for day view
     private var dayDataCompletion: (([VitalDataPoint]) -> Void)?
     private var weekMonthDataCompletion: (([VitalDataPoint]) -> Void)?
@@ -116,9 +125,37 @@ final class HealthVitalsViewController: AppBaseViewController {
                 }
             }
             
-        case .hrv, .temperature, .bloodGlucose, .bloodOxygen:
-            // TODO: Implement combined data sync helpers
-            print("⚠️ Sync helpers not yet implemented for \(vitalType.displayName)")
+        case .hrv:
+            combinedDataSyncHelper = CombinedDataSyncHelper(listener: self)
+            hrvDailySyncHelper = HRVDailySyncHelper(listener: self)
+            
+            if userId > 0 {
+                hrvDailySyncHelper?.fetchDailyData(userId: userId) { _ in }
+            }
+            
+        case .bloodOxygen:
+            combinedDataSyncHelper = CombinedDataSyncHelper(listener: self)
+            bloodOxygenDailySyncHelper = BloodOxygenDailySyncHelper(listener: self)
+            
+            if userId > 0 {
+                bloodOxygenDailySyncHelper?.fetchDailyData(userId: userId) { _ in }
+            }
+            
+        case .bloodGlucose:
+            combinedDataSyncHelper = CombinedDataSyncHelper(listener: self)
+            bloodGlucoseDailySyncHelper = BloodGlucoseDailySyncHelper(listener: self)
+            
+            if userId > 0 {
+                bloodGlucoseDailySyncHelper?.fetchDailyData(userId: userId) { _ in }
+            }
+            
+        case .temperature:
+            combinedDataSyncHelper = CombinedDataSyncHelper(listener: self)
+            temperatureDailySyncHelper = TemperatureDailySyncHelper(listener: self)
+            
+            if userId > 0 {
+                temperatureDailySyncHelper?.fetchDailyData(userId: userId) { _ in }
+            }
         }
     }
     
@@ -130,8 +167,7 @@ final class HealthVitalsViewController: AppBaseViewController {
             heartRateSyncHelper?.startSync()
             
         case .hrv, .temperature, .bloodGlucose, .bloodOxygen:
-            // TODO: Start combined data sync
-            print("⚠️ BLE sync not yet implemented for \(vitalType.displayName)")
+            combinedDataSyncHelper?.startSync()
         }
     }
 
@@ -392,22 +428,67 @@ extension HealthVitalsViewController: VitalChartDataSource {
         case .heartRate:
             switch range {
             case .day:
-                // Store completion for later
                 dayDataCompletion = completion
                 heartRateSyncHelper?.fetchDataForDate(userId: userId, date: date)
                 
             case .week, .month:
-                // Query local DB for the selected date range (no API call)
                 heartRateDailySyncHelper?.loadDataForDateRange(userId: userId, range: range, selectedDate: date) { [weak self] dataPoints in
                     completion(dataPoints)
                     self?.updateStats(with: dataPoints)
                 }
             }
             
-        case .hrv, .temperature, .bloodGlucose, .bloodOxygen:
-            // TODO: Implement combined data fetching
-            print("⚠️ Data fetching not yet implemented for \(vitalType.displayName)")
-            completion([])
+        case .hrv:
+            switch range {
+            case .day:
+                dayDataCompletion = completion
+                combinedDataSyncHelper?.fetchDataForDate(userId: userId, date: date)
+                
+            case .week, .month:
+                hrvDailySyncHelper?.loadDataForDateRange(userId: userId, range: range, selectedDate: date) { [weak self] dataPoints in
+                    completion(dataPoints)
+                    self?.updateStats(with: dataPoints)
+                }
+            }
+            
+        case .bloodOxygen:
+            switch range {
+            case .day:
+                dayDataCompletion = completion
+                combinedDataSyncHelper?.fetchDataForDate(userId: userId, date: date)
+                
+            case .week, .month:
+                bloodOxygenDailySyncHelper?.loadDataForDateRange(userId: userId, range: range, selectedDate: date) { [weak self] dataPoints in
+                    completion(dataPoints)
+                    self?.updateStats(with: dataPoints)
+                }
+            }
+            
+        case .bloodGlucose:
+            switch range {
+            case .day:
+                dayDataCompletion = completion
+                combinedDataSyncHelper?.fetchDataForDate(userId: userId, date: date)
+                
+            case .week, .month:
+                bloodGlucoseDailySyncHelper?.loadDataForDateRange(userId: userId, range: range, selectedDate: date) { [weak self] dataPoints in
+                    completion(dataPoints)
+                    self?.updateStats(with: dataPoints)
+                }
+            }
+            
+        case .temperature:
+            switch range {
+            case .day:
+                dayDataCompletion = completion
+                combinedDataSyncHelper?.fetchDataForDate(userId: userId, date: date)
+                
+            case .week, .month:
+                temperatureDailySyncHelper?.loadDataForDateRange(userId: userId, range: range, selectedDate: date) { [weak self] dataPoints in
+                    completion(dataPoints)
+                    self?.updateStats(with: dataPoints)
+                }
+            }
         }
     }
 }
@@ -420,15 +501,15 @@ extension HealthVitalsViewController: VitalChartDelegate {
     }
 }
 
-// MARK: - Heart Rate Sync Listeners
-extension HealthVitalsViewController: HeartRateSyncHelper.HeartRateSyncListener {
+// MARK: - BLE Sync Listeners (Consolidated)
+// HeartRateSyncListener and CombinedDataSyncListener both have onSyncFailed(error:)
+extension HealthVitalsViewController: HeartRateSyncHelper.HeartRateSyncListener,
+                                       CombinedDataSyncHelper.CombinedDataSyncListener {
+    
+    // HeartRateSyncListener methods
     func onHeartRateDataFetched(_ data: [YCHealthDataHeartRate]) {
         print("✅ Received \(data.count) heart rate entries from ring")
         chartView.reloadData()
-    }
-    
-    func onSyncFailed(error: String) {
-        print("❌ Sync failed: \(error)")
     }
     
     func onLocalDataFetched(_ data: [(timestamp: Int64, bpm: Int)]) {
@@ -445,26 +526,136 @@ extension HealthVitalsViewController: HeartRateSyncHelper.HeartRateSyncListener 
             self.dayDataCompletion = nil
         }
     }
+    
+    // CombinedDataSyncListener methods
+    func onCombinedDataFetched(
+        hrv: [YCHealthDataCombinedData],
+        bloodOxygen: [YCHealthDataCombinedData],
+        bloodGlucose: [YCHealthDataCombinedData],
+        temperature: [YCHealthDataCombinedData]
+    ) {
+        print("✅ [\(vitalType.displayName)] Combined data fetched from BLE:")
+        print("   - HRV: \(hrv.count) entries")
+        print("   - Blood Oxygen: \(bloodOxygen.count) entries")
+        print("   - Blood Glucose: \(bloodGlucose.count) entries")
+        print("   - Temperature: \(temperature.count) entries")
+        
+        // Print sample values based on vital type
+        switch vitalType {
+        case .hrv:
+            if let first = hrv.first {
+                print("   📊 Sample HRV: \(first.hrv)ms at timestamp \(first.startTimeStamp)")
+            }
+            
+        case .bloodOxygen:
+            if let first = bloodOxygen.first {
+                print("   📊 Sample Blood Oxygen: \(first.bloodOxygen)% at timestamp \(first.startTimeStamp)")
+            }
+            
+        case .bloodGlucose:
+            if let first = bloodGlucose.first {
+                print("   📊 Sample Blood Glucose: \(first.bloodGlucose)mg/dL at timestamp \(first.startTimeStamp)")
+            }
+            
+        case .temperature:
+            if let first = temperature.first {
+                print("   📊 Sample Temperature: \(first.temperature)°C (valid: \(first.temperatureValid)) at timestamp \(first.startTimeStamp)")
+            }
+            
+        default:
+            break
+        }
+        
+        chartView.reloadData()
+    }
+    
+    func onLocalDataFetched(
+        hrv: [(timestamp: Int64, hrvValue: Int)],
+        bloodOxygen: [(timestamp: Int64, oxygenValue: Int)],
+        bloodGlucose: [(timestamp: Int64, glucoseValue: Double)],
+        temperature: [(timestamp: Int64, temperatureValue: Double)]
+    ) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            print("📊 [\(self.vitalType.displayName)] Local data fetched:")
+            
+            var dataPoints: [VitalDataPoint] = []
+            
+            switch self.vitalType {
+            case .hrv:
+                print("   - HRV: \(hrv.count) entries from local DB")
+                if let first = hrv.first {
+                    print("   📊 First HRV value: \(first.hrvValue)ms")
+                }
+                dataPoints = hrv.map { VitalDataPoint(timestamp: $0.timestamp, value: Double($0.hrvValue)) }
+                
+            case .bloodOxygen:
+                print("   - Blood Oxygen: \(bloodOxygen.count) entries from local DB")
+                if let first = bloodOxygen.first {
+                    print("   📊 First Blood Oxygen value: \(first.oxygenValue)%")
+                }
+                dataPoints = bloodOxygen.map { VitalDataPoint(timestamp: $0.timestamp, value: Double($0.oxygenValue)) }
+                
+            case .bloodGlucose:
+                print("   - Blood Glucose: \(bloodGlucose.count) entries from local DB")
+                if let first = bloodGlucose.first {
+                    print("   📊 First Blood Glucose value: \(first.glucoseValue)mg/dL")
+                }
+                dataPoints = bloodGlucose.map { VitalDataPoint(timestamp: $0.timestamp, value: $0.glucoseValue) }
+                
+            case .temperature:
+                print("   - Temperature: \(temperature.count) entries from local DB")
+                if let first = temperature.first {
+                    print("   📊 First Temperature value: \(first.temperatureValue)°C")
+                }
+                dataPoints = temperature.map { VitalDataPoint(timestamp: $0.timestamp, value: $0.temperatureValue) }
+                
+            default:
+                break
+            }
+            
+            // Update stats
+            self.updateStats(with: dataPoints)
+            
+            // Call chart completion
+            self.dayDataCompletion?(dataPoints)
+            self.dayDataCompletion = nil
+        }
+    }
+    
+    // Shared method: onSyncFailed (used by both protocols)
+    func onSyncFailed(error: String) {
+        print("❌ [\(vitalType.displayName)] Sync failed: \(error)")
+    }
 }
 
-// MARK: - Heart Rate Daily Stats Sync
-extension HealthVitalsViewController: HeartRateDailySyncHelper.HeartRateDailySyncListener {
+
+
+
+
+
+
+// MARK: - Daily Stats Sync Listeners (Consolidated)
+// All daily sync listeners share same method signatures
+extension HealthVitalsViewController: HeartRateDailySyncHelper.HeartRateDailySyncListener,
+                                       HRVDailySyncHelper.HRVDailySyncListener,
+                                       BloodOxygenDailySyncHelper.BloodOxygenDailySyncListener,
+                                       BloodGlucoseDailySyncHelper.BloodGlucoseDailySyncListener,
+                                       TemperatureDailySyncHelper.TemperatureDailySyncListener {
+    
     func onLocalDailyDataFetched(_ data: [VitalDataPoint]) {
-        print("📊 Loaded \(data.count) daily entries from local DB")
-        // Data already sent via completion in fetchDailyData
+        print("📊 [\(vitalType.displayName) Daily] Loaded \(data.count) daily entries from local DB")
     }
     
     func onAPIDailyDataFetched(_ data: [VitalDataPoint]) {
-        print("🔄 Received \(data.count) updated daily entries from API")
-        
-        // API sync completed - local DB is now up to date
-        // Reload chart if currently viewing week/month tab
+        print("🔄 [\(vitalType.displayName) Daily] Received \(data.count) updated daily entries from API")
         DispatchQueue.main.async { [weak self] in
             self?.chartView.reloadData()
         }
     }
     
     func onDailySyncFailed(error: String) {
-        print("❌ Daily sync failed: \(error)")
+        print("❌ [\(vitalType.displayName) Daily] Sync failed: \(error)")
     }
 }

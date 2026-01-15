@@ -84,8 +84,8 @@ class BloodPressureRepository {
     // MARK: - Fetch Operations
     
     /// Get all heart rates ordered by timestamp descending
-    func getAll() -> [HeartRateEntity] {
-        let request = HeartRateEntity.fetchAll()
+    func getAll() -> [BloodPressureEntity] {
+        let request = BloodPressureEntity.fetchAll()
         
         do {
             let results = try context.fetch(request)
@@ -98,8 +98,8 @@ class BloodPressureRepository {
     }
     
     /// Get latest heart rate entry
-    func getLatestEntry() -> HeartRateEntity? {
-        let request = HeartRateEntity.fetchLatest()
+    func getLatestEntry() -> BloodPressureEntity? {
+        let request = BloodPressureEntity.fetchLatest()
         
         do {
             let results = try context.fetch(request)
@@ -111,8 +111,8 @@ class BloodPressureRepository {
     }
     
     /// Get latest batch of synced data
-    func getLatestBatch() -> [HeartRateEntity] {
-        let request = HeartRateEntity.fetchAll()
+    func getLatestBatch() -> [BloodPressureEntity] {
+        let request = BloodPressureEntity.fetchAll()
         
         do {
             let allResults = try context.fetch(request)
@@ -130,7 +130,7 @@ class BloodPressureRepository {
     }
     
     /// Get heart rates for today
-    func getTodayLatestEntry() -> HeartRateEntity? {
+    func getTodayLatestEntry() -> BloodPressureEntity? {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: Date())
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
@@ -138,7 +138,7 @@ class BloodPressureRepository {
         let startTimestamp = Int64(startOfDay.timeIntervalSince1970)
         let endTimestamp = Int64(endOfDay.timeIntervalSince1970)
         
-        let request = HeartRateEntity.fetchByDateRange(start: startTimestamp, end: endTimestamp)
+        let request = BloodPressureEntity.fetchByDateRange(start: startTimestamp, end: endTimestamp)
         request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
         request.fetchLimit = 1
         
@@ -152,11 +152,11 @@ class BloodPressureRepository {
     }
     
     /// Get heart rates for specific date range
-    func getByDateRange(start: Date, end: Date) -> [HeartRateEntity] {
+    func getByDateRange(start: Date, end: Date) -> [BloodPressureEntity] {
         let startTimestamp = Int64(start.timeIntervalSince1970)
         let endTimestamp = Int64(end.timeIntervalSince1970)
         
-        let request = HeartRateEntity.fetchByDateRange(start: startTimestamp, end: endTimestamp)
+        let request = BloodPressureEntity.fetchByDateRange(start: startTimestamp, end: endTimestamp)
         
         do {
             let results = try context.fetch(request)
@@ -172,14 +172,14 @@ class BloodPressureRepository {
     
     /// Delete all heart rate data
     func deleteAll() {
-        CoreDataManager.shared.deleteAllData(for: "HeartRateEntity")
+        CoreDataManager.shared.deleteAllData(for: "BloodPressureEntity")
     }
     
     // MARK: - Helper Methods
     
     /// Get all existing timestamps (for duplicate checking)
     private func getExistingTimestamps(in context: NSManagedObjectContext) -> Set<Int64> {
-        let request = NSFetchRequest<HeartRateEntity>(entityName: "HeartRateEntity")
+        let request = NSFetchRequest<BloodPressureEntity>(entityName: "BloodPressureEntity")
         request.propertiesToFetch = ["timestamp"]
         
         do {
@@ -206,7 +206,7 @@ class BloodPressureRepository {
             formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
             let dateStr = formatter.string(from: date)
             
-            print("  \(index + 1). BPM: \(entry.bpm) | Time: \(dateStr) | Timestamp: \(entry.timestamp)")
+            print("  \(index + 1). BP: \(entry.systolicValue)/\(entry.diastolicValue) mmHg | Time: \(dateStr) | Timestamp: \(entry.timestamp)")
         }
         print("----------------------------------------")
     }
@@ -219,10 +219,14 @@ class BloodPressureRepository {
             return
         }
         
-        let bpmValues = all.map { Int($0.bpm) }
-        let minBpm = bpmValues.min() ?? 0
-        let maxBpm = bpmValues.max() ?? 0
-        let avgBpm = bpmValues.reduce(0, +) / bpmValues.count
+        let systolicValues = all.map { Int($0.systolicValue) }
+        let diastolicValues = all.map { Int($0.diastolicValue) }
+        let minSystolic = systolicValues.min() ?? 0
+        let maxSystolic = systolicValues.max() ?? 0
+        let avgSystolic = systolicValues.reduce(0, +) / systolicValues.count
+        let minDiastolic = diastolicValues.min() ?? 0
+        let maxDiastolic = diastolicValues.max() ?? 0
+        let avgDiastolic = diastolicValues.reduce(0, +) / diastolicValues.count
         
         let oldestDate = all.last?.timestampAsDate ?? Date()
         let newestDate = all.first?.timestampAsDate ?? Date()
@@ -232,9 +236,8 @@ class BloodPressureRepository {
         
         print("[\(TAG)] 📊 Database Summary:")
         print("  Total entries: \(all.count)")
-        print("  Min BPM: \(minBpm)")
-        print("  Max BPM: \(maxBpm)")
-        print("  Avg BPM: \(avgBpm)")
+        print("  Systolic - Min: \(minSystolic) | Max: \(maxSystolic) | Avg: \(avgSystolic) mmHg")
+        print("  Diastolic - Min: \(minDiastolic) | Max: \(maxDiastolic) | Avg: \(avgDiastolic) mmHg")
         print("  Oldest: \(formatter.string(from: oldestDate))")
         print("  Newest: \(formatter.string(from: newestDate))")
     }

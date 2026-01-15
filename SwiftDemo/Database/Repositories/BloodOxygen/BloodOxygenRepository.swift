@@ -205,7 +205,7 @@ class BloodOxygenRepository {
             formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
             let dateStr = formatter.string(from: date)
             
-            print("  \(index + 1). BPM: \(entry.bpm) | Time: \(dateStr) | Timestamp: \(entry.timestamp)")
+            print("  \(index + 1). Oxygen: \(entry.oxygenValue)% | Time: \(dateStr) | Timestamp: \(entry.timestamp)")
         }
         print("----------------------------------------")
     }
@@ -218,10 +218,10 @@ class BloodOxygenRepository {
             return
         }
         
-        let bpmValues = all.map { Int($0.bpm) }
-        let minBpm = bpmValues.min() ?? 0
-        let maxBpm = bpmValues.max() ?? 0
-        let avgBpm = bpmValues.reduce(0, +) / bpmValues.count
+        let oxygenValues = all.map { Int($0.oxygenValue) }
+        let minOxygen = oxygenValues.min() ?? 0
+        let maxOxygen = oxygenValues.max() ?? 0
+        let avgOxygen = oxygenValues.reduce(0, +) / oxygenValues.count
         
         let oldestDate = all.last?.timestampAsDate ?? Date()
         let newestDate = all.first?.timestampAsDate ?? Date()
@@ -231,9 +231,9 @@ class BloodOxygenRepository {
         
         print("[\(TAG)] 📊 Database Summary:")
         print("  Total entries: \(all.count)")
-        print("  Min BPM: \(minBpm)")
-        print("  Max BPM: \(maxBpm)")
-        print("  Avg BPM: \(avgBpm)")
+        print("  Min Oxygen: \(minOxygen)%")
+        print("  Max Oxygen: \(maxOxygen)%")
+        print("  Avg Oxygen: \(avgOxygen)%")
         print("  Oldest: \(formatter.string(from: oldestDate))")
         print("  Newest: \(formatter.string(from: newestDate))")
     }

@@ -32,7 +32,7 @@ class HrvDailyStatsRepository {
                     print("[\(self.TAG)] 🔄 Updating existing entry for \(date)")
                 } else {
                     // Create new
-                    entity = HeartRateDailyStatsEntity(context: backgroundContext)
+                    entity = HrvDailyStatsEntity(context: backgroundContext)
                     entity.userId = Int64(userId)
                     entity.date = date
                     print("[\(self.TAG)] ➕ Creating new entry for \(date)")
@@ -70,12 +70,12 @@ class HrvDailyStatsRepository {
             var savedCount = 0
             
             for stat in stats {
-                let fetchRequest = HeartRateDailyStatsEntity.fetchByUserAndDate(userId: userId, date: stat.date, in: backgroundContext)
+                let fetchRequest = HrvDailyStatsEntity.fetchByUserAndDate(userId: userId, date: stat.date, in: backgroundContext)
                 
                 do {
                     let results = try backgroundContext.fetch(fetchRequest)
                     
-                    let entity: HeartRateDailyStatsEntity
+                    let entity: HrvDailyStatsEntity
                     if let existing = results.first {
                         // Check if value changed
                         if existing.value != stat.value {
@@ -86,7 +86,7 @@ class HrvDailyStatsRepository {
                         }
                     } else {
                         // Create new
-                        entity = HeartRateDailyStatsEntity(context: backgroundContext)
+                        entity = HrvDailyStatsEntity(context: backgroundContext)
                         entity.userId = Int64(userId)
                         entity.date = stat.date
                         entity.value = stat.value
@@ -118,8 +118,8 @@ class HrvDailyStatsRepository {
     // MARK: - Fetch Operations
     
     /// Get all daily stats for a user, ordered by date descending
-    func getAllForUser(userId: Int) -> [HeartRateDailyStatsEntity] {
-        let request = HeartRateDailyStatsEntity.fetchAllForUser(userId: userId)
+    func getAllForUser(userId: Int) -> [HrvDailyStatsEntity] {
+        let request = HrvDailyStatsEntity.fetchAllForUser(userId: userId)
         
         do {
             let results = try context.fetch(request)
@@ -132,8 +132,8 @@ class HrvDailyStatsRepository {
     }
     
     /// Get daily stats for last N days
-    func getRecentDays(userId: Int, days: Int) -> [HeartRateDailyStatsEntity] {
-        let request = HeartRateDailyStatsEntity.fetchAllForUser(userId: userId)
+    func getRecentDays(userId: Int, days: Int) -> [HrvDailyStatsEntity] {
+        let request = HrvDailyStatsEntity.fetchAllForUser(userId: userId)
         request.fetchLimit = days
         
         do {
@@ -147,8 +147,8 @@ class HrvDailyStatsRepository {
     }
     
     /// Get daily stats for specific date
-    func getByDate(userId: Int, date: String) -> HeartRateDailyStatsEntity? {
-        let request = HeartRateDailyStatsEntity.fetchByUserAndDate(userId: userId, date: date, in: context)
+    func getByDate(userId: Int, date: String) -> HrvDailyStatsEntity? {
+        let request = HrvDailyStatsEntity.fetchByUserAndDate(userId: userId, date: date, in: context)
         
         do {
             let results = try context.fetch(request)
@@ -163,7 +163,7 @@ class HrvDailyStatsRepository {
     
     /// Delete all daily stats for a user
     func deleteAllForUser(userId: Int) {
-        let request = NSFetchRequest<NSFetchRequestResult>(entityName: "HeartRateDailyStatsEntity")
+        let request = NSFetchRequest<NSFetchRequestResult>(entityName: "HrvDailyStatsEntity")
         request.predicate = NSPredicate(format: "userId == %d", userId)
         
         let deleteRequest = NSBatchDeleteRequest(fetchRequest: request)
@@ -179,6 +179,6 @@ class HrvDailyStatsRepository {
     
     /// Delete all daily stats (for all users) - used during logout
     func deleteAll() {
-        CoreDataManager.shared.deleteAllData(for: "HeartRateDailyStatsEntity")
+        CoreDataManager.shared.deleteAllData(for: "HrvDailyStatsEntity")
     }
 }

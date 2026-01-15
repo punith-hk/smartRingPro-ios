@@ -205,7 +205,7 @@ class BloodGlucoseRepository {
             formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
             let dateStr = formatter.string(from: date)
             
-            print("  \(index + 1). BPM: \(entry.bpm) | Time: \(dateStr) | Timestamp: \(entry.timestamp)")
+            print("  \(index + 1). Glucose: \(entry.glucoseValue)mg/dL | Time: \(dateStr) | Timestamp: \(entry.timestamp)")
         }
         print("----------------------------------------")
     }
@@ -218,10 +218,10 @@ class BloodGlucoseRepository {
             return
         }
         
-        let bpmValues = all.map { Int($0.bpm) }
-        let minBpm = bpmValues.min() ?? 0
-        let maxBpm = bpmValues.max() ?? 0
-        let avgBpm = bpmValues.reduce(0, +) / bpmValues.count
+        let glucoseValues = all.map { $0.glucoseValue }
+        let minGlucose = glucoseValues.min() ?? 0
+        let maxGlucose = glucoseValues.max() ?? 0
+        let avgGlucose = glucoseValues.reduce(0, +) / Double(glucoseValues.count)
         
         let oldestDate = all.last?.timestampAsDate ?? Date()
         let newestDate = all.first?.timestampAsDate ?? Date()
@@ -231,9 +231,9 @@ class BloodGlucoseRepository {
         
         print("[\(TAG)] 📊 Database Summary:")
         print("  Total entries: \(all.count)")
-        print("  Min BPM: \(minBpm)")
-        print("  Max BPM: \(maxBpm)")
-        print("  Avg BPM: \(avgBpm)")
+        print("  Min Glucose: \(String(format: "%.1f", minGlucose))mg/dL")
+        print("  Max Glucose: \(String(format: "%.1f", maxGlucose))mg/dL")
+        print("  Avg Glucose: \(String(format: "%.1f", avgGlucose))mg/dL")
         print("  Oldest: \(formatter.string(from: oldestDate))")
         print("  Newest: \(formatter.string(from: newestDate))")
     }

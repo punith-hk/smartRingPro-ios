@@ -20,12 +20,12 @@ class BloodGlucoseDailyStatsRepository {
             guard let self = self else { return }
             
             // Check if entry exists
-            let fetchRequest = HrvDailyStatsEntity.fetchByUserAndDate(userId: userId, date: date, in: backgroundContext)
+            let fetchRequest = BloodGlucoseDailyStatsEntity.fetchByUserAndDate(userId: userId, date: date, in: backgroundContext)
             
             do {
                 let results = try backgroundContext.fetch(fetchRequest)
                 
-                let entity: HrvDailyStatsEntity
+                let entity: BloodGlucoseDailyStatsEntity
                 if let existing = results.first {
                     // Update existing
                     entity = existing

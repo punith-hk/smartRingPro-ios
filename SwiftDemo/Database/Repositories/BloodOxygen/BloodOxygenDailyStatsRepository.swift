@@ -86,7 +86,7 @@ class BloodOxygenDailyStatsRepository {
                         }
                     } else {
                         // Create new
-                        entity = HeartRateDailyStatsEntity(context: backgroundContext)
+                        entity = BloodOxygenDailyStatsEntity(context: backgroundContext)
                         entity.userId = Int64(userId)
                         entity.date = stat.date
                         entity.value = stat.value
