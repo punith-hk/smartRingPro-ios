@@ -9,14 +9,8 @@
 /* Begin PBXBuildFile section */
 		19914F0ACEF80BB6D38EE68F /* libPods-SwiftDemo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E870874FA04E877CD9D2884B /* libPods-SwiftDemo.a */; };
 		4BEF9B752DE93FE900439088 /* YCHenAIBloodPressureViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEF9B732DE93FE900439088 /* YCHenAIBloodPressureViewController.swift */; };
-		B29AE7672F17EF2B0080E203 /* HeartRateEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE75E2F17EF2B0080E203 /* HeartRateEntity+CoreDataProperties.swift */; };
-		B29AE7682F17EF2B0080E203 /* HeartRateDailyStatsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE7602F17EF2B0080E203 /* HeartRateDailyStatsRepository.swift */; };
-		B29AE7692F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE75C2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataProperties.swift */; };
-		B29AE76A2F17EF2B0080E203 /* HeartRateEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE75D2F17EF2B0080E203 /* HeartRateEntity+CoreDataClass.swift */; };
 		B29AE76B2F17EF2B0080E203 /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE7632F17EF2B0080E203 /* CoreDataManager.swift */; };
-		B29AE76C2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE75B2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataClass.swift */; };
 		B29AE76D2F17EF2B0080E203 /* MannaHealData.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = B29AE7642F17EF2B0080E203 /* MannaHealData.xcdatamodeld */; };
-		B29AE76E2F17EF2B0080E203 /* HeartRateRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE7612F17EF2B0080E203 /* HeartRateRepository.swift */; };
 		CA15818D2754C6B20073C514 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CA15818B2754C6B20073C514 /* Main.storyboard */; };
 		CA15818F2754C6B40073C514 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CA15818E2754C6B40073C514 /* Assets.xcassets */; };
 		CA1581922754C6B40073C514 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CA1581902754C6B40073C514 /* LaunchScreen.storyboard */; };
@@ -91,12 +85,6 @@
 		6CDB37AFE12D152C32B6584F /* Pods_YCProductSDK.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_YCProductSDK.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A75B1B61EE37F0A3F5C14301 /* Pods-ObjcDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ObjcDemo.release.xcconfig"; path = "Target Support Files/Pods-ObjcDemo/Pods-ObjcDemo.release.xcconfig"; sourceTree = "<group>"; };
 		AA999FD1E4B8A9FF39FE17CC /* Pods-ObjcDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ObjcDemo.debug.xcconfig"; path = "Target Support Files/Pods-ObjcDemo/Pods-ObjcDemo.debug.xcconfig"; sourceTree = "<group>"; };
-		B29AE75B2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HeartRateDailyStatsEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
-		B29AE75C2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HeartRateDailyStatsEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		B29AE75D2F17EF2B0080E203 /* HeartRateEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HeartRateEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
-		B29AE75E2F17EF2B0080E203 /* HeartRateEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HeartRateEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		B29AE7602F17EF2B0080E203 /* HeartRateDailyStatsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateDailyStatsRepository.swift; sourceTree = "<group>"; };
-		B29AE7612F17EF2B0080E203 /* HeartRateRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateRepository.swift; sourceTree = "<group>"; };
 		B29AE7632F17EF2B0080E203 /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
 		B29AE7662F17EF2B0080E203 /* MannaHealData.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = MannaHealData.xcdatamodel; sourceTree = "<group>"; };
 		C8C475C791BC3BEBB8BE75EB /* Pods-SwiftDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SwiftDemo.release.xcconfig"; path = "Target Support Files/Pods-SwiftDemo/Pods-SwiftDemo.release.xcconfig"; sourceTree = "<group>"; };
@@ -181,6 +169,18 @@
 		B22CF95C2EF9CA0C00EC2BE8 /* App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = App; sourceTree = "<group>"; };
 		B22CF95E2EF9CA2D00EC2BE8 /* Base */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Base; sourceTree = "<group>"; };
 		B22CF9782EF9CB6A00EC2BE8 /* Views */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Views; sourceTree = "<group>"; };
+		B2AE58592F19456900EB7757 /* HeartRate */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = HeartRate; sourceTree = "<group>"; };
+		B2AE585A2F19458300EB7757 /* HeartRate */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = HeartRate; sourceTree = "<group>"; };
+		B2AE585B2F19459200EB7757 /* Hrv */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Hrv; sourceTree = "<group>"; };
+		B2AE585C2F1945A300EB7757 /* Hrv */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Hrv; sourceTree = "<group>"; };
+		B2AE58772F194B7600EB7757 /* BloodOxygen */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = BloodOxygen; sourceTree = "<group>"; };
+		B2AE58782F194B7F00EB7757 /* BloodGlucose */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = BloodGlucose; sourceTree = "<group>"; };
+		B2AE58792F194B9B00EB7757 /* BloodPressure */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = BloodPressure; sourceTree = "<group>"; };
+		B2AE587A2F194BAE00EB7757 /* Temperature */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Temperature; sourceTree = "<group>"; };
+		B2AE587B2F194BC100EB7757 /* BloodOxygen */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = BloodOxygen; sourceTree = "<group>"; };
+		B2AE587C2F194BCC00EB7757 /* BloodPressure */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = BloodPressure; sourceTree = "<group>"; };
+		B2AE587D2F194BDC00EB7757 /* BloodGlucose */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = BloodGlucose; sourceTree = "<group>"; };
+		B2AE587E2F194BEA00EB7757 /* Temperature */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Temperature; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -245,10 +245,12 @@
 		B29AE75F2F17EF2B0080E203 /* Entities */ = {
 			isa = PBXGroup;
 			children = (
-				B29AE75B2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataClass.swift */,
-				B29AE75C2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataProperties.swift */,
-				B29AE75D2F17EF2B0080E203 /* HeartRateEntity+CoreDataClass.swift */,
-				B29AE75E2F17EF2B0080E203 /* HeartRateEntity+CoreDataProperties.swift */,
+				B2AE587A2F194BAE00EB7757 /* Temperature */,
+				B2AE58792F194B9B00EB7757 /* BloodPressure */,
+				B2AE58782F194B7F00EB7757 /* BloodGlucose */,
+				B2AE58772F194B7600EB7757 /* BloodOxygen */,
+				B2AE585B2F19459200EB7757 /* Hrv */,
+				B2AE58592F19456900EB7757 /* HeartRate */,
 			);
 			path = Entities;
 			sourceTree = "<group>";
@@ -256,8 +258,12 @@
 		B29AE7622F17EF2B0080E203 /* Repositories */ = {
 			isa = PBXGroup;
 			children = (
-				B29AE7602F17EF2B0080E203 /* HeartRateDailyStatsRepository.swift */,
-				B29AE7612F17EF2B0080E203 /* HeartRateRepository.swift */,
+				B2AE587E2F194BEA00EB7757 /* Temperature */,
+				B2AE587D2F194BDC00EB7757 /* BloodGlucose */,
+				B2AE587C2F194BCC00EB7757 /* BloodPressure */,
+				B2AE587B2F194BC100EB7757 /* BloodOxygen */,
+				B2AE585C2F1945A300EB7757 /* Hrv */,
+				B2AE585A2F19458300EB7757 /* HeartRate */,
 			);
 			path = Repositories;
 			sourceTree = "<group>";
@@ -617,6 +623,18 @@
 				B22CF95C2EF9CA0C00EC2BE8 /* App */,
 				B22CF95E2EF9CA2D00EC2BE8 /* Base */,
 				B22CF9782EF9CB6A00EC2BE8 /* Views */,
+				B2AE58592F19456900EB7757 /* HeartRate */,
+				B2AE585A2F19458300EB7757 /* HeartRate */,
+				B2AE585B2F19459200EB7757 /* Hrv */,
+				B2AE585C2F1945A300EB7757 /* Hrv */,
+				B2AE58772F194B7600EB7757 /* BloodOxygen */,
+				B2AE58782F194B7F00EB7757 /* BloodGlucose */,
+				B2AE58792F194B9B00EB7757 /* BloodPressure */,
+				B2AE587A2F194BAE00EB7757 /* Temperature */,
+				B2AE587B2F194BC100EB7757 /* BloodOxygen */,
+				B2AE587C2F194BCC00EB7757 /* BloodPressure */,
+				B2AE587D2F194BDC00EB7757 /* BloodGlucose */,
+				B2AE587E2F194BEA00EB7757 /* Temperature */,
 			);
 			name = SwiftDemo;
 			productName = SwiftDemo;
@@ -786,14 +804,8 @@
 				CA5DB46D27564DE2008AFB6F /* YCWatchFaceViewController.swift in Sources */,
 				CA1F854A275DB4640060C475 /* YCAppControlViewController.swift in Sources */,
 				CA5DB45F27562F36008AFB6F /* YCCollectDataViewController.swift in Sources */,
-				B29AE7672F17EF2B0080E203 /* HeartRateEntity+CoreDataProperties.swift in Sources */,
-				B29AE7682F17EF2B0080E203 /* HeartRateDailyStatsRepository.swift in Sources */,
-				B29AE7692F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataProperties.swift in Sources */,
-				B29AE76A2F17EF2B0080E203 /* HeartRateEntity+CoreDataClass.swift in Sources */,
 				B29AE76B2F17EF2B0080E203 /* CoreDataManager.swift in Sources */,
-				B29AE76C2F17EF2B0080E203 /* HeartRateDailyStatsEntity+CoreDataClass.swift in Sources */,
 				B29AE76D2F17EF2B0080E203 /* MannaHealData.xcdatamodeld in Sources */,
-				B29AE76E2F17EF2B0080E203 /* HeartRateRepository.swift in Sources */,
 				CA8AB86F288005B800B91963 /* YCECGReportPictureView.m in Sources */,
 				CA8AB86C288005B800B91963 /* YCECGDiseaseScreeningViewCell.swift in Sources */,
 				4BEF9B752DE93FE900439088 /* YCHenAIBloodPressureViewController.swift in Sources */,

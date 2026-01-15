@@ -356,22 +356,23 @@ class HealthDashboardViewController: AppBaseViewController {
         }
         
         heartRateCard.onTap = { [weak self] in
-            let vc = HeartRateViewController()
+            // Using new generic HealthVitalsViewController for testing
+            let vc = HealthVitalsViewController(vitalType: .heartRate)
             self?.navigationController?.pushViewController(vc, animated: true)
         }
         
         hrvCard.onTap = { [weak self] in
-            let vc = HrvViewController()
+            let vc = HealthVitalsViewController(vitalType: .hrv)
             self?.navigationController?.pushViewController(vc, animated: true)
         }
         
         temperatureCard.onTap = { [weak self] in
-            let vc = TemperatureViewController()
+            let vc = HealthVitalsViewController(vitalType: .temperature)
             self?.navigationController?.pushViewController(vc, animated: true)
         }
         
         bloodOxygenCard.onTap = { [weak self] in
-            let vc = BloodOxygenViewController()
+            let vc = HealthVitalsViewController(vitalType: .bloodOxygen)
             self?.navigationController?.pushViewController(vc, animated: true)
         }
         
