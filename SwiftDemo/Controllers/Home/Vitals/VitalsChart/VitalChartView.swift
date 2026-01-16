@@ -158,7 +158,19 @@ class VitalChartView: UIView {
     private func setupChart() {
         lineChart.delegate = self
         lineChart.backgroundColor = .clear
-        lineChart.legend.enabled = false
+        
+        // Enable legend only for BP to show Systolic/Diastolic
+        lineChart.legend.enabled = (vitalType == .bloodPressure)
+        if vitalType == .bloodPressure {
+            lineChart.legend.form = .circle
+            lineChart.legend.horizontalAlignment = .left
+            lineChart.legend.verticalAlignment = .bottom
+            lineChart.legend.orientation = .horizontal
+            lineChart.legend.drawInside = false
+            lineChart.legend.yOffset = 0
+            lineChart.extraBottomOffset = 5
+        }
+        
         lineChart.rightAxis.enabled = false
         
         lineChart.dragEnabled = true
@@ -176,6 +188,7 @@ class VitalChartView: UIView {
         xAxis.drawGridLinesEnabled = false
         xAxis.granularity = 1.0
         xAxis.labelCount = 5
+        xAxis.yOffset = vitalType == .bloodPressure ? 5 : 0
         
         let leftAxis = lineChart.leftAxis
         leftAxis.drawGridLinesEnabled = false
@@ -206,21 +219,40 @@ class VitalChartView: UIView {
         dataSource?.fetchChartData(for: selectedRange, date: selectedDate) { [weak self] dataPoints in
             guard let self = self else { return }
             self.currentDataPoints = dataPoints
-            self.populateChart(with: dataPoints)
             
-            // Update labels with latest value
-            if !dataPoints.isEmpty {
-                let latest = dataPoints.max(by: { $0.timestamp < $1.timestamp })!
-                self.updateLabelsForDataPoint(latest)
+            // For BP, also fetch diastolic data
+            if self.vitalType == .bloodPressure {
+                self.dataSource?.fetchSecondaryChartData(for: self.selectedRange, date: self.selectedDate) { [weak self] secondaryDataPoints in
+                    guard let self = self else { return }
+                    self.populateChart(with: dataPoints, secondaryData: secondaryDataPoints)
+                    
+                    // Update labels with latest value
+                    if !dataPoints.isEmpty {
+                        let latest = dataPoints.max(by: { $0.timestamp < $1.timestamp })!
+                        self.updateLabelsForDataPoint(latest)
+                    } else {
+                        self.timeLabel.text = "--:--"
+                        self.valueLabel.text = "-- \(self.vitalType.unit)"
+                        self.delegate?.chartShouldUpdateLabels(time: "--:--", value: "-- \(self.vitalType.unit)")
+                    }
+                }
             } else {
-                self.timeLabel.text = "--:--"
-                self.valueLabel.text = "-- \(self.vitalType.unit)"
-                self.delegate?.chartShouldUpdateLabels(time: "--:--", value: "-- \(self.vitalType.unit)")
+                self.populateChart(with: dataPoints, secondaryData: nil)
+                
+                // Update labels with latest value
+                if !dataPoints.isEmpty {
+                    let latest = dataPoints.max(by: { $0.timestamp < $1.timestamp })!
+                    self.updateLabelsForDataPoint(latest)
+                } else {
+                    self.timeLabel.text = "--:--"
+                    self.valueLabel.text = "-- \(self.vitalType.unit)"
+                    self.delegate?.chartShouldUpdateLabels(time: "--:--", value: "-- \(self.vitalType.unit)")
+                }
             }
         }
     }
     
-    private func populateChart(with dataPoints: [VitalDataPoint]) {
+    private func populateChart(with dataPoints: [VitalDataPoint], secondaryData: [VitalDataPoint]? = nil) {
         guard !dataPoints.isEmpty else {
             lineChart.data = nil
             lineChart.setNeedsDisplay()
@@ -228,6 +260,7 @@ class VitalChartView: UIView {
         }
         
         var entries: [ChartDataEntry] = []
+        var secondaryEntries: [ChartDataEntry] = []
         
         switch selectedRange {
         case .day:
@@ -317,17 +350,83 @@ class VitalChartView: UIView {
             return
         }
         
-        let dataSet = LineChartDataSet(entries: entries, label: vitalType.displayName)
+        // Primary data set (systolic for BP, or main data for other vitals)
+        let dataSet = LineChartDataSet(entries: entries, label: vitalType == .bloodPressure ? "Systolic" : vitalType.displayName)
         dataSet.drawValuesEnabled = false
         dataSet.setColor(vitalType.color)
         dataSet.setCircleColor(.systemBlue)
         dataSet.circleRadius = 4
         
-        if let maxValue = entries.map({ $0.y }).max() {
-            lineChart.leftAxis.axisMaximum = maxValue + vitalType.yAxisPadding
+        var dataSets: [LineChartDataSet] = [dataSet]
+        var maxValue = entries.map({ $0.y }).max() ?? 0
+        
+        // Add secondary data set for BP (diastolic)
+        if let secondaryData = secondaryData, !secondaryData.isEmpty {
+            switch selectedRange {
+            case .day:
+                for point in secondaryData {
+                    let date = Date(timeIntervalSince1970: TimeInterval(point.timestamp))
+                    let calendar = Calendar.current
+                    let hour = Double(calendar.component(.hour, from: date))
+                    let minute = Double(calendar.component(.minute, from: date))
+                    let xValue = hour + (minute / 60.0)
+                    secondaryEntries.append(ChartDataEntry(x: xValue, y: point.value))
+                }
+                secondaryEntries.sort { $0.x < $1.x }
+                
+            case .week:
+                guard let startDate = weekStartDate else { break }
+                let calendar = Calendar.current
+                
+                for i in 0..<7 {
+                    let currentDate = calendar.date(byAdding: .day, value: i, to: startDate)!
+                    let dayStart = calendar.startOfDay(for: currentDate)
+                    let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
+                    
+                    if let point = secondaryData.first(where: {
+                        let pointDate = Date(timeIntervalSince1970: TimeInterval($0.timestamp))
+                        return pointDate >= dayStart && pointDate < dayEnd
+                    }) {
+                        secondaryEntries.append(ChartDataEntry(x: Double(i), y: point.value))
+                    }
+                }
+                
+            case .month:
+                guard let startDate = monthStartDate else { break }
+                let calendar = Calendar.current
+                let daysInMonth = calendar.range(of: .day, in: .month, for: startDate)!.count
+                
+                for i in 0..<daysInMonth {
+                    let currentDate = calendar.date(byAdding: .day, value: i, to: startDate)!
+                    let dayStart = calendar.startOfDay(for: currentDate)
+                    let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
+                    
+                    if let point = secondaryData.first(where: {
+                        let pointDate = Date(timeIntervalSince1970: TimeInterval($0.timestamp))
+                        return pointDate >= dayStart && pointDate < dayEnd
+                    }) {
+                        secondaryEntries.append(ChartDataEntry(x: Double(i), y: point.value))
+                    }
+                }
+            }
+            
+            if !secondaryEntries.isEmpty {
+                let secondaryDataSet = LineChartDataSet(entries: secondaryEntries, label: "Diastolic")
+                secondaryDataSet.drawValuesEnabled = false
+                secondaryDataSet.setColor(.systemRed)
+                secondaryDataSet.setCircleColor(.systemRed)
+                secondaryDataSet.circleRadius = 4
+                dataSets.append(secondaryDataSet)
+                
+                // Update max value to include secondary data
+                if let secondaryMax = secondaryEntries.map({ $0.y }).max() {
+                    maxValue = max(maxValue, secondaryMax)
+                }
+            }
         }
         
-        lineChart.data = LineChartData(dataSets: [dataSet])
+        lineChart.leftAxis.axisMaximum = maxValue + vitalType.yAxisPadding
+        lineChart.data = LineChartData(dataSets: dataSets)
         
         // Reset zoom to fit all data for week/month, move to last for day
         switch selectedRange {
@@ -347,7 +446,8 @@ class VitalChartView: UIView {
         let value = Int(point.value)
         
         let timeString: String
-        let valueString = "\(value) \(vitalType.unit)"
+        // Try custom format first, fallback to default
+        let valueString = delegate?.chartCustomValueFormat(for: point.timestamp) ?? "\(value) \(vitalType.unit)"
         
         switch selectedRange {
         case .day:

@@ -3,6 +3,7 @@ import UIKit
 // MARK: - Vital Type
 enum VitalType {
     case heartRate
+    case bloodPressure
     case bloodGlucose
     case temperature
     case bloodOxygen
@@ -11,6 +12,7 @@ enum VitalType {
     var displayName: String {
         switch self {
         case .heartRate: return "Heart Rate"
+        case .bloodPressure: return "Blood Pressure"
         case .bloodGlucose: return "Blood Glucose"
         case .temperature: return "Temperature"
         case .bloodOxygen: return "Blood Oxygen"
@@ -21,6 +23,7 @@ enum VitalType {
     var unit: String {
         switch self {
         case .heartRate: return "times/min"
+        case .bloodPressure: return "mmHg"
         case .bloodGlucose: return "mg/dL"
         case .temperature: return "°C"
         case .bloodOxygen: return "%"
@@ -31,6 +34,7 @@ enum VitalType {
     var color: UIColor {
         switch self {
         case .heartRate: return .systemRed
+        case .bloodPressure: return .systemIndigo
         case .bloodGlucose: return .systemPurple
         case .temperature: return .systemOrange
         case .bloodOxygen: return .systemBlue
@@ -41,6 +45,7 @@ enum VitalType {
     var yAxisPadding: Double {
         switch self {
         case .heartRate: return 30
+        case .bloodPressure: return 20
         case .bloodGlucose: return 20
         case .temperature: return 2
         case .bloodOxygen: return 10
@@ -73,10 +78,30 @@ struct VitalDataPoint {
 // MARK: - Data Source Protocol
 protocol VitalChartDataSource: AnyObject {
     func fetchChartData(for range: VitalChartRange, date: Date, completion: @escaping ([VitalDataPoint]) -> Void)
+    
+    /// Optional: For BP, fetch secondary data (diastolic) to show dual lines
+    func fetchSecondaryChartData(for range: VitalChartRange, date: Date, completion: @escaping ([VitalDataPoint]) -> Void)
+}
+
+// Default implementation for optional method
+extension VitalChartDataSource {
+    func fetchSecondaryChartData(for range: VitalChartRange, date: Date, completion: @escaping ([VitalDataPoint]) -> Void) {
+        completion([])
+    }
 }
 
 // MARK: - Delegate Protocol
 protocol VitalChartDelegate: AnyObject {
     /// Called when chart needs to update value labels
     func chartShouldUpdateLabels(time: String, value: String)
+    
+    /// Called to get custom formatted value for display (optional, for BP dual values)
+    func chartCustomValueFormat(for timestamp: Int64) -> String?
+}
+
+// Default implementation for optional method
+extension VitalChartDelegate {
+    func chartCustomValueFormat(for timestamp: Int64) -> String? {
+        return nil
+    }
 }

@@ -19,6 +19,13 @@ final class HealthVitalsViewController: AppBaseViewController {
         chart.translatesAutoresizingMaskIntoConstraints = false
         return chart
     }()
+    
+    // Blood Pressure uses a custom dual-line chart
+    private lazy var bpChartView: BloodPressureDualLineChartView = {
+        let chart = BloodPressureDualLineChartView()
+        chart.translatesAutoresizingMaskIntoConstraints = false
+        return chart
+    }()
 
     // MARK: - State
     private var isMeasuring = false
@@ -35,6 +42,10 @@ final class HealthVitalsViewController: AppBaseViewController {
     private lazy var minCard = VitalStatView(title: "Minimum", value: "--", color: .systemRed)
     private lazy var maxCard = VitalStatView(title: "Maximum", value: "--", color: .systemGreen)
     private lazy var avgCard = VitalStatView(title: "Average", value: "--", color: .systemYellow)
+    
+    // Blood Pressure specific stat cards
+    private lazy var systolicCard = VitalStatView(title: "Mean Systolic BP", value: "--", color: .systemIndigo, titleFont: .boldSystemFont(ofSize: 14))
+    private lazy var diastolicCard = VitalStatView(title: "Mean Diastolic BP", value: "--", color: .systemRed, titleFont: .boldSystemFont(ofSize: 14))
 
     private let actionButton = UIButton(type: .system)
     private lazy var measurementValueLabel = UILabel()
@@ -43,6 +54,10 @@ final class HealthVitalsViewController: AppBaseViewController {
     // MARK: - Sync Helpers
     private var heartRateSyncHelper: HeartRateSyncHelper?
     private var heartRateDailySyncHelper: HeartRateDailySyncHelper?
+    
+    // Blood Pressure sync helper (separate query like heart rate)
+    private var bloodPressureSyncHelper: BloodPressureSyncHelper?
+    private var bloodPressureDailySyncHelper: BloodPressureDailySyncHelper?
     
     // Combined data sync helper (for HRV, Temperature, Blood Glucose, Blood Oxygen)
     private var combinedDataSyncHelper: CombinedDataSyncHelper?
@@ -56,6 +71,9 @@ final class HealthVitalsViewController: AppBaseViewController {
     // Store completion for day view
     private var dayDataCompletion: (([VitalDataPoint]) -> Void)?
     private var weekMonthDataCompletion: (([VitalDataPoint]) -> Void)?
+    
+    // Store BP data for dual-line chart and value display
+    private var currentBPData: [(timestamp: Int64, systolicValue: Int, diastolicValue: Int)] = []
 
     // MARK: - Initialization
     init(vitalType: VitalType) {
@@ -85,6 +103,15 @@ final class HealthVitalsViewController: AppBaseViewController {
         // This will be implemented when we add specific sync helpers
         setupSyncHelpers()
         
+        // Load initial data from local DB
+        if vitalType == .bloodPressure {
+            // BP fetches data and updates stats manually
+            if userId > 0 {
+                bloodPressureSyncHelper?.fetchDataForDate(userId: userId, date: Date())
+            }
+        }
+        
+        // All vitals use chartView (including BP now)
         chartView.reloadData()
         
         // Check if device is connected
@@ -123,6 +150,14 @@ final class HealthVitalsViewController: AppBaseViewController {
                 heartRateDailySyncHelper?.fetchDailyData(userId: userId) { _ in
                     // Data synced to local DB, will be used for week/month views
                 }
+            }
+            
+        case .bloodPressure:
+            bloodPressureSyncHelper = BloodPressureSyncHelper(listener: self)
+            bloodPressureDailySyncHelper = BloodPressureDailySyncHelper(listener: self)
+            
+            if userId > 0 {
+                bloodPressureDailySyncHelper?.fetchDailyData(userId: userId) { _, _ in }
             }
             
         case .hrv:
@@ -165,6 +200,9 @@ final class HealthVitalsViewController: AppBaseViewController {
         switch vitalType {
         case .heartRate:
             heartRateSyncHelper?.startSync()
+            
+        case .bloodPressure:
+            bloodPressureSyncHelper?.startSync()
             
         case .hrv, .temperature, .bloodGlucose, .bloodOxygen:
             combinedDataSyncHelper?.startSync()
@@ -231,15 +269,27 @@ final class HealthVitalsViewController: AppBaseViewController {
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
         ])
 
-        // Chart view
-        contentView.addSubview(chartView)
+        // Chart view - BP uses both chartView (for tabs/date) and bpChartView (for dual-line rendering)
+        if vitalType == .bloodPressure {
+            // Use chartView for UI structure (tabs, date selector)
+            contentView.addSubview(chartView)
+            // But we'll need to customize it to show BP data
+        } else {
+            contentView.addSubview(chartView)
+        }
 
         // Stats stack
         statsStack.axis = .horizontal
         statsStack.spacing = 12
         statsStack.distribution = .fillEqually
         statsStack.translatesAutoresizingMaskIntoConstraints = false
-        [minCard, maxCard, avgCard].forEach { statsStack.addArrangedSubview($0) }
+        
+        // For blood pressure, show systolic and diastolic mean cards
+        if vitalType == .bloodPressure {
+            [systolicCard, diastolicCard].forEach { statsStack.addArrangedSubview($0) }
+        } else {
+            [minCard, maxCard, avgCard].forEach { statsStack.addArrangedSubview($0) }
+        }
         contentView.addSubview(statsStack)
 
         // Measurement controls (show/hide based on vital type)
@@ -438,6 +488,36 @@ extension HealthVitalsViewController: VitalChartDataSource {
                 }
             }
             
+        case .bloodPressure:
+            switch range {
+            case .day:
+                dayDataCompletion = completion
+                bloodPressureSyncHelper?.fetchDataForDate(userId: userId, date: date)
+                
+            case .week, .month:
+                bloodPressureDailySyncHelper?.loadDataForDateRange(userId: userId, range: range, selectedDate: date) { [weak self] systolicPoints, diastolicPoints in
+                    guard let self = self else { return }
+                    
+                    // Update mean cards with data from date range
+                    if !systolicPoints.isEmpty {
+                        let systolicValues = systolicPoints.map { Int($0.value) }
+                        let diastolicValues = diastolicPoints.map { Int($0.value) }
+                        
+                        let meanSystolic = systolicValues.reduce(0, +) / systolicValues.count
+                        let meanDiastolic = diastolicValues.reduce(0, +) / diastolicValues.count
+                        
+                        self.systolicCard.updateValue("\(meanSystolic)")
+                        self.diastolicCard.updateValue("\(meanDiastolic)")
+                    } else {
+                        self.systolicCard.updateValue("--")
+                        self.diastolicCard.updateValue("--")
+                    }
+                    
+                    // Return systolic data for chart
+                    completion(systolicPoints)
+                }
+            }
+            
         case .hrv:
             switch range {
             case .day:
@@ -491,6 +571,34 @@ extension HealthVitalsViewController: VitalChartDataSource {
             }
         }
     }
+    
+    func fetchSecondaryChartData(for range: VitalChartRange, date: Date, completion: @escaping ([VitalDataPoint]) -> Void) {
+        // Only BP has secondary data (diastolic)
+        guard vitalType == .bloodPressure else {
+            completion([])
+            return
+        }
+        
+        guard userId > 0 else {
+            completion([])
+            return
+        }
+        
+        switch range {
+        case .day:
+            // Convert diastolic values from currentBPData to VitalDataPoint
+            let diastolicPoints = currentBPData.map { entry in
+                VitalDataPoint(timestamp: entry.timestamp, value: Double(entry.diastolicValue))
+            }
+            completion(diastolicPoints)
+            
+        case .week, .month:
+            // Fetch diastolic data from daily stats
+            bloodPressureDailySyncHelper?.loadDataForDateRange(userId: userId, range: range, selectedDate: date) { _, diastolicPoints in
+                completion(diastolicPoints)
+            }
+        }
+    }
 }
 
 // MARK: - VitalChartDelegate
@@ -499,11 +607,23 @@ extension HealthVitalsViewController: VitalChartDelegate {
         // Labels are now internal to VitalChartView, no action needed
         // This delegate method can be used for other purposes if needed
     }
+    
+    func chartCustomValueFormat(for timestamp: Int64) -> String? {
+        // Custom formatting for Blood Pressure: show "systolic/diastolic mmHg"
+        guard vitalType == .bloodPressure else { return nil }
+        
+        if let bpEntry = currentBPData.first(where: { $0.timestamp == timestamp }) {
+            return "\(bpEntry.systolicValue)/\(bpEntry.diastolicValue) mmHg"
+        }
+        
+        return nil
+    }
 }
 
 // MARK: - BLE Sync Listeners (Consolidated)
 // HeartRateSyncListener and CombinedDataSyncListener both have onSyncFailed(error:)
 extension HealthVitalsViewController: HeartRateSyncHelper.HeartRateSyncListener,
+                                       BloodPressureSyncHelper.BloodPressureSyncListener,
                                        CombinedDataSyncHelper.CombinedDataSyncListener {
     
     // HeartRateSyncListener methods
@@ -522,6 +642,47 @@ extension HealthVitalsViewController: HeartRateSyncHelper.HeartRateSyncListener,
             self.updateStats(with: dataPoints)
             
             // Call chart completion
+            self.dayDataCompletion?(dataPoints)
+            self.dayDataCompletion = nil
+        }
+    }
+    
+    // BloodPressureSyncListener methods
+    func onBloodPressureDataFetched(_ data: [YCHealthDataBloodPressure]) {
+        print("✅ Received \(data.count) blood pressure entries from ring")
+    }
+    
+    func onLocalDataFetched(data: [(timestamp: Int64, systolicValue: Int, diastolicValue: Int)]) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            print("📊 [Blood Pressure] Loaded \(data.count) readings from local DB")
+            
+            // Store BP data for later use (chart needs both values)
+            self.currentBPData = data
+            
+            // Convert to VitalDataPoint for chart (using systolic values)
+            let dataPoints = data.map { VitalDataPoint(timestamp: $0.timestamp, value: Double($0.systolicValue)) }
+            
+            // Calculate and show mean systolic and diastolic values
+            if !data.isEmpty {
+                let systolicValues = data.map { $0.systolicValue }
+                let diastolicValues = data.map { $0.diastolicValue }
+                
+                let meanSystolic = systolicValues.reduce(0, +) / systolicValues.count
+                let meanDiastolic = diastolicValues.reduce(0, +) / diastolicValues.count
+                
+                self.systolicCard.updateValue("\(meanSystolic)")
+                self.diastolicCard.updateValue("\(meanDiastolic)")
+                
+                print("📊 Mean BP: \(meanSystolic)/\(meanDiastolic) mmHg")
+            } else {
+                // Reset to -- when no data
+                self.systolicCard.updateValue("--")
+                self.diastolicCard.updateValue("--")
+            }
+            
+            // Call chart completion to update the chart
             self.dayDataCompletion?(dataPoints)
             self.dayDataCompletion = nil
         }
@@ -639,6 +800,7 @@ extension HealthVitalsViewController: HeartRateSyncHelper.HeartRateSyncListener,
 // MARK: - Daily Stats Sync Listeners (Consolidated)
 // All daily sync listeners share same method signatures
 extension HealthVitalsViewController: HeartRateDailySyncHelper.HeartRateDailySyncListener,
+                                       BloodPressureDailySyncHelper.BloodPressureDailySyncListener,
                                        HRVDailySyncHelper.HRVDailySyncListener,
                                        BloodOxygenDailySyncHelper.BloodOxygenDailySyncListener,
                                        BloodGlucoseDailySyncHelper.BloodGlucoseDailySyncListener,
@@ -657,5 +819,21 @@ extension HealthVitalsViewController: HeartRateDailySyncHelper.HeartRateDailySyn
     
     func onDailySyncFailed(error: String) {
         print("❌ [\(vitalType.displayName) Daily] Sync failed: \(error)")
+    }
+    
+    // BP-specific daily sync callbacks
+    func onLocalDailyBPDataFetched(_ systolicData: [VitalDataPoint], _ diastolicData: [VitalDataPoint]) {
+        print("📊 [Blood Pressure Daily] Loaded \(systolicData.count) daily entries from local DB")
+    }
+    
+    func onAPIDailyBPDataFetched(_ systolicData: [VitalDataPoint], _ diastolicData: [VitalDataPoint]) {
+        print("🔄 [Blood Pressure Daily] Received \(systolicData.count) updated daily entries from API")
+        DispatchQueue.main.async { [weak self] in
+            self?.chartView.reloadData()
+        }
+    }
+    
+    func onDailyBPSyncFailed(error: String) {
+        print("❌ [Blood Pressure Daily] Sync failed: \(error)")
     }
 }

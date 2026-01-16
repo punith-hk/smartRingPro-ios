@@ -345,10 +345,10 @@ class HealthDashboardViewController: AppBaseViewController {
             self?.navigationController?.pushViewController(vc, animated: true)
         }
         
-        // bloodPressureCard.onTap = { [weak self] in
-        //     let vc = HealthVitalsViewController(vitalType: .bloodPressure)
-        //     self?.navigationController?.pushViewController(vc, animated: true)
-        // }
+        bloodPressureCard.onTap = { [weak self] in
+            let vc = HealthVitalsViewController(vitalType: .bloodPressure)
+            self?.navigationController?.pushViewController(vc, animated: true)
+        }
 
         sleepCard.onTap = { [weak self] in
             let vc = SleepViewController()

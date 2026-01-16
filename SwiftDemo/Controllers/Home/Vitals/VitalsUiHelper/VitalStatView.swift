@@ -4,7 +4,7 @@ final class VitalStatView: UIView {
 
     private let valueLabel = UILabel()
 
-    init(title: String, value: String, color: UIColor) {
+    init(title: String, value: String, color: UIColor, titleFont: UIFont? = nil) {
         super.init(frame: .zero)
 
         backgroundColor = .white
@@ -20,7 +20,7 @@ final class VitalStatView: UIView {
         valueLabel.text = value
 
         let titleLabel = UILabel()
-        titleLabel.font = .systemFont(ofSize: 12)
+        titleLabel.font = titleFont ?? .systemFont(ofSize: 12)
         titleLabel.textAlignment = .center
         titleLabel.textColor = .darkGray
         titleLabel.text = title
