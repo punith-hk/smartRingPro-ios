@@ -124,7 +124,7 @@ class TemperatureDailySyncHelper {
             return (date, stat)
         })
         
-        var statsToSave: [(date: String, value: String, diastolicValue: String)] = []
+        var statsToSave: [(date: String, value: String)] = []
         var hasChanges = false
         
         for apiEntry in apiData {
@@ -134,12 +134,12 @@ class TemperatureDailySyncHelper {
             
             if let local = localDict[date] {
                 if local.value != value {
-                    statsToSave.append((date: date, value: value, diastolicValue: diastolicValue))
+                    statsToSave.append((date: date, value: value))
                     hasChanges = true
                     print("[\(TAG)] 🔄 Updated entry for \(date): \(local.value ?? "nil") → \(value)")
                 }
             } else {
-                statsToSave.append((date: date, value: value, diastolicValue: diastolicValue))
+                statsToSave.append((date: date, value: value))
                 hasChanges = true
                 print("[\(TAG)] ➕ New entry for \(date): \(value)")
             }

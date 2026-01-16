@@ -15,7 +15,7 @@ class HeartRateDailyStatsRepository {
     // MARK: - Save Operations
     
     /// Save or update daily stats from API
-    func saveDailyStats(userId: Int, date: String, value: String, diastolicValue: String, completion: @escaping (Bool) -> Void) {
+    func saveDailyStats(userId: Int, date: String, value: String, completion: @escaping (Bool) -> Void) {
         CoreDataManager.shared.performBackgroundTask { [weak self] backgroundContext in
             guard let self = self else { return }
             
@@ -39,7 +39,6 @@ class HeartRateDailyStatsRepository {
                 }
                 
                 entity.value = value
-                entity.diastolicValue = diastolicValue
                 entity.lastUpdated = Int64(Date().timeIntervalSince1970)
                 
                 try backgroundContext.save()
@@ -58,7 +57,7 @@ class HeartRateDailyStatsRepository {
     }
     
     /// Batch save multiple daily stats
-    func saveBatch(userId: Int, stats: [(date: String, value: String, diastolicValue: String)], completion: @escaping (Bool, Int) -> Void) {
+    func saveBatch(userId: Int, stats: [(date: String, value: String)], completion: @escaping (Bool, Int) -> Void) {
         guard !stats.isEmpty else {
             completion(true, 0)
             return
@@ -80,7 +79,6 @@ class HeartRateDailyStatsRepository {
                         // Check if value changed
                         if existing.value != stat.value {
                             existing.value = stat.value
-                            existing.diastolicValue = stat.diastolicValue
                             existing.lastUpdated = Int64(Date().timeIntervalSince1970)
                             savedCount += 1
                         }
@@ -90,7 +88,6 @@ class HeartRateDailyStatsRepository {
                         entity.userId = Int64(userId)
                         entity.date = stat.date
                         entity.value = stat.value
-                        entity.diastolicValue = stat.diastolicValue
                         entity.lastUpdated = Int64(Date().timeIntervalSince1970)
                         savedCount += 1
                     }

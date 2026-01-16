@@ -138,7 +138,7 @@ class HeartRateDailySyncHelper {
         })
         
         // Prepare batch for saving
-        var statsToSave: [(date: String, value: String, diastolicValue: String)] = []
+        var statsToSave: [(date: String, value: String)] = []
         var hasChanges = false
         
         for apiEntry in apiData {
@@ -149,13 +149,13 @@ class HeartRateDailySyncHelper {
             if let local = localDict[date] {
                 // Entry exists - check if value changed
                 if local.value != value || local.diastolicValue != diastolicValue {
-                    statsToSave.append((date: date, value: value, diastolicValue: diastolicValue))
+                    statsToSave.append((date: date, value: value))
                     hasChanges = true
                     print("[\(TAG)] 🔄 Updated entry for \(date): \(local.value ?? "nil") → \(value)")
                 }
             } else {
                 // New entry
-                statsToSave.append((date: date, value: value, diastolicValue: diastolicValue))
+                statsToSave.append((date: date, value: value))
                 hasChanges = true
                 print("[\(TAG)] ➕ New entry for \(date): \(value)")
             }

@@ -385,6 +385,11 @@ class HealthDashboardViewController: AppBaseViewController {
         let userId = UserDefaults.standard.integer(forKey: "id")
         guard userId > 0 else { return }
 
+        // ✅ Fetch latest values from local database instead of API
+        fetchLatestFromLocalDB()
+        
+        // 🔴 COMMENTED: Old API call for latest data
+        /*
         HealthService.shared.getLastHealthData(userId: userId) {
             [weak self] result in
             DispatchQueue.main.async {
@@ -393,6 +398,74 @@ class HealthDashboardViewController: AppBaseViewController {
                 if case .success(let response) = result {
                     self.lastHealthResponse = response
                     self.applyHealthData(response)
+                }
+            }
+        }
+        */
+    }
+    
+    // MARK: - Local Database Fetch
+    private func fetchLatestFromLocalDB() {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            // Fetch latest values from each repository
+            let heartRateRepo = HeartRateRepository()
+            let bpRepo = BloodPressureRepository()
+            let hrvRepo = HrvRepository()
+            let bloodOxygenRepo = BloodOxygenRepository()
+            let bloodGlucoseRepo = BloodGlucoseRepository()
+            let tempRepo = TemperatureRepository()
+            
+            let latestHR = heartRateRepo.getLatestEntry()
+            let latestBP = bpRepo.getLatestEntry()
+            let latestHRV = hrvRepo.getLatestEntry()
+            let latestO2 = bloodOxygenRepo.getLatestEntry()
+            let latestGlucose = bloodGlucoseRepo.getLatestEntry()
+            let latestTemp = tempRepo.getLatestEntry()
+            
+            DispatchQueue.main.async {
+                // Heart Rate
+                if let hr = latestHR {
+                    self.heartRateCard.updateValue("\(hr.bpm) times/min")
+                } else {
+                    self.heartRateCard.updateValue("-- times/min")
+                }
+                
+                // Blood Pressure
+                if let bp = latestBP {
+                    self.bloodPressureCard.updateValue("\(bp.systolicValue)/\(bp.diastolicValue) mmHg")
+                } else {
+                    self.bloodPressureCard.updateValue("--/-- mmHg")
+                }
+                
+                // HRV
+                if let hrv = latestHRV {
+                    self.hrvCard.updateValue("\(hrv.hrvValue) ms")
+                } else {
+                    self.hrvCard.updateValue("-- ms")
+                }
+                
+                // Blood Oxygen
+                if let o2 = latestO2 {
+                    self.bloodOxygenCard.updateValue("\(o2.oxygenValue) %")
+                } else {
+                    self.bloodOxygenCard.updateValue("-- %")
+                }
+                
+                // Blood Glucose
+                if let glucose = latestGlucose {
+                    self.bloodGlucoseCard.updateValue("\(glucose.glucoseValue) mg/dL")
+                } else {
+                    self.bloodGlucoseCard.updateValue("-- mg/dL")
+                }
+                
+                // Temperature
+                if let temp = latestTemp {
+                    let tempValue = temp.temperatureValue
+                    self.temperatureCard.updateValue(self.formatBodyTemperature(tempValue))
+                } else {
+                    self.temperatureCard.updateValue(self.formatBodyTemperature(nil))
                 }
             }
         }

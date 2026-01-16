@@ -96,9 +96,9 @@ class TemperatureRepository {
         }
     }
     
-    /// Get latest heart rate entry
-    func getLatestEntry() -> HeartRateEntity? {
-        let request = HeartRateEntity.fetchLatest()
+    /// Get latest temperature entry
+    func getLatestEntry() -> TemperatureEntity? {
+        let request = TemperatureEntity.fetchLatest()
         
         do {
             let results = try context.fetch(request)
