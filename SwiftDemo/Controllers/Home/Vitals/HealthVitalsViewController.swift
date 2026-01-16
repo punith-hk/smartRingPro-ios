@@ -498,6 +498,20 @@ extension HealthVitalsViewController: VitalChartDataSource {
                 bloodPressureDailySyncHelper?.loadDataForDateRange(userId: userId, range: range, selectedDate: date) { [weak self] systolicPoints, diastolicPoints in
                     guard let self = self else { return }
                     
+                    // Store BP data for custom value formatting (combine systolic and diastolic by timestamp)
+                    var bpData: [(timestamp: Int64, systolicValue: Int, diastolicValue: Int)] = []
+                    for (index, systolicPoint) in systolicPoints.enumerated() {
+                        if index < diastolicPoints.count {
+                            let diastolicPoint = diastolicPoints[index]
+                            bpData.append((
+                                timestamp: systolicPoint.timestamp,
+                                systolicValue: Int(systolicPoint.value),
+                                diastolicValue: Int(diastolicPoint.value)
+                            ))
+                        }
+                    }
+                    self.currentBPData = bpData
+                    
                     // Update mean cards with data from date range
                     if !systolicPoints.isEmpty {
                         let systolicValues = systolicPoints.map { Int($0.value) }

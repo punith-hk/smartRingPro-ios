@@ -49,8 +49,10 @@ class BloodOxygenDailySyncHelper {
         case .week:
             let weekday = calendar.component(.weekday, from: selectedDate)
             let daysToMonday = (weekday == 1) ? -6 : -(weekday - 2)
-            startDate = calendar.date(byAdding: .day, value: daysToMonday, to: selectedDate)!
-            endDate = calendar.date(byAdding: .day, value: 6, to: startDate)!
+            let weekStart = calendar.date(byAdding: .day, value: daysToMonday, to: selectedDate)!
+            startDate = calendar.startOfDay(for: weekStart)
+            let weekEnd = calendar.date(byAdding: .day, value: 6, to: startDate)!
+            endDate = calendar.date(byAdding: .day, value: 1, to: weekEnd)! // Start of next day for comparison
             
         case .month:
             let components = calendar.dateComponents([.year, .month], from: selectedDate)
@@ -70,7 +72,7 @@ class BloodOxygenDailySyncHelper {
                   let statDate = dateFormatter.date(from: dateString) else {
                 return false
             }
-            return statDate >= startDate && statDate <= endDate
+            return statDate >= startDate && statDate < endDate
         }
         
         let dataPoints = convertToDataPoints(filteredStats)
