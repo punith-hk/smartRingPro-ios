@@ -4,16 +4,32 @@ final class VitalStatView: UIView {
 
     private let valueLabel = UILabel()
 
-    init(title: String, value: String, color: UIColor, titleFont: UIFont? = nil) {
+    init(title: String, value: String, color: UIColor, icon: UIImage? = nil, titleFont: UIFont? = nil) {
         super.init(frame: .zero)
 
         backgroundColor = .white
         layer.cornerRadius = 14
 
-        let icon = UIView()
-        icon.backgroundColor = color
-        icon.layer.cornerRadius = 10
-        icon.translatesAutoresizingMaskIntoConstraints = false
+        let iconContainer = UIView()
+        iconContainer.backgroundColor = color
+        iconContainer.layer.cornerRadius = 10
+        iconContainer.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Add icon image if provided
+        if let icon = icon {
+            let iconImageView = UIImageView(image: icon)
+            iconImageView.tintColor = .white
+            iconImageView.contentMode = .scaleAspectFit
+            iconImageView.translatesAutoresizingMaskIntoConstraints = false
+            iconContainer.addSubview(iconImageView)
+            
+            NSLayoutConstraint.activate([
+                iconImageView.centerXAnchor.constraint(equalTo: iconContainer.centerXAnchor),
+                iconImageView.centerYAnchor.constraint(equalTo: iconContainer.centerYAnchor),
+                iconImageView.widthAnchor.constraint(equalToConstant: 12),
+                iconImageView.heightAnchor.constraint(equalToConstant: 12)
+            ])
+        }
 
         valueLabel.font = .boldSystemFont(ofSize: 20)
         valueLabel.textAlignment = .center
@@ -25,7 +41,7 @@ final class VitalStatView: UIView {
         titleLabel.textColor = .darkGray
         titleLabel.text = title
 
-        let stack = UIStackView(arrangedSubviews: [icon, valueLabel, titleLabel])
+        let stack = UIStackView(arrangedSubviews: [iconContainer, valueLabel, titleLabel])
         stack.axis = .vertical
         stack.alignment = .center
         stack.spacing = 6
@@ -34,8 +50,8 @@ final class VitalStatView: UIView {
         addSubview(stack)
 
         NSLayoutConstraint.activate([
-            icon.widthAnchor.constraint(equalToConstant: 20),
-            icon.heightAnchor.constraint(equalToConstant: 20),
+            iconContainer.widthAnchor.constraint(equalToConstant: 20),
+            iconContainer.heightAnchor.constraint(equalToConstant: 20),
 
             stack.centerXAnchor.constraint(equalTo: centerXAnchor),
             stack.centerYAnchor.constraint(equalTo: centerYAnchor)

@@ -39,13 +39,24 @@ final class HealthVitalsViewController: AppBaseViewController {
     // MARK: - UI
     private let statsStack = UIStackView()
 
-    private lazy var minCard = VitalStatView(title: "Minimum", value: "--", color: .systemRed)
-    private lazy var maxCard = VitalStatView(title: "Maximum", value: "--", color: .systemGreen)
-    private lazy var avgCard = VitalStatView(title: "Average", value: "--", color: .systemYellow)
+    private lazy var minCard: VitalStatView = {
+        let icon = getIconForVitalType()
+        return VitalStatView(title: "Minimum", value: "--", color: .systemYellow, icon: icon)
+    }()
+    
+    private lazy var maxCard: VitalStatView = {
+        let icon = getIconForVitalType()
+        return VitalStatView(title: "Maximum", value: "--", color: .systemRed, icon: icon)
+    }()
+    
+    private lazy var avgCard: VitalStatView = {
+        let icon = getIconForVitalType()
+        return VitalStatView(title: "Average", value: "--", color: .systemGreen, icon: icon)
+    }()
     
     // Blood Pressure specific stat cards
-    private lazy var systolicCard = VitalStatView(title: "Mean Systolic BP", value: "--", color: .systemIndigo, titleFont: .boldSystemFont(ofSize: 14))
-    private lazy var diastolicCard = VitalStatView(title: "Mean Diastolic BP", value: "--", color: .systemRed, titleFont: .boldSystemFont(ofSize: 14))
+    private lazy var systolicCard = VitalStatView(title: "Mean Systolic BP", value: "--", color: .systemIndigo, icon: UIImage(systemName: "waveform.path.ecg"), titleFont: .boldSystemFont(ofSize: 14))
+    private lazy var diastolicCard = VitalStatView(title: "Mean Diastolic BP", value: "--", color: .systemRed, icon: UIImage(systemName: "waveform.path.ecg"), titleFont: .boldSystemFont(ofSize: 14))
 
     private let actionButton = UIButton(type: .system)
     private lazy var measurementValueLabel = UILabel()
@@ -369,10 +380,13 @@ final class HealthVitalsViewController: AppBaseViewController {
     }
     
     private func shouldShowMeasurementControls() -> Bool {
-        // TODO: Define which vitals support measurement
-        // For now, return false (no measurement controls)
-        // Can be customized later: return vitalType == .heartRate || vitalType == .bloodPressure
-        return false
+        // Show measurement controls for all vitals except calories
+        switch vitalType {
+        case .calories:
+            return false
+        default:
+            return true
+        }
     }
 
     // MARK: - Measurement (Optional - only if shouldShowMeasurementControls)
@@ -905,5 +919,27 @@ extension HealthVitalsViewController: HeartRateDailySyncHelper.HeartRateDailySyn
     
     func onDailyBPSyncFailed(error: String) {
         print("❌ [Blood Pressure Daily] Sync failed: \(error)")
+    }
+}
+
+// MARK: - Helper Methods
+extension HealthVitalsViewController {
+    private func getIconForVitalType() -> UIImage? {
+        switch vitalType {
+        case .heartRate:
+            return UIImage(systemName: "heart.fill")
+        case .temperature:
+            return UIImage(systemName: "thermometer")
+        case .bloodGlucose:
+            return UIImage(systemName: "drop.fill")
+        case .bloodOxygen:
+            return UIImage(systemName: "lungs.fill")
+        case .hrv:
+            return UIImage(systemName: "waveform")
+        case .bloodPressure:
+            return UIImage(systemName: "waveform.path.ecg")
+        case .calories:
+            return UIImage(systemName: "flame.fill")
+        }
     }
 }

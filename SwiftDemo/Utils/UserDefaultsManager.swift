@@ -60,4 +60,25 @@ final class UserDefaultsManager {
     var userName: String? {
         defaults.string(forKey: "user")
     }
+    
+    // MARK: - Profile Data
+    var profileName: String? {
+        get { defaults.string(forKey: "profileName") }
+        set { defaults.set(newValue, forKey: "profileName") }
+    }
+    
+    var profilePhotoUrl: String? {
+        get { defaults.string(forKey: "profilePhotoUrl") }
+        set { defaults.set(newValue, forKey: "profilePhotoUrl") }
+    }
+    
+    func saveProfileData(name: String, photoUrl: String) {
+        defaults.set(name, forKey: "profileName")
+        defaults.set(photoUrl, forKey: "profilePhotoUrl")
+    }
+    
+    func clearProfileData() {
+        defaults.removeObject(forKey: "profileName")
+        defaults.removeObject(forKey: "profilePhotoUrl")
+    }
 }

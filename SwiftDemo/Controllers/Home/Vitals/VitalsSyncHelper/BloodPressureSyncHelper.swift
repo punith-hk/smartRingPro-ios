@@ -96,6 +96,21 @@ class BloodPressureSyncHelper {
             
             if success {
                 print("[\(self.TAG)] ✅ Saved \(savedCount)/\(readings.count) blood pressure readings to local DB")
+                
+                // Reload data from local DB to update chart
+                DispatchQueue.main.async {
+                    let calendar = Calendar.current
+                    let today = calendar.startOfDay(for: Date())
+                    guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) else { return }
+                    
+                    let entries = self.bloodPressureRepository.getByDateRange(start: today, end: tomorrow)
+                    let bpData = entries.map {
+                        (timestamp: $0.timestamp, systolicValue: Int($0.systolicValue), diastolicValue: Int($0.diastolicValue))
+                    }.sorted { $0.timestamp < $1.timestamp }
+                    
+                    print("[\(self.TAG)] 🔄 Reloaded \(bpData.count) readings from local DB after save")
+                    self.listener?.onLocalDataFetched(data: bpData)
+                }
             } else {
                 print("[\(self.TAG)] ❌ Failed to save blood pressure data to local DB")
             }

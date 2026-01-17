@@ -1,5 +1,9 @@
 import UIKit
 
+extension Notification.Name {
+    static let profileDataLoaded = Notification.Name("profileDataLoaded")
+}
+
 class ProfileViewController: AppBaseViewController {
     
     private var userResId: Int = 0      // patient_id
@@ -583,6 +587,17 @@ class ProfileViewController: AppBaseViewController {
         
         firstNameField.text = data.first_name ?? ""
         lastNameField.text = data.last_name ?? ""
+        
+        // Post notification to update side menu with profile data
+        let fullName = "\(data.first_name ?? "") \(data.last_name ?? "")".trimmingCharacters(in: .whitespaces)
+        NotificationCenter.default.post(
+            name: .profileDataLoaded,
+            object: nil,
+            userInfo: ["name": fullName, "imageUrl": data.patient_image_url ?? ""]
+        )
+        
+        // Save to UserDefaults for persistence
+        UserDefaultsManager.shared.saveProfileData(name: fullName, photoUrl: data.patient_image_url ?? "")
 
         emailField.text = data.email ?? ""
         mobileField.text = data.phone_number

@@ -79,6 +79,7 @@ class HealthDashboardViewController: AppBaseViewController {
         stepProgress.setProgress(current: 0, total: 10000)
 
         observeSettings()
+        fetchProfileIfNeeded()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -598,7 +599,36 @@ class HealthDashboardViewController: AppBaseViewController {
 
         label.text = text
     }
-
-
-
+    
+    // MARK: - Profile Data Fetch
+    private func fetchProfileIfNeeded() {
+        // Check if profile data is already saved
+        guard UserDefaultsManager.shared.profileName == nil || 
+              UserDefaultsManager.shared.profileName?.isEmpty == true else {
+            return
+        }
+        
+        // Fetch profile data if not saved
+        let userId = UserDefaultsManager.shared.userId
+        guard userId > 0 else { return }
+        
+        ProfileService.shared.getUserProfile(userId: userId) { result in
+            DispatchQueue.main.async {
+                if case .success(let response) = result {
+                    let data = response.data
+                    let fullName = "\(data.first_name ?? "") \(data.last_name ?? "")".trimmingCharacters(in: .whitespaces)
+                    
+                    // Save to UserDefaults
+                    UserDefaultsManager.shared.saveProfileData(name: fullName, photoUrl: data.patient_image_url ?? "")
+                    
+                    // Post notification to update side menu
+                    NotificationCenter.default.post(
+                        name: .profileDataLoaded,
+                        object: nil,
+                        userInfo: ["name": fullName, "imageUrl": data.patient_image_url ?? ""]
+                    )
+                }
+            }
+        }
+    }
 }

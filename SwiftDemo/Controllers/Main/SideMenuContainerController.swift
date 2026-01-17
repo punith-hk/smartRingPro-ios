@@ -194,8 +194,9 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
         
         print("✅ All local data cleared")
 
-        // Clear user session
+        // Clear user session and profile data
         UserDefaults.standard.removeObject(forKey: "isLoggedIn")
+        UserDefaultsManager.shared.clearProfileData()
 
         let loginVC = LoginViewController()
         let nav = UINavigationController(rootViewController: loginVC)
