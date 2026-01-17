@@ -45,7 +45,7 @@ class MainTabBarController: UITabBarController {
 
         let profile = createNav(
             vc: CareViewController(),
-            title: "Profile",
+            title: "Caring",
             icon: "person"
         )
 

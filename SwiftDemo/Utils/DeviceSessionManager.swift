@@ -5,21 +5,28 @@ final class DeviceSessionManager {
     static let shared = DeviceSessionManager()
     private init() {}
 
-    private let key = "connectedDeviceMac"
+    private let macKey = "connectedDeviceMac"
+    private let nameKey = "connectedDeviceName"
 
-    func saveConnectedDevice(mac: String) {
-        UserDefaults.standard.set(mac, forKey: key)
+    func saveConnectedDevice(mac: String, name: String) {
+        UserDefaults.standard.set(mac, forKey: macKey)
+        UserDefaults.standard.set(name, forKey: nameKey)
     }
 
     func clearDevice() {
-        UserDefaults.standard.removeObject(forKey: key)
+        UserDefaults.standard.removeObject(forKey: macKey)
+        UserDefaults.standard.removeObject(forKey: nameKey)
     }
 
     func isDeviceConnected() -> Bool {
-        return UserDefaults.standard.string(forKey: key) != nil
+        return connectedDeviceMac() != nil
     }
 
     func connectedDeviceMac() -> String? {
-        return UserDefaults.standard.string(forKey: key)
+        UserDefaults.standard.string(forKey: macKey)
+    }
+
+    func connectedDeviceName() -> String? {
+        UserDefaults.standard.string(forKey: nameKey)
     }
 }

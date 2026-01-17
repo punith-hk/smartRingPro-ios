@@ -1,4 +1,5 @@
 import UIKit
+import YCProductSDK
 
 class SideMenuContainerController: UIViewController, SideMenuDelegate {
 
@@ -164,6 +165,18 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
 
         closeMenu()
 
+        // 🔥 BLE CLEANUP
+        YCProduct.disconnectDevice { _, _ in }
+        YCProduct.shared.isReconnectEnable = false
+
+        DeviceSessionManager.shared.clearDevice()
+        
+        // 🗄️ CLEAR ALL LOCAL DATABASE
+        print("🗑️ Clearing all local database data...")
+        HeartRateRepository().deleteAll()
+        HeartRateDailyStatsRepository().deleteAll()
+        print("✅ All local data cleared")
+
         // Clear user session
         UserDefaults.standard.removeObject(forKey: "isLoggedIn")
 
@@ -176,5 +189,6 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
             sceneDelegate.setRootViewController(nav)
         }
     }
+
 
 }

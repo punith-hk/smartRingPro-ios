@@ -5,4 +5,5 @@ enum NetworkError: Error {
     case network
     case noData
     case decoding
+    case encoding
 }

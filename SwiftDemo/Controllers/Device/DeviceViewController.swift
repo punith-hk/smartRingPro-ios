@@ -2,9 +2,11 @@ import UIKit
 
 class DeviceViewController: AppBaseViewController {
 
+    // MARK: - UI
     private let cardView = UIView()
     private let titleLabel = UILabel()
     private let subtitleLabel = UILabel()
+    private let textStack = UIStackView()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -19,7 +21,7 @@ class DeviceViewController: AppBaseViewController {
             alpha: 1
         )
     }
-    
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
@@ -29,7 +31,7 @@ class DeviceViewController: AppBaseViewController {
             showBindDevice()
         }
     }
-    
+
     private func showBindDevice() {
         setupUI()
     }
@@ -39,9 +41,12 @@ class DeviceViewController: AppBaseViewController {
         navigationController?.setViewControllers([self, connectedVC], animated: false)
     }
 
-
-
     private func setupUI() {
+
+        // Avoid duplicate UI on reappear
+        view.subviews.forEach {
+            if $0 == cardView { $0.removeFromSuperview() }
+        }
 
         // Card
         cardView.backgroundColor = UIColor(
@@ -50,9 +55,9 @@ class DeviceViewController: AppBaseViewController {
             blue: 0.85,
             alpha: 1
         )
-        cardView.layer.cornerRadius = 16
+        cardView.layer.cornerRadius = 18
         cardView.layer.shadowColor = UIColor.black.cgColor
-        cardView.layer.shadowOpacity = 0.2
+        cardView.layer.shadowOpacity = 0.18
         cardView.layer.shadowOffset = CGSize(width: 0, height: 4)
         cardView.layer.shadowRadius = 6
         cardView.translatesAutoresizingMaskIntoConstraints = false
@@ -60,18 +65,25 @@ class DeviceViewController: AppBaseViewController {
 
         // Title
         titleLabel.text = "Bind the device"
-        titleLabel.font = .systemFont(ofSize: 18, weight: .semibold)
+        titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
         titleLabel.textColor = .black
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        cardView.addSubview(titleLabel)
+        titleLabel.textAlignment = .left
 
         // Subtitle
-        subtitleLabel.text = "you have not bound any device yet"
-        subtitleLabel.font = .systemFont(ofSize: 14)
-        subtitleLabel.textColor = .black
+        subtitleLabel.text = "You have not bound any device yet"
+        subtitleLabel.font = .systemFont(ofSize: 14, weight: .regular)
+        subtitleLabel.textColor = UIColor.black.withAlphaComponent(0.7)
+        subtitleLabel.textAlignment = .left
         subtitleLabel.numberOfLines = 2
-        subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
-        cardView.addSubview(subtitleLabel)
+
+        // Stack
+        textStack.axis = .vertical
+        textStack.alignment = .leading
+        textStack.spacing = 6
+        textStack.translatesAutoresizingMaskIntoConstraints = false
+        textStack.addArrangedSubview(titleLabel)
+        textStack.addArrangedSubview(subtitleLabel)
+        cardView.addSubview(textStack)
 
         // Tap gesture
         let tap = UITapGestureRecognizer(target: self, action: #selector(bindDeviceTapped))
@@ -80,18 +92,14 @@ class DeviceViewController: AppBaseViewController {
 
         // Constraints
         NSLayoutConstraint.activate([
-            cardView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
+            cardView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
             cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            cardView.heightAnchor.constraint(equalToConstant: 120),
+            cardView.heightAnchor.constraint(equalToConstant: 130),
 
-            titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 20),
-            titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 20),
-            titleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -20),
-
-            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
-            subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            subtitleLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor)
+            textStack.centerYAnchor.constraint(equalTo: cardView.centerYAnchor),
+            textStack.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 20),
+            textStack.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -20)
         ])
     }
 
@@ -99,5 +107,4 @@ class DeviceViewController: AppBaseViewController {
         let searchVC = SearchDeviceViewController()
         navigationController?.pushViewController(searchVC, animated: true)
     }
-
 }
