@@ -106,10 +106,19 @@ class ConnectedDeviceViewController: AppBaseViewController {
         macLabel.text =
             DeviceSessionManager.shared.connectedDeviceMac() ?? "--"
 
-        // While reconnecting → keep connecting UI
-        startBlinking()
-        updateBatteryUI(power: nil, status: nil)
-        firmwareValueLabel.text = "--"
+        // Check if device is already connected via BLE
+        if DeviceSessionManager.shared.isDeviceActuallyConnected() {
+            // Device is already connected - show connected state
+            print("✅ Device already connected on viewDidLoad")
+            stopBlinkingConnected()
+            fetchAndUpdateDeviceBasicInfo()
+        } else {
+            // Device not connected yet - show connecting animation
+            print("⏳ Device not connected, showing connecting state")
+            startBlinking()
+            updateBatteryUI(power: nil, status: nil)
+            firmwareValueLabel.text = "--"
+        }
     }
     
     private func populateConnectedDeviceInfo() {

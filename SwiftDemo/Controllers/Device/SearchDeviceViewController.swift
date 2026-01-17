@@ -12,6 +12,10 @@ class SearchDeviceViewController: AppBaseViewController {
 
     private var devices: [ScannedDevice] = []
     private var scanTimer: Timer?
+    
+    // Connection state
+    private var isConnecting = false
+    private let loadingView = UIActivityIndicatorView(style: .large)
 
     // UI
     private let containerView = UIView()
@@ -25,11 +29,20 @@ class SearchDeviceViewController: AppBaseViewController {
 
         setScreenTitle("Bind Device")
         setupUI()
+        setupLoadingView()
         startScanCycle()
+    }
+    
+    private func setupLoadingView() {
+        // Loading indicator (hidden by default)
+        loadingView.color = .white
+        loadingView.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        loadingView.layer.cornerRadius = 10
+        loadingView.hidesWhenStopped = true
+        view.addSubview(loadingView)
     }
 
     private func setupUI() {
-
         view.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.9)
 
         containerView.frame = CGRect(x: 16, y: 120, width: view.bounds.width - 32, height: 360)
@@ -63,6 +76,14 @@ class SearchDeviceViewController: AppBaseViewController {
         scanButton.setTitleColor(.black, for: .normal)
         scanButton.addTarget(self, action: #selector(rescanTapped), for: .touchUpInside)
         view.addSubview(scanButton)
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
+        // Center loading view after layout
+        loadingView.frame = CGRect(x: 0, y: 0, width: 80, height: 80)
+        loadingView.center = view.center
     }
 
     // MARK: - Scan
@@ -141,18 +162,7 @@ extension SearchDeviceViewController: UITableViewDataSource, UITableViewDelegate
         // CONNECT BUTTON TAP
         cell.onConnectTapped = { [weak self] in
             guard let self = self else { return }
-
-            // 1️⃣ Save device for routing
-            DeviceSessionManager.shared.saveConnectedDevice(
-                mac: device.mac,
-                name: device.name
-            )
-
-            // 2️⃣ Start BLE connection
-            YCProduct.connectDevice(device.peripheral) { _, _ in }
-
-            // 3️⃣ Go back to DeviceViewController
-            self.navigationController?.popViewController(animated: true)
+            self.connectToDevice(device)
         }
 
         return cell
@@ -160,16 +170,92 @@ extension SearchDeviceViewController: UITableViewDataSource, UITableViewDelegate
 
     // ROW TAP = SAME AS CONNECT BUTTON
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-
         let device = devices[indexPath.row]
+        connectToDevice(device)
+    }
+}
 
-        DeviceSessionManager.shared.saveConnectedDevice(
-            mac: device.mac,
-            name: device.name
+// MARK: - BLE Connection
+
+extension SearchDeviceViewController {
+    
+    private func connectToDevice(_ device: ScannedDevice) {
+        
+        // Prevent multiple connection attempts
+        guard !isConnecting else { return }
+        isConnecting = true
+        
+        // 🔄 Show loading
+        loadingView.startAnimating()
+        view.bringSubviewToFront(loadingView)
+        
+        print("🔵 Connecting to device: \(device.name) (\(device.mac))")
+        
+        // 🔗 Start BLE connection
+        YCProduct.connectDevice(device.peripheral) { [weak self] state, error in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                self.loadingView.stopAnimating()
+                self.isConnecting = false
+                
+                switch state {
+                case .connected:
+                    print("✅ Device connected successfully")
+                    
+                    // Save device info
+                    DeviceSessionManager.shared.saveConnectedDevice(
+                        mac: device.mac,
+                        name: device.name
+                    )
+                    
+                    // Navigate back immediately
+                    self.navigationController?.popViewController(animated: true)
+                    
+                    // Show success toast on navigation controller's view (persists during transition)
+                    if let navView = self.navigationController?.view {
+                        Toast.show(message: "Connected to \(device.name)", in: navView)
+                    }
+                    
+                case .connectedFailed:
+                    print("❌ Connection failed")
+                    self.showConnectionError(
+                        title: "Connection Failed",
+                        message: "Could not connect to \(device.name). Please try again."
+                    )
+                    
+                case .timeout:
+                    print("⏱️ Connection timeout")
+                    self.showConnectionError(
+                        title: "Connection Timeout",
+                        message: "Connection to \(device.name) timed out. Please make sure the device is nearby and try again."
+                    )
+                    
+                default:
+                    print("⚠️ Connection state: \(state)")
+                    if let error = error {
+                        self.showConnectionError(
+                            title: "Connection Error",
+                            message: error.localizedDescription
+                        )
+                    } else {
+                        self.showConnectionError(
+                            title: "Connection Error",
+                            message: "Unable to connect to \(device.name). Please try again."
+                        )
+                    }
+                }
+            }
+        }
+    }
+    
+    private func showConnectionError(title: String, message: String) {
+        let alert = UIAlertController(
+            title: title,
+            message: message,
+            preferredStyle: .alert
         )
-
-        YCProduct.connectDevice(device.peripheral) { _, _ in }
-
-        navigationController?.popViewController(animated: true)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
 }

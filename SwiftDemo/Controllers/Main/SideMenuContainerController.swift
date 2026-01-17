@@ -173,8 +173,23 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
         
         // 🗄️ CLEAR ALL LOCAL DATABASE
         print("🗑️ Clearing all local database data...")
+        
+        // Clear raw data
         HeartRateRepository().deleteAll()
+        BloodPressureRepository().deleteAll()
+        HrvRepository().deleteAll()
+        BloodOxygenRepository().deleteAll()
+        BloodGlucoseRepository().deleteAll()
+        TemperatureRepository().deleteAll()
+        
+        // Clear daily stats
         HeartRateDailyStatsRepository().deleteAll()
+        BloodPressureDailyStatsRepository().deleteAll()
+        HrvDailyStatsRepository().deleteAll()
+        BloodOxygenDailyStatsRepository().deleteAll()
+        BloodGlucoseDailyStatsRepository().deleteAll()
+        TemperatureDailyStatsRepository().deleteAll()
+        
         print("✅ All local data cleared")
 
         // Clear user session
