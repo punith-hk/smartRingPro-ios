@@ -22,6 +22,7 @@ class VitalChartView: UIView {
     private let segmentedControl = UISegmentedControl(items: ["Day", "Week", "Month"])
     private let chartCard = UIView()
     private let lineChart = LineChartView()
+    private let barChart = BarChartView()
     
     // Date header
     private let prevButton = UIButton(type: .system)
@@ -103,9 +104,14 @@ class VitalChartView: UIView {
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
         chartCard.addSubview(valueLabel)
         
-        // Line chart
-        lineChart.translatesAutoresizingMaskIntoConstraints = false
-        chartCard.addSubview(lineChart)
+        // Line chart or Bar chart based on vitalType
+        if vitalType.useBarChart {
+            barChart.translatesAutoresizingMaskIntoConstraints = false
+            chartCard.addSubview(barChart)
+        } else {
+            lineChart.translatesAutoresizingMaskIntoConstraints = false
+            chartCard.addSubview(lineChart)
+        }
         
         // Legend label
         // legendLabel.font = .systemFont(ofSize: 11)
@@ -141,12 +147,26 @@ class VitalChartView: UIView {
             
             valueLabel.topAnchor.constraint(equalTo: timeLabel.bottomAnchor, constant: 2),
             valueLabel.centerXAnchor.constraint(equalTo: chartCard.centerXAnchor),
-            
-            lineChart.topAnchor.constraint(equalTo: valueLabel.bottomAnchor, constant: -8),
-            lineChart.leadingAnchor.constraint(equalTo: chartCard.leadingAnchor, constant: 6),
-            lineChart.trailingAnchor.constraint(equalTo: chartCard.trailingAnchor, constant: -12),
-            lineChart.heightAnchor.constraint(equalToConstant: 160),
-            
+        ])
+        
+        // Add chart-specific constraints
+        if vitalType.useBarChart {
+            NSLayoutConstraint.activate([
+                barChart.topAnchor.constraint(equalTo: valueLabel.bottomAnchor, constant: -8),
+                barChart.leadingAnchor.constraint(equalTo: chartCard.leadingAnchor, constant: 6),
+                barChart.trailingAnchor.constraint(equalTo: chartCard.trailingAnchor, constant: -12),
+                barChart.heightAnchor.constraint(equalToConstant: 160),
+            ])
+        } else {
+            NSLayoutConstraint.activate([
+                lineChart.topAnchor.constraint(equalTo: valueLabel.bottomAnchor, constant: -8),
+                lineChart.leadingAnchor.constraint(equalTo: chartCard.leadingAnchor, constant: 6),
+                lineChart.trailingAnchor.constraint(equalTo: chartCard.trailingAnchor, constant: -12),
+                lineChart.heightAnchor.constraint(equalToConstant: 160),
+            ])
+        }
+        
+        NSLayoutConstraint.activate([
             // legendLabel.topAnchor.constraint(equalTo: lineChart.bottomAnchor, constant: 2),
             // legendLabel.centerXAnchor.constraint(equalTo: chartCard.centerXAnchor),
             // legendLabel.bottomAnchor.constraint(equalTo: chartCard.bottomAnchor, constant: -4),
@@ -156,6 +176,14 @@ class VitalChartView: UIView {
     }
     
     private func setupChart() {
+        if vitalType.useBarChart {
+            setupBarChart()
+        } else {
+            setupLineChart()
+        }
+    }
+    
+    private func setupLineChart() {
         lineChart.delegate = self
         lineChart.backgroundColor = .clear
         
@@ -191,6 +219,34 @@ class VitalChartView: UIView {
         xAxis.yOffset = vitalType == .bloodPressure ? 5 : 0
         
         let leftAxis = lineChart.leftAxis
+        leftAxis.drawGridLinesEnabled = false
+        leftAxis.drawAxisLineEnabled = false
+        leftAxis.axisMinimum = 0
+    }
+    
+    private func setupBarChart() {
+        barChart.delegate = self
+        barChart.backgroundColor = .clear
+        barChart.legend.enabled = false
+        barChart.rightAxis.enabled = false
+        
+        barChart.dragEnabled = true
+        barChart.setScaleEnabled(true)
+        barChart.pinchZoomEnabled = true
+        barChart.doubleTapToZoomEnabled = false
+        barChart.scaleXEnabled = true
+        barChart.scaleYEnabled = false
+        
+        barChart.dragDecelerationEnabled = true
+        barChart.dragDecelerationFrictionCoef = 0.9
+        
+        let xAxis = barChart.xAxis
+        xAxis.labelPosition = .bottom
+        xAxis.drawGridLinesEnabled = false
+        xAxis.granularity = 1.0
+        xAxis.labelCount = 5
+        
+        let leftAxis = barChart.leftAxis
         leftAxis.drawGridLinesEnabled = false
         leftAxis.drawAxisLineEnabled = false
         leftAxis.axisMinimum = 0
@@ -253,6 +309,136 @@ class VitalChartView: UIView {
     }
     
     private func populateChart(with dataPoints: [VitalDataPoint], secondaryData: [VitalDataPoint]? = nil) {
+        if vitalType.useBarChart {
+            populateBarChart(with: dataPoints)
+        } else {
+            populateLineChart(with: dataPoints, secondaryData: secondaryData)
+        }
+    }
+    
+    private func populateBarChart(with dataPoints: [VitalDataPoint]) {
+        guard !dataPoints.isEmpty else {
+            barChart.data = nil
+            barChart.setNeedsDisplay()
+            return
+        }
+        
+        var entries: [BarChartDataEntry] = []
+        
+        switch selectedRange {
+        case .day:
+            // X-axis: hour (0-24)
+            for point in dataPoints {
+                let date = Date(timeIntervalSince1970: TimeInterval(point.timestamp))
+                let calendar = Calendar.current
+                let hour = Double(calendar.component(.hour, from: date))
+                let minute = Double(calendar.component(.minute, from: date))
+                let xValue = hour + (minute / 60.0)
+                entries.append(BarChartDataEntry(x: xValue, y: point.value))
+            }
+            entries.sort { $0.x < $1.x }
+            
+            barChart.xAxis.valueFormatter = TimeValueFormatter()
+            barChart.xAxis.axisMinimum = 0
+            barChart.xAxis.axisMaximum = 24
+            barChart.xAxis.labelCount = 7
+            barChart.xAxis.granularity = 4.0
+            barChart.setVisibleXRangeMaximum(24)
+            
+        case .week:
+            // X-axis: day index (0-6)
+            guard let startDate = weekStartDate else { return }
+            
+            let calendar = Calendar.current
+            var dayLabels: [String] = []
+            let weekDays = ["M", "T", "W", "T", "F", "S", "S"]
+            
+            for i in 0..<7 {
+                let currentDate = calendar.date(byAdding: .day, value: i, to: startDate)!
+                let weekdayComponent = calendar.component(.weekday, from: currentDate)
+                dayLabels.append(weekDays[(weekdayComponent + 5) % 7])
+                
+                // Find data for this day
+                let dayStart = calendar.startOfDay(for: currentDate)
+                let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
+                
+                if let point = dataPoints.first(where: {
+                    let pointDate = Date(timeIntervalSince1970: TimeInterval($0.timestamp))
+                    return pointDate >= dayStart && pointDate < dayEnd
+                }) {
+                    entries.append(BarChartDataEntry(x: Double(i), y: point.value))
+                }
+            }
+            
+            barChart.xAxis.valueFormatter = WeekValueFormatter(dayLabels: dayLabels)
+            barChart.xAxis.axisMinimum = -0.5
+            barChart.xAxis.axisMaximum = 6.5
+            barChart.xAxis.labelCount = 7
+            barChart.xAxis.granularity = 1.0
+            barChart.dragEnabled = true
+            barChart.setScaleEnabled(false)
+            
+        case .month:
+            // X-axis: day of month (0-30)
+            guard let startDate = monthStartDate else { return }
+            
+            let calendar = Calendar.current
+            let daysInMonth = calendar.range(of: .day, in: .month, for: startDate)!.count
+            
+            for i in 0..<daysInMonth {
+                let currentDate = calendar.date(byAdding: .day, value: i, to: startDate)!
+                let dayStart = calendar.startOfDay(for: currentDate)
+                let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
+                
+                if let point = dataPoints.first(where: {
+                    let pointDate = Date(timeIntervalSince1970: TimeInterval($0.timestamp))
+                    return pointDate >= dayStart && pointDate < dayEnd
+                }) {
+                    entries.append(BarChartDataEntry(x: Double(i), y: point.value))
+                }
+            }
+            
+            barChart.xAxis.valueFormatter = MonthValueFormatter(daysInMonth: daysInMonth)
+            barChart.xAxis.axisMinimum = 0
+            barChart.xAxis.axisMaximum = Double(daysInMonth - 1)
+            barChart.xAxis.labelCount = 6
+            barChart.xAxis.granularity = 5.0
+            barChart.dragEnabled = true
+            barChart.setScaleEnabled(false)
+        }
+        
+        guard !entries.isEmpty else {
+            barChart.data = nil
+            barChart.setNeedsDisplay()
+            return
+        }
+        
+        // Create bar data set
+        let dataSet = BarChartDataSet(entries: entries, label: vitalType.displayName)
+        dataSet.drawValuesEnabled = false
+        dataSet.setColor(vitalType.color)
+        dataSet.highlightEnabled = true
+        
+        let maxValue = entries.map({ $0.y }).max() ?? 0
+        barChart.leftAxis.axisMaximum = maxValue + vitalType.yAxisPadding
+        barChart.data = BarChartData(dataSet: dataSet)
+        
+        // Set bar width
+        if let barData = barChart.data as? BarChartData {
+            barData.barWidth = selectedRange == .day ? 0.4 : 0.6
+        }
+        
+        // Force layout update to fix label alignment on first load
+        barChart.notifyDataSetChanged()
+        barChart.setNeedsLayout()
+        barChart.layoutIfNeeded()
+        
+        // Reset zoom to fit all data
+        barChart.fitScreen()
+        barChart.setNeedsDisplay()
+    }
+    
+    private func populateLineChart(with dataPoints: [VitalDataPoint], secondaryData: [VitalDataPoint]? = nil) {
         guard !dataPoints.isEmpty else {
             lineChart.data = nil
             lineChart.setNeedsDisplay()
@@ -427,6 +613,11 @@ class VitalChartView: UIView {
         
         lineChart.leftAxis.axisMaximum = maxValue + vitalType.yAxisPadding
         lineChart.data = LineChartData(dataSets: dataSets)
+        
+        // Notify chart and force layout update
+        lineChart.notifyDataSetChanged()
+        lineChart.setNeedsLayout()
+        lineChart.layoutIfNeeded()
         
         // Reset zoom to fit all data for week/month, move to last for day
         switch selectedRange {

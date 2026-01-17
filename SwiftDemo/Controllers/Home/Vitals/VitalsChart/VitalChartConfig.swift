@@ -8,6 +8,7 @@ enum VitalType {
     case temperature
     case bloodOxygen
     case hrv
+    case calories
     
     var displayName: String {
         switch self {
@@ -17,6 +18,7 @@ enum VitalType {
         case .temperature: return "Temperature"
         case .bloodOxygen: return "Blood Oxygen"
         case .hrv: return "HRV"
+        case .calories: return "Calories"
         }
     }
     
@@ -28,6 +30,7 @@ enum VitalType {
         case .temperature: return "°C"
         case .bloodOxygen: return "%"
         case .hrv: return "ms"
+        case .calories: return "kcal"
         }
     }
     
@@ -39,17 +42,28 @@ enum VitalType {
         case .temperature: return .systemOrange
         case .bloodOxygen: return .systemBlue
         case .hrv: return .systemGreen
+        case .calories: return .systemYellow
         }
     }
     
     var yAxisPadding: Double {
         switch self {
-        case .heartRate: return 30
+        case .heartRate: return 20
         case .bloodPressure: return 20
         case .bloodGlucose: return 20
-        case .temperature: return 2
-        case .bloodOxygen: return 10
-        case .hrv: return 10
+        case .temperature: return 20
+        case .bloodOxygen: return 30
+        case .hrv: return 20
+        case .calories: return 5
+        }
+    }
+    
+    var useBarChart: Bool {
+        switch self {
+        case .calories:
+            return true
+        default:
+            return false
         }
     }
 }

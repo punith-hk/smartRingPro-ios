@@ -13,6 +13,7 @@ class MainTabBarController: UITabBarController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        delegate = self
         setupTabs()
         setupAppearance()
     }
@@ -105,6 +106,14 @@ class MainTabBarController: UITabBarController {
             nav.pushViewController(vc, animated: true)
         }
     }
+}
 
-
+// MARK: - UITabBarControllerDelegate
+extension MainTabBarController: UITabBarControllerDelegate {
+    func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
+        // Pop to root when switching tabs
+        if let nav = viewController as? UINavigationController {
+            nav.popToRootViewController(animated: false)
+        }
+    }
 }

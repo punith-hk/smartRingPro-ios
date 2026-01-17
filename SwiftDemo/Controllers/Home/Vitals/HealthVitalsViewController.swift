@@ -191,6 +191,10 @@ final class HealthVitalsViewController: AppBaseViewController {
             if userId > 0 {
                 temperatureDailySyncHelper?.fetchDailyData(userId: userId) { _ in }
             }
+            
+        case .calories:
+            // Calories doesn't use HealthVitalsViewController, has its own CaloriesViewController
+            break
         }
     }
     
@@ -206,6 +210,10 @@ final class HealthVitalsViewController: AppBaseViewController {
             
         case .hrv, .temperature, .bloodGlucose, .bloodOxygen:
             combinedDataSyncHelper?.startSync()
+            
+        case .calories:
+            // Calories doesn't use HealthVitalsViewController
+            break
         }
     }
 
@@ -451,10 +459,31 @@ final class HealthVitalsViewController: AppBaseViewController {
             return
         }
         
-        let values = dataPoints.map { Int($0.value) }
-        minCard.updateValue("\(values.min()!)")
-        maxCard.updateValue("\(values.max()!)")
-        avgCard.updateValue("\(values.reduce(0, +) / values.count)")
+        // For temperature, convert to selected unit for display
+        if vitalType == .temperature {
+            let unit = AppSettingsManager.shared.getTemperatureUnit()
+            var displayValues: [Double]
+            
+            if unit == .fahrenheit {
+                // Convert all values to Fahrenheit
+                displayValues = dataPoints.map { TemperatureConverter.celsiusToFahrenheit($0.value) }
+            } else {
+                displayValues = dataPoints.map { $0.value }
+            }
+            
+            let minVal = displayValues.min()!
+            let maxVal = displayValues.max()!
+            let avgVal = displayValues.reduce(0, +) / Double(displayValues.count)
+            
+            minCard.updateValue(String(format: "%.1f", minVal))
+            maxCard.updateValue(String(format: "%.1f", maxVal))
+            avgCard.updateValue(String(format: "%.1f", avgVal))
+        } else {
+            let values = dataPoints.map { Int($0.value) }
+            minCard.updateValue("\(values.min()!)")
+            maxCard.updateValue("\(values.max()!)")
+            avgCard.updateValue("\(values.reduce(0, +) / values.count)")
+        }
     }
     
     private func resetStats() {
@@ -579,10 +608,16 @@ extension HealthVitalsViewController: VitalChartDataSource {
                 
             case .week, .month:
                 temperatureDailySyncHelper?.loadDataForDateRange(userId: userId, range: range, selectedDate: date) { [weak self] dataPoints in
-                    completion(dataPoints)
-                    self?.updateStats(with: dataPoints)
+                    // Convert to Fahrenheit for display if needed
+                    let displayPoints = self?.convertTemperatureDataIfNeeded(dataPoints) ?? dataPoints
+                    completion(displayPoints)
+                    self?.updateStats(with: dataPoints)  // Stats use original data for conversion
                 }
             }
+            
+        case .calories:
+            // Calories doesn't use HealthVitalsViewController, has its own CaloriesViewController
+            completion([])
         }
     }
     
@@ -624,12 +659,14 @@ extension HealthVitalsViewController: VitalChartDelegate {
     
     func chartCustomValueFormat(for timestamp: Int64) -> String? {
         // Custom formatting for Blood Pressure: show "systolic/diastolic mmHg"
-        guard vitalType == .bloodPressure else { return nil }
-        
-        if let bpEntry = currentBPData.first(where: { $0.timestamp == timestamp }) {
-            return "\(bpEntry.systolicValue)/\(bpEntry.diastolicValue) mmHg"
+        if vitalType == .bloodPressure {
+            if let bpEntry = currentBPData.first(where: { $0.timestamp == timestamp }) {
+                return "\(bpEntry.systolicValue)/\(bpEntry.diastolicValue) mmHg"
+            }
+            return nil
         }
         
+        // Temperature: No custom format needed, conversion is handled in data points
         return nil
     }
 }
@@ -639,6 +676,22 @@ extension HealthVitalsViewController: VitalChartDelegate {
 extension HealthVitalsViewController: HeartRateSyncHelper.HeartRateSyncListener,
                                        BloodPressureSyncHelper.BloodPressureSyncListener,
                                        CombinedDataSyncHelper.CombinedDataSyncListener {
+    
+    // MARK: - Temperature Conversion Helper
+    private func convertTemperatureDataIfNeeded(_ dataPoints: [VitalDataPoint]) -> [VitalDataPoint] {
+        guard vitalType == .temperature else { return dataPoints }
+        
+        let unit = AppSettingsManager.shared.getTemperatureUnit()
+        guard unit == .fahrenheit else { return dataPoints }
+        
+        // Convert all values to Fahrenheit for display
+        return dataPoints.map { point in
+            VitalDataPoint(
+                timestamp: point.timestamp,
+                value: TemperatureConverter.celsiusToFahrenheit(point.value)
+            )
+        }
+    }
     
     // HeartRateSyncListener methods
     func onHeartRateDataFetched(_ data: [YCHealthDataHeartRate]) {
@@ -793,8 +846,11 @@ extension HealthVitalsViewController: HeartRateSyncHelper.HeartRateSyncListener,
             // Update stats
             self.updateStats(with: dataPoints)
             
+            // Convert temperature for chart display if needed
+            let displayPoints = self.convertTemperatureDataIfNeeded(dataPoints)
+            
             // Call chart completion
-            self.dayDataCompletion?(dataPoints)
+            self.dayDataCompletion?(displayPoints)
             self.dayDataCompletion = nil
         }
     }

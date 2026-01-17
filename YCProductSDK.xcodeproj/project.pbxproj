@@ -11,6 +11,12 @@
 		4BEF9B752DE93FE900439088 /* YCHenAIBloodPressureViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEF9B732DE93FE900439088 /* YCHenAIBloodPressureViewController.swift */; };
 		B29AE76B2F17EF2B0080E203 /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE7632F17EF2B0080E203 /* CoreDataManager.swift */; };
 		B29AE76D2F17EF2B0080E203 /* MannaHealData.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = B29AE7642F17EF2B0080E203 /* MannaHealData.xcdatamodeld */; };
+		B2FE6BCE2F1BF6960013E05A /* StepsDailyStatsEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FE6BCA2F1BF6960013E05A /* StepsDailyStatsEntity+CoreDataProperties.swift */; };
+		B2FE6BCF2F1BF6960013E05A /* StepsEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FE6BCC2F1BF6960013E05A /* StepsEntity+CoreDataProperties.swift */; };
+		B2FE6BD02F1BF6960013E05A /* StepsEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FE6BCB2F1BF6960013E05A /* StepsEntity+CoreDataClass.swift */; };
+		B2FE6BDE2F1BF87C0013E05A /* StepsDailyStatsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FE6BDC2F1BF87C0013E05A /* StepsDailyStatsRepository.swift */; };
+		B2FE6BDF2F1BF87C0013E05A /* StepsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FE6BDD2F1BF87C0013E05A /* StepsRepository.swift */; };
+		B2FE6BE32F1BFA300013E05A /* StepsDailyStatsEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FE6BE22F1BFA300013E05A /* StepsDailyStatsEntity+CoreDataClass.swift */; };
 		CA15818D2754C6B20073C514 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CA15818B2754C6B20073C514 /* Main.storyboard */; };
 		CA15818F2754C6B40073C514 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CA15818E2754C6B40073C514 /* Assets.xcassets */; };
 		CA1581922754C6B40073C514 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CA1581902754C6B40073C514 /* LaunchScreen.storyboard */; };
@@ -87,6 +93,12 @@
 		AA999FD1E4B8A9FF39FE17CC /* Pods-ObjcDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ObjcDemo.debug.xcconfig"; path = "Target Support Files/Pods-ObjcDemo/Pods-ObjcDemo.debug.xcconfig"; sourceTree = "<group>"; };
 		B29AE7632F17EF2B0080E203 /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
 		B29AE7662F17EF2B0080E203 /* MannaHealData.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = MannaHealData.xcdatamodel; sourceTree = "<group>"; };
+		B2FE6BCA2F1BF6960013E05A /* StepsDailyStatsEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StepsDailyStatsEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		B2FE6BCB2F1BF6960013E05A /* StepsEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StepsEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
+		B2FE6BCC2F1BF6960013E05A /* StepsEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StepsEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		B2FE6BDC2F1BF87C0013E05A /* StepsDailyStatsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepsDailyStatsRepository.swift; sourceTree = "<group>"; };
+		B2FE6BDD2F1BF87C0013E05A /* StepsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepsRepository.swift; sourceTree = "<group>"; };
+		B2FE6BE22F1BFA300013E05A /* StepsDailyStatsEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StepsDailyStatsEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
 		C8C475C791BC3BEBB8BE75EB /* Pods-SwiftDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SwiftDemo.release.xcconfig"; path = "Target Support Files/Pods-SwiftDemo/Pods-SwiftDemo.release.xcconfig"; sourceTree = "<group>"; };
 		CA1581832754C6B20073C514 /* SwiftDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CA15818C2754C6B20073C514 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -251,6 +263,7 @@
 				B2AE58772F194B7600EB7757 /* BloodOxygen */,
 				B2AE585B2F19459200EB7757 /* Hrv */,
 				B2AE58592F19456900EB7757 /* HeartRate */,
+				B2FE6BCD2F1BF6960013E05A /* Steps */,
 			);
 			path = Entities;
 			sourceTree = "<group>";
@@ -264,6 +277,7 @@
 				B2AE587B2F194BC100EB7757 /* BloodOxygen */,
 				B2AE585C2F1945A300EB7757 /* Hrv */,
 				B2AE585A2F19458300EB7757 /* HeartRate */,
+				B2FE6BDB2F1BF8580013E05A /* Steps */,
 			);
 			path = Repositories;
 			sourceTree = "<group>";
@@ -277,6 +291,26 @@
 				B29AE7642F17EF2B0080E203 /* MannaHealData.xcdatamodeld */,
 			);
 			path = Database;
+			sourceTree = "<group>";
+		};
+		B2FE6BCD2F1BF6960013E05A /* Steps */ = {
+			isa = PBXGroup;
+			children = (
+				B2FE6BE22F1BFA300013E05A /* StepsDailyStatsEntity+CoreDataClass.swift */,
+				B2FE6BCA2F1BF6960013E05A /* StepsDailyStatsEntity+CoreDataProperties.swift */,
+				B2FE6BCB2F1BF6960013E05A /* StepsEntity+CoreDataClass.swift */,
+				B2FE6BCC2F1BF6960013E05A /* StepsEntity+CoreDataProperties.swift */,
+			);
+			path = Steps;
+			sourceTree = "<group>";
+		};
+		B2FE6BDB2F1BF8580013E05A /* Steps */ = {
+			isa = PBXGroup;
+			children = (
+				B2FE6BDC2F1BF87C0013E05A /* StepsDailyStatsRepository.swift */,
+				B2FE6BDD2F1BF87C0013E05A /* StepsRepository.swift */,
+			);
+			path = Steps;
 			sourceTree = "<group>";
 		};
 		CA15816A2754C65C0073C514 = {
@@ -790,7 +824,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				CA8AB871288005B800B91963 /* YCECGPhotoViewCell.swift in Sources */,
+				B2FE6BDE2F1BF87C0013E05A /* StepsDailyStatsRepository.swift in Sources */,
+				B2FE6BDF2F1BF87C0013E05A /* StepsRepository.swift in Sources */,
 				CA1582482754FDE00073C514 /* YCECGMeasureViewController.swift in Sources */,
+				B2FE6BCE2F1BF6960013E05A /* StepsDailyStatsEntity+CoreDataProperties.swift in Sources */,
+				B2FE6BCF2F1BF6960013E05A /* StepsEntity+CoreDataProperties.swift in Sources */,
+				B2FE6BD02F1BF6960013E05A /* StepsEntity+CoreDataClass.swift in Sources */,
 				CA15824A2754FDE00073C514 /* YCGradientProgressView.swift in Sources */,
 				CA8AB868288005B800B91963 /* YCECGReportViewController.swift in Sources */,
 				CAB7B83E27579D2B001B53A7 /* YCECGShowViewController.swift in Sources */,
@@ -803,6 +842,7 @@
 				CA1F854F275DC17F0060C475 /* YCSettingViewController.swift in Sources */,
 				CA5DB46D27564DE2008AFB6F /* YCWatchFaceViewController.swift in Sources */,
 				CA1F854A275DB4640060C475 /* YCAppControlViewController.swift in Sources */,
+				B2FE6BE32F1BFA300013E05A /* StepsDailyStatsEntity+CoreDataClass.swift in Sources */,
 				CA5DB45F27562F36008AFB6F /* YCCollectDataViewController.swift in Sources */,
 				B29AE76B2F17EF2B0080E203 /* CoreDataManager.swift in Sources */,
 				B29AE76D2F17EF2B0080E203 /* MannaHealData.xcdatamodeld in Sources */,

@@ -181,6 +181,7 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
         BloodOxygenRepository().deleteAll()
         BloodGlucoseRepository().deleteAll()
         TemperatureRepository().deleteAll()
+        StepsRepository().deleteAll()
         
         // Clear daily stats
         HeartRateDailyStatsRepository().deleteAll()
@@ -189,6 +190,7 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
         BloodOxygenDailyStatsRepository().deleteAll()
         BloodGlucoseDailyStatsRepository().deleteAll()
         TemperatureDailyStatsRepository().deleteAll()
+        StepsDailyStatsRepository().deleteAll()
         
         print("✅ All local data cleared")
 

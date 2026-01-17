@@ -78,8 +78,14 @@ class HealthDashboardViewController: AppBaseViewController {
 
         stepProgress.setProgress(current: 0, total: 10000)
 
-        fetchLatestHealthData()
         observeSettings()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        // Refresh data from local DB every time view appears
+        fetchLatestHealthData()
     }
     
     private func observeSettings() {
@@ -92,8 +98,22 @@ class HealthDashboardViewController: AppBaseViewController {
     }
     
     @objc private func onTemperatureUnitChanged() {
-        guard let lastResponse = lastHealthResponse else { return }
-        applyHealthData(lastResponse)
+        // Re-fetch and update temperature from local DB with new unit
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            let tempRepo = TemperatureRepository()
+            let latestTemp = tempRepo.getLatestEntry()
+            
+            DispatchQueue.main.async {
+                if let temp = latestTemp {
+                    let tempValue = temp.temperatureValue
+                    self.temperatureCard.updateValue(self.formatBodyTemperature(tempValue))
+                } else {
+                    self.temperatureCard.updateValue(self.formatBodyTemperature(nil))
+                }
+            }
+        }
     }
 
 
@@ -416,6 +436,7 @@ class HealthDashboardViewController: AppBaseViewController {
             let bloodOxygenRepo = BloodOxygenRepository()
             let bloodGlucoseRepo = BloodGlucoseRepository()
             let tempRepo = TemperatureRepository()
+            let stepsRepo = StepsRepository()
             
             let latestHR = heartRateRepo.getLatestEntry()
             let latestBP = bpRepo.getLatestEntry()
@@ -423,6 +444,18 @@ class HealthDashboardViewController: AppBaseViewController {
             let latestO2 = bloodOxygenRepo.getLatestEntry()
             let latestGlucose = bloodGlucoseRepo.getLatestEntry()
             let latestTemp = tempRepo.getLatestEntry()
+            
+            // Fetch today's steps data
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+            let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
+            let todaySteps = stepsRepo.getByDateRange(start: today, end: tomorrow)
+            
+            // Calculate today's totals
+            let totalSteps = todaySteps.reduce(0) { $0 + Int($1.steps) }
+            let totalCalories = todaySteps.reduce(0) { $0 + Int($1.calories) }
+            let totalDistance = todaySteps.reduce(0) { $0 + Int($1.distance) }
+            let distanceKm = Double(totalDistance) / 1000.0
             
             DispatchQueue.main.async {
                 // Heart Rate
@@ -467,6 +500,13 @@ class HealthDashboardViewController: AppBaseViewController {
                 } else {
                     self.temperatureCard.updateValue(self.formatBodyTemperature(nil))
                 }
+                
+                // Update Steps, Calories, Distance
+                self.updateStepStats(
+                    steps: totalSteps,
+                    calories: totalCalories,
+                    distanceKm: distanceKm
+                )
             }
         }
     }
