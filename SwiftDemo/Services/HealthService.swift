@@ -116,3 +116,49 @@ extension HealthService {
     }
 }
 
+// MARK: - Sleep Data API
+extension HealthService {
+    
+    /// Save sleep session data to API (matching Android saveSleepData)
+    /// - Parameters:
+    ///   - userId: User ID
+    ///   - sleepData: Sleep session with details
+    ///   - completion: Callback with result
+    func saveSleepData(
+        userId: Int,
+        sleepData: SleepSessionAPI,
+        completion: @escaping (Result<SaveSleepDataResponse, NetworkError>) -> Void
+    ) {
+        let request = SaveSleepDataRequest(userId: userId, sleepData: sleepData)
+        
+        APIClient.shared.postJSON(
+            endpoint: APIEndpoints.saveSleepData,
+            body: request,
+            responseType: SaveSleepDataResponse.self,
+            completion: completion
+        )
+    }
+    
+    /// Fetch sleep data by date range (matching Android getSleepDataByDateWise)
+    /// - Parameters:
+    ///   - userId: User ID
+    ///   - startDate: Start date (yyyy-MM-dd)
+    ///   - endDate: End date (yyyy-MM-dd)
+    ///   - completion: Callback with result
+    func getSleepDataByDateWise(
+        userId: Int,
+        startDate: String,
+        endDate: String,
+        completion: @escaping (Result<GetSleepDataResponse, NetworkError>) -> Void
+    ) {
+        APIClient.shared.get(
+            endpoint: APIEndpoints.getSleepDataByDateWise(
+                userId: userId,
+                startDate: startDate,
+                endDate: endDate
+            ),
+            responseType: GetSleepDataResponse.self,
+            completion: completion
+        )
+    }
+}

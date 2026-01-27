@@ -97,6 +97,18 @@ enum APIEndpoints {
     ) -> String {
         return "CreateRingValue?user_id=\(userId)&type=\(type)&value=\(value)&timestamp=\(timestamp)"
     }
+    
+    // MARK: - Sleep Data
+    static let saveSleepData = "saveSleepData"
+    
+    /// Get sleep data by date range
+    static func getSleepDataByDateWise(
+        userId: Int,
+        startDate: String,
+        endDate: String
+    ) -> String {
+        return "getSleepDataByDateWise?user_id=\(userId)&startDate=\(startDate)&endDate=\(endDate)"
+    }
 
     // MARK: - Diseases
     static let getDiseaseList = "diseases/list"

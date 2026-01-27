@@ -193,6 +193,8 @@
 		B2AE587C2F194BCC00EB7757 /* BloodPressure */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = BloodPressure; sourceTree = "<group>"; };
 		B2AE587D2F194BDC00EB7757 /* BloodGlucose */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = BloodGlucose; sourceTree = "<group>"; };
 		B2AE587E2F194BEA00EB7757 /* Temperature */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Temperature; sourceTree = "<group>"; };
+		B2F137432F1FF9C30083D5BB /* Sleep */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sleep; sourceTree = "<group>"; };
+		B2F137482F1FFA3D0083D5BB /* Sleep */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sleep; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -257,6 +259,7 @@
 		B29AE75F2F17EF2B0080E203 /* Entities */ = {
 			isa = PBXGroup;
 			children = (
+				B2F137432F1FF9C30083D5BB /* Sleep */,
 				B2AE587A2F194BAE00EB7757 /* Temperature */,
 				B2AE58792F194B9B00EB7757 /* BloodPressure */,
 				B2AE58782F194B7F00EB7757 /* BloodGlucose */,
@@ -271,6 +274,7 @@
 		B29AE7622F17EF2B0080E203 /* Repositories */ = {
 			isa = PBXGroup;
 			children = (
+				B2F137482F1FFA3D0083D5BB /* Sleep */,
 				B2AE587E2F194BEA00EB7757 /* Temperature */,
 				B2AE587D2F194BDC00EB7757 /* BloodGlucose */,
 				B2AE587C2F194BCC00EB7757 /* BloodPressure */,
@@ -669,6 +673,8 @@
 				B2AE587C2F194BCC00EB7757 /* BloodPressure */,
 				B2AE587D2F194BDC00EB7757 /* BloodGlucose */,
 				B2AE587E2F194BEA00EB7757 /* Temperature */,
+				B2F137432F1FF9C30083D5BB /* Sleep */,
+				B2F137482F1FFA3D0083D5BB /* Sleep */,
 			);
 			name = SwiftDemo;
 			productName = SwiftDemo;
