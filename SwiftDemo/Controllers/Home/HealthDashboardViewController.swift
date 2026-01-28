@@ -438,6 +438,7 @@ class HealthDashboardViewController: AppBaseViewController {
             let bloodGlucoseRepo = BloodGlucoseRepository()
             let tempRepo = TemperatureRepository()
             let stepsRepo = StepsRepository()
+            let sleepRepo = SleepRepository()
             
             let latestHR = heartRateRepo.getLatestEntry()
             let latestBP = bpRepo.getLatestEntry()
@@ -452,11 +453,23 @@ class HealthDashboardViewController: AppBaseViewController {
             let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
             let todaySteps = stepsRepo.getByDateRange(start: today, end: tomorrow)
             
+            // Fetch today's sleep data
+            let todaySleep = sleepRepo.getByDateRange(startDate: today, endDate: tomorrow)
+            
             // Calculate today's totals
             let totalSteps = todaySteps.reduce(0) { $0 + Int($1.steps) }
             let totalCalories = todaySteps.reduce(0) { $0 + Int($1.calories) }
             let totalDistance = todaySteps.reduce(0) { $0 + Int($1.distance) }
             let distanceKm = Double(totalDistance) / 1000.0
+            
+            // Calculate total sleep time (Deep + Light + REM only)
+            var totalSleepMinutes = 0
+            for session in todaySleep {
+                let deepMin = Int(session.deepSleepTimes) / 60
+                let lightMin = Int(session.lightSleepTimes) / 60
+                let remMin = Int(session.remSleepTimes) / 60
+                totalSleepMinutes += deepMin + lightMin + remMin
+            }
             
             DispatchQueue.main.async {
                 // Heart Rate
@@ -500,6 +513,15 @@ class HealthDashboardViewController: AppBaseViewController {
                     self.temperatureCard.updateValue(self.formatBodyTemperature(tempValue))
                 } else {
                     self.temperatureCard.updateValue(self.formatBodyTemperature(nil))
+                }
+                
+                // Sleep
+                if totalSleepMinutes > 0 {
+                    let hours = totalSleepMinutes / 60
+                    let minutes = totalSleepMinutes % 60
+                    self.sleepCard.updateValue("\(hours)h \(minutes)m")
+                } else {
+                    self.sleepCard.updateValue("--:--")
                 }
                 
                 // Update Steps, Calories, Distance

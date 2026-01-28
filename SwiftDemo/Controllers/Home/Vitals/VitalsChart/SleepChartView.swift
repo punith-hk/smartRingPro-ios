@@ -170,6 +170,9 @@ class SleepChartView: UIView, ChartViewDelegate {
         // Sort by start time
         sleepSegments = allSegments.sorted { $0.startTime < $1.startTime }
         
+        // Fill gaps between sessions with "Awake" segments
+        sleepSegments = fillGapsWithAwakeSegments(sleepSegments)
+        
         // Find time range
         if let first = sleepSegments.first, let last = sleepSegments.last {
             earliestTime = first.startTime
@@ -223,6 +226,38 @@ class SleepChartView: UIView, ChartViewDelegate {
         
         print("[SleepChartView] Converted \(segments.count) segments")
         return segments
+    }
+    
+    private func fillGapsWithAwakeSegments(_ segments: [SleepChartSegment]) -> [SleepChartSegment] {
+        guard segments.count > 1 else { return segments }
+        
+        var filledSegments: [SleepChartSegment] = []
+        let minGapDuration: TimeInterval = 60 // Minimum 1 minute gap to fill
+        
+        for (index, segment) in segments.enumerated() {
+            filledSegments.append(segment)
+            
+            // Check if there's a next segment
+            if index < segments.count - 1 {
+                let nextSegment = segments[index + 1]
+                let gap = nextSegment.startTime.timeIntervalSince(segment.endTime)
+                
+                // If there's a significant gap, fill it with an Awake segment
+                if gap >= minGapDuration {
+                    let awakeSegment = SleepChartSegment(
+                        startTime: segment.endTime,
+                        endTime: nextSegment.startTime,
+                        duration: Int(gap),
+                        sleepType: 4 // 4 = Awake
+                    )
+                    filledSegments.append(awakeSegment)
+                    print("[SleepChartView] Added gap fill: Awake segment from \(segment.endTime) to \(nextSegment.startTime) (\(Int(gap/60)) min)")
+                }
+            }
+        }
+        
+        print("[SleepChartView] Filled segments: \(segments.count) → \(filledSegments.count)")
+        return filledSegments
     }
     
     private func updateChartData() {

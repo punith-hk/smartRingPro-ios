@@ -41,10 +41,13 @@ final class SleepViewController: AppBaseViewController {
     private let sleepQualityCard = UIView()
     private let qualityTitleLabel = UILabel()
     private let qualityScoreLabel = UILabel()
+    private let qualityGradientBar = UIView()
+    private let qualityGradientLayer = CAGradientLayer()
     private let qualityDescriptionLabel = UILabel()
 
     // MARK: - Sleep Efficiency Card
     private let sleepEfficiencyCard = UIView()
+    private let efficiencyIconLabel = UILabel()
     private let efficiencyTitleLabel = UILabel()
     private let efficiencyValueLabel = UILabel()
     private let efficiencyDescriptionLabel = UILabel()
@@ -59,6 +62,12 @@ final class SleepViewController: AppBaseViewController {
         setScreenTitle("Sleep")
         view.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
         setupUI()
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // Update gradient bar frame
+        qualityGradientLayer.frame = qualityGradientBar.bounds
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -272,15 +281,31 @@ final class SleepViewController: AppBaseViewController {
         sleepQualityCard.addSubview(qualityTitleLabel)
 
         qualityScoreLabel.text = "-- Fraction"
-        qualityScoreLabel.font = .boldSystemFont(ofSize: 32)
+        qualityScoreLabel.font = .boldSystemFont(ofSize: 28)
         qualityScoreLabel.textAlignment = .center
         qualityScoreLabel.translatesAutoresizingMaskIntoConstraints = false
         sleepQualityCard.addSubview(qualityScoreLabel)
+        
+        // Gradient bar
+        qualityGradientBar.layer.cornerRadius = 8
+        qualityGradientBar.clipsToBounds = true
+        qualityGradientBar.translatesAutoresizingMaskIntoConstraints = false
+        sleepQualityCard.addSubview(qualityGradientBar)
+        
+        // Setup gradient colors (orange -> purple -> blue)
+        qualityGradientLayer.colors = [
+            UIColor(red: 0.96, green: 0.65, blue: 0.14, alpha: 1).cgColor,  // Orange
+            UIColor(red: 0.85, green: 0.55, blue: 0.48, alpha: 1).cgColor,  // Brown-red
+            UIColor(red: 0.60, green: 0.45, blue: 0.70, alpha: 1).cgColor,  // Purple
+            UIColor(red: 0.20, green: 0.40, blue: 0.90, alpha: 1).cgColor   // Blue
+        ]
+        qualityGradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
+        qualityGradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
+        qualityGradientBar.layer.addSublayer(qualityGradientLayer)
 
-        qualityDescriptionLabel.text = "Will be calculated later"
+        qualityDescriptionLabel.text = "The sleep quality score is based on the basic principles of the pittsburgh sleep Quality Index. The ring evaluates and scores sleep quality through factors such as sleep quality, sleep onset time, sleep duration, sleep efficiency, number of awakenings at night, and awakening time. 0-60 points indicate very poor sleep quality; 60-69 points indicate poor sleep quality; 70-79 points indicate average sleep quality; 80-89 points indicate good sleep quality; 90-100 points indicate excellent sleep quality."
         qualityDescriptionLabel.font = .systemFont(ofSize: 12)
-        qualityDescriptionLabel.textColor = .lightGray
-        qualityDescriptionLabel.textAlignment = .center
+        qualityDescriptionLabel.textColor = UIColor(red: 0.4, green: 0.5, blue: 0.8, alpha: 1)
         qualityDescriptionLabel.numberOfLines = 0
         qualityDescriptionLabel.translatesAutoresizingMaskIntoConstraints = false
         sleepQualityCard.addSubview(qualityDescriptionLabel)
@@ -289,17 +314,23 @@ final class SleepViewController: AppBaseViewController {
             sleepQualityCard.topAnchor.constraint(equalTo: statsStack.bottomAnchor, constant: 16),
             sleepQualityCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             sleepQualityCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            sleepQualityCard.heightAnchor.constraint(equalToConstant: 150),
+            sleepQualityCard.heightAnchor.constraint(greaterThanOrEqualToConstant: 230),
 
             qualityTitleLabel.topAnchor.constraint(equalTo: sleepQualityCard.topAnchor, constant: 16),
             qualityTitleLabel.leadingAnchor.constraint(equalTo: sleepQualityCard.leadingAnchor, constant: 16),
 
+            qualityScoreLabel.topAnchor.constraint(equalTo: qualityTitleLabel.bottomAnchor, constant: 16),
             qualityScoreLabel.centerXAnchor.constraint(equalTo: sleepQualityCard.centerXAnchor),
-            qualityScoreLabel.centerYAnchor.constraint(equalTo: sleepQualityCard.centerYAnchor),
+            
+            qualityGradientBar.topAnchor.constraint(equalTo: qualityScoreLabel.bottomAnchor, constant: 12),
+            qualityGradientBar.leadingAnchor.constraint(equalTo: sleepQualityCard.leadingAnchor, constant: 16),
+            qualityGradientBar.trailingAnchor.constraint(equalTo: sleepQualityCard.trailingAnchor, constant: -16),
+            qualityGradientBar.heightAnchor.constraint(equalToConstant: 16),
 
-            qualityDescriptionLabel.topAnchor.constraint(equalTo: qualityScoreLabel.bottomAnchor, constant: 8),
+            qualityDescriptionLabel.topAnchor.constraint(equalTo: qualityGradientBar.bottomAnchor, constant: 12),
             qualityDescriptionLabel.leadingAnchor.constraint(equalTo: sleepQualityCard.leadingAnchor, constant: 16),
-            qualityDescriptionLabel.trailingAnchor.constraint(equalTo: sleepQualityCard.trailingAnchor, constant: -16)
+            qualityDescriptionLabel.trailingAnchor.constraint(equalTo: sleepQualityCard.trailingAnchor, constant: -16),
+            qualityDescriptionLabel.bottomAnchor.constraint(equalTo: sleepQualityCard.bottomAnchor, constant: -16)
         ])
     }
 
@@ -318,17 +349,23 @@ final class SleepViewController: AppBaseViewController {
         efficiencyTitleLabel.textColor = .darkGray
         efficiencyTitleLabel.translatesAutoresizingMaskIntoConstraints = false
         sleepEfficiencyCard.addSubview(efficiencyTitleLabel)
+        
+        // Icon with percentage
+        efficiencyIconLabel.text = "📈"
+        efficiencyIconLabel.font = .systemFont(ofSize: 24)
+        efficiencyIconLabel.translatesAutoresizingMaskIntoConstraints = false
+        sleepEfficiencyCard.addSubview(efficiencyIconLabel)
 
-        efficiencyValueLabel.text = "--%"
-        efficiencyValueLabel.font = .boldSystemFont(ofSize: 32)
-        efficiencyValueLabel.textAlignment = .center
+        efficiencyValueLabel.text = "99%"
+        efficiencyValueLabel.font = .boldSystemFont(ofSize: 36)
+        efficiencyValueLabel.textColor = .systemBlue
+        efficiencyValueLabel.textAlignment = .right
         efficiencyValueLabel.translatesAutoresizingMaskIntoConstraints = false
         sleepEfficiencyCard.addSubview(efficiencyValueLabel)
 
-        efficiencyDescriptionLabel.text = "Sleep efficiency will be calculated later"
+        efficiencyDescriptionLabel.text = "Sleep efficiency is a way to quantify how fast you fall asleep. A sleep efficiency of 85% or more usually means that your sleep speed is relatively stable. When the sleep efficiency is between 70% and 84%, your sleep quality may be slightly poor, and you may have difficulty falling asleep or waking up easily at night. A sleep efficiency below 70% indicates poor sleep quantity."
         efficiencyDescriptionLabel.font = .systemFont(ofSize: 12)
-        efficiencyDescriptionLabel.textColor = .lightGray
-        efficiencyDescriptionLabel.textAlignment = .center
+        efficiencyDescriptionLabel.textColor = .gray
         efficiencyDescriptionLabel.numberOfLines = 0
         efficiencyDescriptionLabel.translatesAutoresizingMaskIntoConstraints = false
         sleepEfficiencyCard.addSubview(efficiencyDescriptionLabel)
@@ -337,18 +374,22 @@ final class SleepViewController: AppBaseViewController {
             sleepEfficiencyCard.topAnchor.constraint(equalTo: sleepQualityCard.bottomAnchor, constant: 16),
             sleepEfficiencyCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             sleepEfficiencyCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            sleepEfficiencyCard.heightAnchor.constraint(equalToConstant: 150),
+            sleepEfficiencyCard.heightAnchor.constraint(greaterThanOrEqualToConstant: 180),
             sleepEfficiencyCard.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20),
 
             efficiencyTitleLabel.topAnchor.constraint(equalTo: sleepEfficiencyCard.topAnchor, constant: 16),
             efficiencyTitleLabel.leadingAnchor.constraint(equalTo: sleepEfficiencyCard.leadingAnchor, constant: 16),
+            
+            efficiencyIconLabel.topAnchor.constraint(equalTo: efficiencyTitleLabel.bottomAnchor, constant: 16),
+            efficiencyIconLabel.leadingAnchor.constraint(equalTo: sleepEfficiencyCard.leadingAnchor, constant: 16),
 
-            efficiencyValueLabel.centerXAnchor.constraint(equalTo: sleepEfficiencyCard.centerXAnchor),
-            efficiencyValueLabel.centerYAnchor.constraint(equalTo: sleepEfficiencyCard.centerYAnchor),
+            efficiencyValueLabel.centerYAnchor.constraint(equalTo: efficiencyIconLabel.centerYAnchor),
+            efficiencyValueLabel.trailingAnchor.constraint(equalTo: sleepEfficiencyCard.trailingAnchor, constant: -16),
 
-            efficiencyDescriptionLabel.topAnchor.constraint(equalTo: efficiencyValueLabel.bottomAnchor, constant: 8),
+            efficiencyDescriptionLabel.topAnchor.constraint(equalTo: efficiencyValueLabel.bottomAnchor, constant: 16),
             efficiencyDescriptionLabel.leadingAnchor.constraint(equalTo: sleepEfficiencyCard.leadingAnchor, constant: 16),
-            efficiencyDescriptionLabel.trailingAnchor.constraint(equalTo: sleepEfficiencyCard.trailingAnchor, constant: -16)
+            efficiencyDescriptionLabel.trailingAnchor.constraint(equalTo: sleepEfficiencyCard.trailingAnchor, constant: -16),
+            efficiencyDescriptionLabel.bottomAnchor.constraint(equalTo: sleepEfficiencyCard.bottomAnchor, constant: -16)
         ])
     }
 
@@ -459,6 +500,9 @@ final class SleepViewController: AppBaseViewController {
         remSleepCard.updateValue("-- min")
         awakeDurationCard.updateValue("-- min")
         totalSleepCard.updateValue("-- min")
+        
+        qualityScoreLabel.text = "-- Fraction"
+        efficiencyValueLabel.text = "--%"
     }
     
     private func updateChartLabelsForSelection(time: Date, sleepType: String) {
@@ -468,6 +512,31 @@ final class SleepViewController: AppBaseViewController {
         
         chartTimeLabel.text = timeString
         chartSubtitleLabel.text = sleepType
+    }
+    
+    private func calculateSleepScore(totalSleepMinutes: Int) -> Int {
+        // Calculate score based on 480 minutes (8 hours) as ideal
+        let score = Int((Double(totalSleepMinutes) / 480.0) * 100.0)
+        
+        // Clamp between 12 and 100
+        if score > 100 {
+            return 100
+        } else if score < 12 {
+            return 12
+        } else {
+            return score
+        }
+    }
+    
+    private func calculateSleepEfficiency(totalSleepMinutes: Int, totalAwakeMinutes: Int) -> Int {
+        let totalTimeInBed = totalSleepMinutes + totalAwakeMinutes
+        
+        guard totalTimeInBed > 0 else {
+            return 0
+        }
+        
+        let efficiency = (Double(totalSleepMinutes) / Double(totalTimeInBed)) * 100.0
+        return Int(efficiency)
     }
     
     private func getSleepTypeName(_ type: Int) -> String {
@@ -543,8 +612,28 @@ extension SleepViewController: SleepSyncListener {
             totalAwakeMinutes += Int(session.wakeupTimes) / 60
         }
         
-        // Calculate total from sum of all durations (not from totalTimes to avoid rounding errors)
-        let totalMinutes = totalDeepMinutes + totalLightMinutes + totalRemMinutes + totalAwakeMinutes
+        // Calculate gaps between sessions and add to awake time
+        if sessions.count > 1 {
+            // Sort sessions by start time
+            let sortedSessions = sessions.sorted { $0.startTime < $1.startTime }
+            
+            for i in 0..<(sortedSessions.count - 1) {
+                let currentSession = sortedSessions[i]
+                let nextSession = sortedSessions[i + 1]
+                
+                let gapSeconds = nextSession.startTime - currentSession.endTime
+                let gapMinutes = Int(gapSeconds) / 60
+                
+                // Only add gaps of 1 minute or more
+                if gapMinutes >= 1 {
+                    totalAwakeMinutes += gapMinutes
+                    print("📊 [SleepVC] Gap between sessions: \(gapMinutes) min")
+                }
+            }
+        }
+        
+        // Calculate total sleep duration (Deep + Light + REM only, NOT awake)
+        let totalMinutes = totalDeepMinutes + totalLightMinutes + totalRemMinutes
         
         print("📊 [SleepVC] Displaying \(sessions.count) session(s) - Total: \(totalMinutes) min")
         
@@ -571,6 +660,16 @@ extension SleepViewController: SleepSyncListener {
             self.remSleepCard.updateValue(self.formatDuration(minutes: totalRemMinutes))
             self.awakeDurationCard.updateValue(self.formatDuration(minutes: totalAwakeMinutes))
             self.totalSleepCard.updateValue(self.formatDuration(minutes: totalMinutes))
+            
+            // Calculate and update sleep score
+            let sleepScore = self.calculateSleepScore(totalSleepMinutes: totalMinutes)
+            self.qualityScoreLabel.text = "\(sleepScore) Fraction"
+            print("💤 [SleepVC] Sleep score: \(sleepScore)")
+            
+            // Calculate and update sleep efficiency
+            let sleepEfficiency = self.calculateSleepEfficiency(totalSleepMinutes: totalMinutes, totalAwakeMinutes: totalAwakeMinutes)
+            self.efficiencyValueLabel.text = "\(sleepEfficiency)%"
+            print("💤 [SleepVC] Sleep efficiency: \(sleepEfficiency)%")
             
             // Update labels with last segment info
             if let lastTime = lastSegmentTime {
