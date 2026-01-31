@@ -24,7 +24,7 @@ class SleepSyncHelper {
         fetchSleepDataFromRing()
     }
     
-    // MARK: - Sync Day Data (Smart Sync for Selected Date)
+    // MARK: - Sync Day Data (Load local and upload to API if needed)
     func syncDayData(for date: Date) {
         let userId = UserDefaultsManager.shared.userId
         guard userId > 0 else {
@@ -38,41 +38,50 @@ class SleepSyncHelper {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let dateString = formatter.string(from: date)
+        // Format date for API (MM/dd/yyyy)
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MM/dd/yyyy"
+        let selectedDate = dateFormatter.string(from: date)
         
-        print("📅 [SleepSyncHelper] Syncing data for: \(dateString)")
+        print("📅 [SleepSyncHelper] Syncing data for: \(selectedDate)")
         
         // Step 1: Get ALL local sessions for this day
         let localSessions = repository.getByDateRange(startDate: startOfDay, endDate: endOfDay)
         
-        print("📊 [SleepSyncHelper] Found \(localSessions.count) local session(s) for \(dateString)")
+        print("📊 [SleepSyncHelper] Found \(localSessions.count) local session(s) for \(selectedDate)")
         
         // Step 2: Return all local sessions to VC immediately
         listener?.onDayDataLoaded(sessions: localSessions)
         
-        // Step 3: Sync with API in background
-        HealthService.shared.getSleepDataByDateWise(userId: userId, startDate: dateString, endDate: dateString) { [weak self] result in
+        // Step 3: Check API for data before uploading
+        HealthService.shared.getSleepData(userId: userId, selectedDate: selectedDate) { [weak self] result in
             guard let self = self else { return }
             
             switch result {
             case .success(let response):
                 if let apiData = response.data, !apiData.isEmpty {
-                    print("✅ [SleepSyncHelper] API has data for \(dateString)")
+                    // API has data - don't upload
+                    print("✅ [SleepSyncHelper] API already has \(apiData.count) session(s) for \(selectedDate) - skipping upload")
                 } else {
-                    // No API data - upload all local sessions if available
-                    print("ℹ️ [SleepSyncHelper] No API data for \(dateString)")
-                    for session in localSessions {
-                        self.uploadSessionToAPI(session, userId: userId)
+                    // API has no data - upload local sessions if available
+                    if !localSessions.isEmpty {
+                        print("📤 [SleepSyncHelper] No API data - uploading \(localSessions.count) local session(s) for \(selectedDate)")
+                        for session in localSessions {
+                            self.uploadSessionToAPI(session, userId: userId)
+                        }
+                    } else {
+                        print("ℹ️ [SleepSyncHelper] No API data and no local data for \(selectedDate)")
                     }
                 }
                 
             case .failure(let error):
-                print("❌ [SleepSyncHelper] API fetch failed: \(error.localizedDescription)")
-                // API failed - still upload local sessions if available
-                for session in localSessions {
-                    self.uploadSessionToAPI(session, userId: userId)
+                print("❌ [SleepSyncHelper] API check failed: \(error.localizedDescription)")
+                // API check failed - upload local sessions if available (to be safe)
+                if !localSessions.isEmpty {
+                    print("📤 [SleepSyncHelper] Uploading \(localSessions.count) local session(s) anyway (API check failed)")
+                    for session in localSessions {
+                        self.uploadSessionToAPI(session, userId: userId)
+                    }
                 }
             }
         }
@@ -360,13 +369,15 @@ class SleepSyncHelper {
         
         // Convert details
         let apiDetails = session.sleepDetailDatas.map { detail -> SleepDetailAPI in
+            // Map iOS enum to API values (matching Android)
+            // Android mapping: 242->0(deep), 241->1(light), 243->3(awake), 244->4(REM)
             let sleepTypeValue: Int
             switch detail.sleepType {
-            case .deepSleep: sleepTypeValue = 1
-            case .lightSleep: sleepTypeValue = 2
-            case .rem: sleepTypeValue = 3
-            case .awake: sleepTypeValue = 4
-            default: sleepTypeValue = 0
+            case .deepSleep: sleepTypeValue = 0   // Deep = 0
+            case .lightSleep: sleepTypeValue = 1  // Light = 1
+            case .awake: sleepTypeValue = 3       // Awake = 3
+            case .rem: sleepTypeValue = 4         // REM = 4
+            default: sleepTypeValue = 0           // Unknown defaults to deep
             }
             
             return SleepDetailAPI(
@@ -404,10 +415,21 @@ class SleepSyncHelper {
         var apiDetails: [SleepDetailAPI] = []
         if let detailsSet = sessionEntity.details as? Set<SleepDetailEntity> {
             apiDetails = detailsSet.map { detail in
-                SleepDetailAPI(
+                // Convert local database type (1=Deep,2=Light,3=REM,4=Awake) to API type
+                // API expects: 0=Deep, 1=Light, 3=Awake, 4=REM
+                let apiSleepType: Int
+                switch detail.sleepType {
+                case 1: apiSleepType = 0  // Deep: 1 -> 0
+                case 2: apiSleepType = 1  // Light: 2 -> 1
+                case 3: apiSleepType = 4  // REM: 3 -> 4
+                case 4: apiSleepType = 3  // Awake: 4 -> 3
+                default: apiSleepType = 0 // Unknown -> Deep
+                }
+                
+                return SleepDetailAPI(
                     startTime: detail.startTime,
                     endTime: detail.endTime,
-                    sleepType: Int(detail.sleepType)
+                    sleepType: apiSleepType
                 )
             }.sorted { $0.startTime < $1.startTime } // Sort by start time
         }

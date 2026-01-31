@@ -55,6 +55,7 @@ final class SleepViewController: AppBaseViewController {
     // MARK: - Sync Helper
     private var sleepSyncHelper: SleepSyncHelper?
     private let sleepRepository = SleepRepository()
+    private let sleepDailyStatsRepository = SleepDailyStatsRepository.shared
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -406,11 +407,25 @@ final class SleepViewController: AppBaseViewController {
         case 1:
             currentRange = .week
             updateDateLabel()
-            resetStatCards()
+            // Ensure chart is visible for week view
+            sleepChartView.isHidden = false
+            chartPlaceholder.isHidden = true
+            // Reset labels to default
+            chartTimeLabel.text = "--"
+            chartSubtitleLabel.text = "--"
+            loadAndDisplayWeeklyChart()  // Load from local DB immediately
+            loadWeeklySleepData()  // Then refresh from API
         case 2:
             currentRange = .month
             updateDateLabel()
-            resetStatCards()
+            // Ensure chart is visible for month view
+            sleepChartView.isHidden = false
+            chartPlaceholder.isHidden = true
+            // Reset labels to default
+            chartTimeLabel.text = "--"
+            chartSubtitleLabel.text = "--"
+            loadAndDisplayMonthlyChart()  // Load from local DB immediately
+            loadMonthlySleepData()  // Then refresh from API
         default:
             break
         }
@@ -424,13 +439,16 @@ final class SleepViewController: AppBaseViewController {
             loadSleepDataForCurrentDate()
         case .week:
             currentDate = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: currentDate) ?? currentDate
+            updateDateLabel()
+            loadAndDisplayWeeklyChart()
+            loadWeeklySleepData()
         case .month:
             currentDate = Calendar.current.date(byAdding: .month, value: -1, to: currentDate) ?? currentDate
+            updateDateLabel()
+            loadAndDisplayMonthlyChart()
+            loadMonthlySleepData()
         }
         updateDateLabel()
-        if currentRange != .day {
-            resetStatCards()
-        }
     }
 
     @objc private func nextDateTapped() {
@@ -443,13 +461,16 @@ final class SleepViewController: AppBaseViewController {
             loadSleepDataForCurrentDate()
         case .week:
             currentDate = Calendar.current.date(byAdding: .weekOfYear, value: 1, to: currentDate) ?? currentDate
+            updateDateLabel()
+            loadAndDisplayWeeklyChart()
+            loadWeeklySleepData()
         case .month:
             currentDate = Calendar.current.date(byAdding: .month, value: 1, to: currentDate) ?? currentDate
+            updateDateLabel()
+            loadAndDisplayMonthlyChart()
+            loadMonthlySleepData()
         }
         updateDateLabel()
-        if currentRange != .day {
-            resetStatCards()
-        }
     }
 
     private func updateDateLabel() {
@@ -506,11 +527,20 @@ final class SleepViewController: AppBaseViewController {
     }
     
     private func updateChartLabelsForSelection(time: Date, sleepType: String) {
-        let timeFormatter = DateFormatter()
-        timeFormatter.dateFormat = "HH:mm"
-        let timeString = timeFormatter.string(from: time)
+        if currentRange == .day {
+            // Day view: show time (HH:mm)
+            let timeFormatter = DateFormatter()
+            timeFormatter.dateFormat = "HH:mm"
+            let timeString = timeFormatter.string(from: time)
+            chartTimeLabel.text = timeString
+        } else {
+            // Week/Month view: show date (yyyy-MM-dd)
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            let dateString = dateFormatter.string(from: time)
+            chartTimeLabel.text = dateString
+        }
         
-        chartTimeLabel.text = timeString
         chartSubtitleLabel.text = sleepType
     }
     
@@ -684,8 +714,8 @@ extension SleepViewController: SleepSyncListener {
                 self.chartSubtitleLabel.text = "--"
             }
             
-            // Load all sessions in chart
-            self.sleepChartView.loadSleepSessions(sessions: sessions)
+            // Load all sessions in chart with date filtering
+            self.sleepChartView.loadSleepSessions(sessions: sessions, forDate: self.currentDate)
             self.sleepChartView.isHidden = false
             self.chartPlaceholder.isHidden = true
         }
@@ -750,5 +780,307 @@ class SleepStatCard: UIView {
     
     func updateValue(_ value: String) {
         valueLabel.text = value
+    }
+}
+
+// MARK: - Weekly/Monthly Data Loading
+extension SleepViewController {
+    
+    private func loadWeeklySleepData() {
+        guard userId > 0 else {
+            print("⚠️ [SleepVC] No valid user ID")
+            resetStatCards()
+            return
+        }
+        
+        let calendar = Calendar.current
+        
+        // Get week start (Sunday) and end (Saturday)
+        let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: currentDate))!
+        let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart)!
+        
+        // Format dates for API (MM/dd/yyyy)
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MM/dd/yyyy"
+        let startDateString = dateFormatter.string(from: weekStart)
+        let endDateString = dateFormatter.string(from: weekEnd)
+        
+        print("📊 [SleepVC] Loading weekly data: \(startDateString) - \(endDateString)")
+        
+        // Call API
+        HealthService.shared.getSleepDataByDateRange(
+            userId: userId,
+            startDate: startDateString,
+            endDate: endDateString
+        ) { [weak self] result in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    if let sessions = response.data, !sessions.isEmpty {
+                        print("✅ [SleepVC] Got \(sessions.count) session(s) for week")
+                        self.processWeeklySessions(sessions)
+                    } else {
+                        print("ℹ️ [SleepVC] No data for this week")
+                        self.resetStatCards()
+                    }
+                    
+                case .failure(let error):
+                    print("❌ [SleepVC] Failed to load weekly data: \(error.localizedDescription)")
+                    self.resetStatCards()
+                }
+            }
+        }
+    }
+    
+    private func loadMonthlySleepData() {
+        guard userId > 0 else {
+            print("⚠️ [SleepVC] No valid user ID")
+            resetStatCards()
+            return
+        }
+        
+        let calendar = Calendar.current
+        
+        // Get month start and end
+        let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: currentDate))!
+        let monthEnd = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: monthStart)!
+        
+        // Format dates for API (MM/dd/yyyy)
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MM/dd/yyyy"
+        let startDateString = dateFormatter.string(from: monthStart)
+        let endDateString = dateFormatter.string(from: monthEnd)
+        
+        print("📊 [SleepVC] Loading monthly data: \(startDateString) - \(endDateString)")
+        
+        // Call API
+        HealthService.shared.getSleepDataByDateRange(
+            userId: userId,
+            startDate: startDateString,
+            endDate: endDateString
+        ) { [weak self] result in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    if let sessions = response.data, !sessions.isEmpty {
+                        print("✅ [SleepVC] Got \(sessions.count) session(s) for month")
+                        self.processMonthlySessions(sessions)
+                    } else {
+                        print("ℹ️ [SleepVC] No data for this month")
+                        self.resetStatCards()
+                    }
+                    
+                case .failure(let error):
+                    print("❌ [SleepVC] Failed to load monthly data: \(error.localizedDescription)")
+                    self.resetStatCards()
+                }
+            }
+        }
+    }
+    
+    private func processWeeklySessions(_ sessions: [SleepBeanResponse]) {
+        // Group sessions by date and aggregate
+        var dailyStats: [String: (deep: Int, light: Int, rem: Int, awake: Int, sessionCount: Int)] = [:]
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        for session in sessions {
+            // Get date from statisticTime
+            let sessionDate = Date(timeIntervalSince1970: TimeInterval(session.statisticTime))
+            let dateKey = dateFormatter.string(from: sessionDate)
+            
+            // Calculate values in minutes
+            let deep = session.deepSleepTimes / 60
+            let light = session.lightSleepTimes / 60
+            let awake = session.wakeupTimes / 60
+            
+            // Calculate REM from sleep_details
+            let rem = session.sleep_details
+                .filter { $0.sleepType == 4 }  // REM type
+                .reduce(0) { $0 + Int(($1.endTime - $1.startTime) / 60) }
+            
+            // Aggregate by date
+            if var existing = dailyStats[dateKey] {
+                existing.deep += deep
+                existing.light += light
+                existing.rem += rem
+                existing.awake += awake
+                existing.sessionCount += 1
+                dailyStats[dateKey] = existing
+            } else {
+                dailyStats[dateKey] = (deep: deep, light: light, rem: rem, awake: awake, sessionCount: 1)
+            }
+        }
+        
+        // Save to local DB
+        let statsArray = dailyStats.map { (date: $0.key, deep: $0.value.deep, light: $0.value.light, rem: $0.value.rem, awake: $0.value.awake, sessionCount: $0.value.sessionCount) }
+        
+        sleepDailyStatsRepository.saveBatch(userId: userId, stats: statsArray) { [weak self] success, savedCount in
+            if success {
+                print("💾 [SleepVC] Saved \(savedCount) daily stats to local DB")
+                
+                // Load from DB and update chart
+                self?.loadAndDisplayWeeklyChart()
+            }
+        }
+        
+        // Calculate totals for UI
+        var totalDeep = 0
+        var totalLight = 0
+        var totalRem = 0
+        var totalAwake = 0
+        
+        for stat in dailyStats.values {
+            totalDeep += stat.deep
+            totalLight += stat.light
+            totalRem += stat.rem
+            totalAwake += stat.awake
+        }
+        
+        let totalSleep = totalDeep + totalLight + totalRem
+        
+        print("📊 [SleepVC] Weekly totals: Deep=\(totalDeep)min, Light=\(totalLight)min, REM=\(totalRem)min, Awake=\(totalAwake)min")
+        
+        // Update stat cards
+        deepSleepCard.updateValue(formatDuration(minutes: totalDeep))
+        lightSleepCard.updateValue(formatDuration(minutes: totalLight))
+        remSleepCard.updateValue(formatDuration(minutes: totalRem))
+        awakeDurationCard.updateValue(formatDuration(minutes: totalAwake))
+        totalSleepCard.updateValue(formatDuration(minutes: totalSleep))
+    }
+    
+    private func processMonthlySessions(_ sessions: [SleepBeanResponse]) {
+        // Group sessions by date and aggregate
+        var dailyStats: [String: (deep: Int, light: Int, rem: Int, awake: Int, sessionCount: Int)] = [:]
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        for session in sessions {
+            // Get date from statisticTime
+            let sessionDate = Date(timeIntervalSince1970: TimeInterval(session.statisticTime))
+            let dateKey = dateFormatter.string(from: sessionDate)
+            
+            // Calculate values in minutes
+            let deep = session.deepSleepTimes / 60
+            let light = session.lightSleepTimes / 60
+            let awake = session.wakeupTimes / 60
+            
+            // Calculate REM from sleep_details
+            let rem = session.sleep_details
+                .filter { $0.sleepType == 4 }  // REM type
+                .reduce(0) { $0 + Int(($1.endTime - $1.startTime) / 60) }
+            
+            // Aggregate by date
+            if var existing = dailyStats[dateKey] {
+                existing.deep += deep
+                existing.light += light
+                existing.rem += rem
+                existing.awake += awake
+                existing.sessionCount += 1
+                dailyStats[dateKey] = existing
+            } else {
+                dailyStats[dateKey] = (deep: deep, light: light, rem: rem, awake: awake, sessionCount: 1)
+            }
+        }
+        
+        // Save to local DB
+        let statsArray = dailyStats.map { (date: $0.key, deep: $0.value.deep, light: $0.value.light, rem: $0.value.rem, awake: $0.value.awake, sessionCount: $0.value.sessionCount) }
+        
+        sleepDailyStatsRepository.saveBatch(userId: userId, stats: statsArray) { [weak self] success, savedCount in
+            if success {
+                print("💾 [SleepVC] Saved \(savedCount) daily stats to local DB")
+                
+                // Load from DB and update chart
+                self?.loadAndDisplayMonthlyChart()
+            }
+        }
+        
+        // Calculate totals for UI
+        var totalDeep = 0
+        var totalLight = 0
+        var totalRem = 0
+        var totalAwake = 0
+        
+        for stat in dailyStats.values {
+            totalDeep += stat.deep
+            totalLight += stat.light
+            totalRem += stat.rem
+            totalAwake += stat.awake
+        }
+        
+        let totalSleep = totalDeep + totalLight + totalRem
+        
+        print("📊 [SleepVC] Monthly totals: Deep=\(totalDeep)min, Light=\(totalLight)min, REM=\(totalRem)min, Awake=\(totalAwake)min")
+        
+        // Update stat cards
+        deepSleepCard.updateValue(formatDuration(minutes: totalDeep))
+        lightSleepCard.updateValue(formatDuration(minutes: totalLight))
+        remSleepCard.updateValue(formatDuration(minutes: totalRem))
+        awakeDurationCard.updateValue(formatDuration(minutes: totalAwake))
+        totalSleepCard.updateValue(formatDuration(minutes: totalSleep))
+    }
+    
+    // MARK: - Chart Update Methods
+    
+    private func loadAndDisplayWeeklyChart() {
+        let calendar = Calendar.current
+        let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: currentDate))!
+        let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart)!
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let startDateString = dateFormatter.string(from: weekStart)
+        let endDateString = dateFormatter.string(from: weekEnd)
+        
+        print("📊 [SleepVC] Loading weekly chart data: \(startDateString) - \(endDateString)")
+        
+        let stats = sleepDailyStatsRepository.getDateRange(userId: userId, startDate: startDateString, endDate: endDateString)
+        
+        var dailyStats: [(date: String, deep: Int, light: Int, rem: Int, awake: Int)] = []
+        for stat in stats {
+            let entry = (date: stat.date ?? "", 
+                        deep: Int(stat.deepSleepMinutes), 
+                        light: Int(stat.lightSleepMinutes), 
+                        rem: Int(stat.remSleepMinutes), 
+                        awake: Int(stat.awakeMinutes))
+            dailyStats.append(entry)
+        }
+        
+        print("📊 [SleepVC] Loaded \(dailyStats.count) days from local DB for chart")
+        sleepChartView.updateWithWeeklyStats(weekStartDate: weekStart, dailyStats: dailyStats)
+    }
+    
+    private func loadAndDisplayMonthlyChart() {
+        let calendar = Calendar.current
+        let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: currentDate))!
+        let monthEnd = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: monthStart)!
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let startDateString = dateFormatter.string(from: monthStart)
+        let endDateString = dateFormatter.string(from: monthEnd)
+        
+        print("📊 [SleepVC] Loading monthly chart data: \(startDateString) - \(endDateString)")
+        
+        let stats = sleepDailyStatsRepository.getDateRange(userId: userId, startDate: startDateString, endDate: endDateString)
+        
+        var dailyStats: [(date: String, deep: Int, light: Int, rem: Int, awake: Int)] = []
+        for stat in stats {
+            let entry = (date: stat.date ?? "", 
+                        deep: Int(stat.deepSleepMinutes), 
+                        light: Int(stat.lightSleepMinutes), 
+                        rem: Int(stat.remSleepMinutes), 
+                        awake: Int(stat.awakeMinutes))
+            dailyStats.append(entry)
+        }
+        
+        print("📊 [SleepVC] Loaded \(dailyStats.count) days from local DB for chart")
+        sleepChartView.updateWithMonthlyStats(monthStartDate: monthStart, dailyStats: dailyStats)
     }
 }

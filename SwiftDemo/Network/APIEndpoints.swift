@@ -99,7 +99,32 @@ enum APIEndpoints {
     }
     
     // MARK: - Sleep Data
-    static let saveSleepData = "saveSleepData"
+    /// Upload sleep data (matching Android CreateSleepData)
+    static func createSleepData(userId: Int) -> String {
+        return "CreateSleepData?user_id=\(userId)"
+    }
+    
+    /// Get sleep data for a single date (matching Android getSleepData)
+    /// - Parameters:
+    ///   - userId: User ID
+    ///   - selectedDate: Date in format "MM/dd/yyyy" (e.g., "01/30/2026")
+    static func getSleepData(userId: Int, selectedDate: String) -> String {
+        return "getSleepData?user_id=\(userId)&selectedDate=\(selectedDate)"
+    }
+    
+    /// Get sleep data for a date range (matching Android getSleepDataByDateWise)
+    /// - Parameters:
+    ///   - userId: User ID
+    ///   - startDate: Start date in format "MM/dd/yyyy"
+    ///   - endDate: End date in format "MM/dd/yyyy"
+    static func getSleepDataByDateRange(userId: Int, startDate: String, endDate: String) -> String {
+        return "getSleepData?user_id=\(userId)&startDate=\(startDate)&endDate=\(endDate)"
+    }
+    
+    /// Get all sleep sessions for a user (no details, just summaries)
+    static func getSleepSessions(userId: Int) -> String {
+        return "getSleepSessions?user_id=\(userId)"
+    }
     
     /// Get sleep data by date range
     static func getSleepDataByDateWise(

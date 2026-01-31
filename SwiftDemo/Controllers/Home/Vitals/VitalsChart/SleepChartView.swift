@@ -9,12 +9,21 @@ class SleepChartView: UIView, ChartViewDelegate {
     private var earliestTime: Date?
     private var latestTime: Date?
     
+    // Weekly/Monthly data storage
+    private var weekStartDate: Date?
+    private var monthStartDate: Date?
+    private var cachedDailyStats: [(date: String, deep: Int, light: Int, rem: Int, awake: Int)] = []
+    
     // Callback for showing selected sleep info
     var onSleepSegmentSelected: ((Date, String) -> Void)?
     
     // MARK: - UI Components
     private let lineChart = LineChartView()
+    private let barChart = BarChartView()
     private let customLegendStack = UIStackView()
+    
+    // Track which view is active
+    private var isBarChartActive = false
     
     // MARK: - Sleep Colors
     private let deepSleepColor = UIColor(red: 0.48, green: 0.41, blue: 0.93, alpha: 1.0) // #7B68EE
@@ -40,6 +49,10 @@ class SleepChartView: UIView, ChartViewDelegate {
         lineChart.translatesAutoresizingMaskIntoConstraints = false
         addSubview(lineChart)
         
+        barChart.translatesAutoresizingMaskIntoConstraints = false
+        barChart.isHidden = true
+        addSubview(barChart)
+        
         // Custom legend stack
         customLegendStack.axis = .horizontal
         customLegendStack.distribution = .fillEqually
@@ -63,6 +76,11 @@ class SleepChartView: UIView, ChartViewDelegate {
             lineChart.leadingAnchor.constraint(equalTo: leadingAnchor),
             lineChart.trailingAnchor.constraint(equalTo: trailingAnchor),
             lineChart.bottomAnchor.constraint(equalTo: customLegendStack.topAnchor, constant: -4),
+            
+            barChart.topAnchor.constraint(equalTo: topAnchor),
+            barChart.leadingAnchor.constraint(equalTo: leadingAnchor),
+            barChart.trailingAnchor.constraint(equalTo: trailingAnchor),
+            barChart.bottomAnchor.constraint(equalTo: customLegendStack.topAnchor, constant: -4),
             
             customLegendStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
             customLegendStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
@@ -142,12 +160,54 @@ class SleepChartView: UIView, ChartViewDelegate {
         lineChart.extraBottomOffset = 4
         lineChart.extraLeftOffset = 20
         lineChart.extraRightOffset = 20
+        
+        // Setup bar chart for weekly/monthly views
+        setupBarChart()
+    }
+    
+    private func setupBarChart() {
+        barChart.delegate = self
+        barChart.backgroundColor = .clear
+        barChart.legend.enabled = false
+        barChart.rightAxis.enabled = false
+        barChart.chartDescription.enabled = false
+        
+        barChart.dragEnabled = false
+        barChart.setScaleEnabled(false)
+        barChart.pinchZoomEnabled = false
+        barChart.doubleTapToZoomEnabled = false
+        barChart.highlightPerTapEnabled = true
+        barChart.highlightPerDragEnabled = false
+        
+        let xAxis = barChart.xAxis
+        xAxis.labelPosition = .bottom
+        xAxis.labelFont = .systemFont(ofSize: 10)
+        xAxis.labelTextColor = .gray
+        xAxis.drawGridLinesEnabled = false
+        xAxis.drawAxisLineEnabled = true
+        xAxis.axisLineColor = .lightGray
+        xAxis.granularity = 1.0
+        xAxis.labelCount = 7
+        
+        let leftAxis = barChart.leftAxis
+        leftAxis.labelFont = .systemFont(ofSize: 9)
+        leftAxis.labelTextColor = .gray
+        leftAxis.drawGridLinesEnabled = false
+        leftAxis.drawAxisLineEnabled = false
+        leftAxis.axisMinimum = 0
+        leftAxis.valueFormatter = HourAxisFormatter()
     }
     
     // MARK: - Public Methods
     
     /// Load multiple sleep sessions for a day and display chart
-    func loadSleepSessions(sessions: [SleepSessionEntity]) {
+    /// Shows complete night's sleep (no segment filtering)
+    func loadSleepSessions(sessions: [SleepSessionEntity], forDate date: Date? = nil) {
+        // Switch to line chart for day view
+        barChart.isHidden = true
+        lineChart.isHidden = false
+        isBarChartActive = false
+        
         // Clear any previous selection/highlight to prevent index out of range errors
         lineChart.highlightValue(nil)
         
@@ -157,9 +217,9 @@ class SleepChartView: UIView, ChartViewDelegate {
         }
         
         self.sessions = sessions
-        print("[SleepChartView] Loading \(sessions.count) session(s)")
+        print("[SleepChartView] Loading \(sessions.count) session(s) - complete night's sleep")
         
-        // Convert all sessions to chart segments
+        // Convert all sessions to chart segments (no filtering - show complete night)
         var allSegments: [SleepChartSegment] = []
         
         for session in sessions {
@@ -199,10 +259,142 @@ class SleepChartView: UIView, ChartViewDelegate {
         latestTime = nil
         lineChart.data = nil
         lineChart.notifyDataSetChanged()
+        barChart.data = nil
+        barChart.notifyDataSetChanged()
+    }
+    
+    /// Update with weekly sleep data (7 days, stacked bars)
+    func updateWithWeeklyStats(weekStartDate: Date, dailyStats: [(date: String, deep: Int, light: Int, rem: Int, awake: Int)]) {
+        // Switch to bar chart
+        lineChart.isHidden = true
+        barChart.isHidden = false
+        isBarChartActive = true
+        
+        // Store data for tap handling
+        self.weekStartDate = weekStartDate
+        self.monthStartDate = nil  // Clear monthly date
+        self.cachedDailyStats = dailyStats
+        
+        guard !dailyStats.isEmpty else {
+            barChart.data = nil
+            barChart.notifyDataSetChanged()
+            return
+        }
+        
+        let calendar = Calendar.current
+        let weekDays = ["S", "M", "T", "W", "T", "F", "S"] // Starting Sunday
+        var entries: [BarChartDataEntry] = []
+        
+        // Create 7 entries for the week
+        for i in 0..<7 {
+            let currentDate = calendar.date(byAdding: .day, value: i, to: weekStartDate)!
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            let dateKey = dateFormatter.string(from: currentDate)
+            
+            // Find data for this day
+            if let stat = dailyStats.first(where: { $0.date == dateKey }) {
+                // Convert minutes to hours for display
+                let deepHours = Double(stat.deep) / 60.0
+                let lightHours = Double(stat.light) / 60.0
+                let remHours = Double(stat.rem) / 60.0
+                let awakeHours = Double(stat.awake) / 60.0
+                
+                // Create stacked entry: [deep, light, rem, awake]
+                let entry = BarChartDataEntry(x: Double(i), yValues: [deepHours, lightHours, remHours, awakeHours])
+                entries.append(entry)
+            } else {
+                // No data for this day, add zero entry
+                let entry = BarChartDataEntry(x: Double(i), yValues: [0, 0, 0, 0])
+                entries.append(entry)
+            }
+        }
+        
+        let dataSet = BarChartDataSet(entries: entries, label: "Sleep")
+        dataSet.drawValuesEnabled = false
+        dataSet.colors = [deepSleepColor, lightSleepColor, remSleepColor, awakeColor]
+        dataSet.stackLabels = ["Deep", "Light", "REM", "Awake"]
+        
+        let data = BarChartData(dataSet: dataSet)
+        data.barWidth = 0.6
+        
+        barChart.data = data
+        barChart.xAxis.valueFormatter = IndexAxisValueFormatter(values: weekDays)
+        barChart.xAxis.axisMinimum = -0.5
+        barChart.xAxis.axisMaximum = 6.5
+        
+        barChart.notifyDataSetChanged()
+        print("[SleepChartView] ✅ Weekly bar chart updated with \(entries.count) days")
+    }
+    
+    /// Update with monthly sleep data (30-31 days, stacked bars)
+    func updateWithMonthlyStats(monthStartDate: Date, dailyStats: [(date: String, deep: Int, light: Int, rem: Int, awake: Int)]) {
+        // Switch to bar chart
+        lineChart.isHidden = true
+        barChart.isHidden = false
+        isBarChartActive = true
+        
+        // Store data for tap handling
+        self.weekStartDate = nil  // Clear weekly date
+        self.monthStartDate = monthStartDate
+        self.cachedDailyStats = dailyStats
+        
+        guard !dailyStats.isEmpty else {
+            barChart.data = nil
+            barChart.notifyDataSetChanged()
+            return
+        }
+        
+        let calendar = Calendar.current
+        let daysInMonth = calendar.range(of: .day, in: .month, for: monthStartDate)!.count
+        var entries: [BarChartDataEntry] = []
+        
+        // Create entries for each day in month
+        for i in 0..<daysInMonth {
+            let currentDate = calendar.date(byAdding: .day, value: i, to: monthStartDate)!
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            let dateKey = dateFormatter.string(from: currentDate)
+            
+            // Find data for this day
+            if let stat = dailyStats.first(where: { $0.date == dateKey }) {
+                // Convert minutes to hours for display
+                let deepHours = Double(stat.deep) / 60.0
+                let lightHours = Double(stat.light) / 60.0
+                let remHours = Double(stat.rem) / 60.0
+                let awakeHours = Double(stat.awake) / 60.0
+                
+                // Create stacked entry: [deep, light, rem, awake]
+                let entry = BarChartDataEntry(x: Double(i), yValues: [deepHours, lightHours, remHours, awakeHours])
+                entries.append(entry)
+            } else {
+                // No data for this day, add zero entry
+                let entry = BarChartDataEntry(x: Double(i), yValues: [0, 0, 0, 0])
+                entries.append(entry)
+            }
+        }
+        
+        let dataSet = BarChartDataSet(entries: entries, label: "Sleep")
+        dataSet.drawValuesEnabled = false
+        dataSet.colors = [deepSleepColor, lightSleepColor, remSleepColor, awakeColor]
+        dataSet.stackLabels = ["Deep", "Light", "REM", "Awake"]
+        
+        let data = BarChartData(dataSet: dataSet)
+        data.barWidth = 0.7
+        
+        barChart.data = data
+        barChart.xAxis.valueFormatter = DayOfMonthFormatter()
+        barChart.xAxis.labelCount = min(daysInMonth, 10)
+        barChart.xAxis.axisMinimum = -0.5
+        barChart.xAxis.axisMaximum = Double(daysInMonth) - 0.5
+        
+        barChart.notifyDataSetChanged()
+        print("[SleepChartView] ✅ Monthly bar chart updated with \(entries.count) days")
     }
     
     // MARK: - Data Conversion
     
+    /// Convert session to chart segments (no filtering - show complete session)
     private func convertToChartSegments(session: SleepSessionEntity) -> [SleepChartSegment] {
         guard let details = session.details?.allObjects as? [SleepDetailEntity] else {
             print("[SleepChartView] No details found")
@@ -215,10 +407,14 @@ class SleepChartView: UIView, ChartViewDelegate {
         var segments: [SleepChartSegment] = []
         
         for detail in sortedDetails {
+            let segmentStart = Date(timeIntervalSince1970: TimeInterval(detail.startTime))
+            let segmentEnd = Date(timeIntervalSince1970: TimeInterval(detail.endTime))
+            let duration = Int(segmentEnd.timeIntervalSince(segmentStart))
+            
             let segment = SleepChartSegment(
-                startTime: Date(timeIntervalSince1970: TimeInterval(detail.startTime)),
-                endTime: Date(timeIntervalSince1970: TimeInterval(detail.endTime)),
-                duration: Int(detail.duration),
+                startTime: segmentStart,
+                endTime: segmentEnd,
+                duration: duration,
                 sleepType: Int(detail.sleepType)
             )
             segments.append(segment)
@@ -388,6 +584,13 @@ class SleepChartView: UIView, ChartViewDelegate {
     // MARK: - ChartViewDelegate
     
     func chartValueSelected(_ chartView: ChartViewBase, entry: ChartDataEntry, highlight: Highlight) {
+        // Handle bar chart selection
+        if chartView == barChart, let barEntry = entry as? BarChartDataEntry {
+            handleBarChartSelection(entry: barEntry, highlight: highlight)
+            return
+        }
+        
+        // Handle line chart selection (existing code)
         guard let startTime = earliestTime else {
             print("[SleepChartView] ⚠️ No start time available")
             return
@@ -422,6 +625,98 @@ class SleepChartView: UIView, ChartViewDelegate {
     func chartValueNothingSelected(_ chartView: ChartViewBase) {
         // Optional: Clear selection display
     }
+    
+    // MARK: - Bar Chart Selection
+    
+    private func handleBarChartSelection(entry: BarChartDataEntry, highlight: Highlight) {
+        let dayIndex = Int(entry.x)
+        let stackIndex = highlight.stackIndex
+        
+        print("[SleepChartView] 🎯 Bar tapped: dayIndex=\(dayIndex), stackIndex=\(stackIndex)")
+        print("[SleepChartView] 📅 weekStartDate=\(String(describing: weekStartDate)), monthStartDate=\(String(describing: monthStartDate))")
+        
+        // Determine which date based on week or month
+        let calendar = Calendar.current
+        var selectedDate: Date?
+        
+        if let weekStart = weekStartDate {
+            selectedDate = calendar.date(byAdding: .day, value: dayIndex, to: weekStart)
+            print("[SleepChartView] 📆 Weekly view - selected date: \(String(describing: selectedDate))")
+        } else if let monthStart = monthStartDate {
+            selectedDate = calendar.date(byAdding: .day, value: dayIndex, to: monthStart)
+            print("[SleepChartView] 📆 Monthly view - selected date: \(String(describing: selectedDate))")
+        }
+        
+        guard let date = selectedDate else {
+            print("[SleepChartView] ❌ No date calculated")
+            return
+        }
+        
+        // Get the date string
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateKey = dateFormatter.string(from: date)
+        
+        print("[SleepChartView] 🔍 Looking for data with dateKey: \(dateKey)")
+        print("[SleepChartView] 📦 Cached stats count: \(cachedDailyStats.count)")
+        
+        // Find data for this day
+        guard let stat = cachedDailyStats.first(where: { $0.date == dateKey }) else {
+            print("[SleepChartView] ❌ No data found for \(dateKey)")
+            print("[SleepChartView] Available dates: \(cachedDailyStats.map { $0.date })")
+            return
+        }
+        
+        print("[SleepChartView] ✅ Found data: Deep=\(stat.deep), Light=\(stat.light), REM=\(stat.rem), Awake=\(stat.awake)")
+        
+        // Determine which stack was tapped (0=deep, 1=light, 2=rem, 3=awake)
+        var sleepType: String
+        var minutes: Int
+        
+        // Handle invalid stackIndex (when tapping bar but not on specific segment)
+        var selectedStackIndex = stackIndex
+        if stackIndex < 0 || stackIndex > 3 {
+            // Default to showing total or first non-zero segment
+            if stat.deep > 0 {
+                selectedStackIndex = 0
+            } else if stat.light > 0 {
+                selectedStackIndex = 1
+            } else if stat.rem > 0 {
+                selectedStackIndex = 2
+            } else if stat.awake > 0 {
+                selectedStackIndex = 3
+            } else {
+                print("[SleepChartView] ❌ No data in any segment")
+                return
+            }
+        }
+        
+        switch selectedStackIndex {
+        case 0:
+            sleepType = "Deep sleep"
+            minutes = stat.deep
+        case 1:
+            sleepType = "Light sleep"
+            minutes = stat.light
+        case 2:
+            sleepType = "REM"
+            minutes = stat.rem
+        case 3:
+            sleepType = "Awake"
+            minutes = stat.awake
+        default:
+            print("[SleepChartView] ❌ Invalid stack index: \(selectedStackIndex)")
+            return
+        }
+        
+        // Format duration
+        let hours = minutes / 60
+        let remainingMins = minutes % 60
+        let durationText = hours > 0 ? "\(sleepType) \(hours) h \(remainingMins) min" : "\(sleepType) \(remainingMins) min"
+        
+        // Trigger callback with selected date and info
+        onSleepSegmentSelected?(date, durationText)
+    }
 }
 
 // MARK: - Chart Data Model
@@ -446,5 +741,22 @@ class SleepTimeAxisFormatter: AxisValueFormatter {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - Hour Axis Formatter (for Y-axis in bar charts)
+
+class HourAxisFormatter: AxisValueFormatter {
+    func stringForValue(_ value: Double, axis: AxisBase?) -> String {
+        return "\(Int(value))"
+    }
+}
+
+// MARK: - Day of Month Formatter
+
+class DayOfMonthFormatter: AxisValueFormatter {
+    func stringForValue(_ value: Double, axis: AxisBase?) -> String {
+        let day = Int(value) + 1
+        return "\(day)"
     }
 }

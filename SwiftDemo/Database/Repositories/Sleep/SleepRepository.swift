@@ -102,17 +102,53 @@ class SleepRepository {
     
     // MARK: - Get Sessions by Date Range
     func getByDateRange(startDate: Date, endDate: Date) -> [SleepSessionEntity] {
+        let calendar = Calendar.current
         let startTimestamp = Int64(startDate.timeIntervalSince1970)
         let endTimestamp = Int64(endDate.timeIntervalSince1970)
+        let maxGapBetweenSessions: Int64 = 12 * 60 * 60 // 12 hours
         
-        let fetchRequest: NSFetchRequest<SleepSessionEntity> = SleepSessionEntity.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "statisticTime >= %lld AND statisticTime <= %lld", startTimestamp, endTimestamp)
-        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "statisticTime", ascending: true)]
+        // Fetch ALL sessions to analyze sleep groups
+        let allSessionsRequest: NSFetchRequest<SleepSessionEntity> = SleepSessionEntity.fetchRequest()
+        allSessionsRequest.sortDescriptors = [NSSortDescriptor(key: "startTime", ascending: true)]
         
         do {
-            let sessions = try context.fetch(fetchRequest)
-            print("📊 [SleepRepository] Fetched \(sessions.count) sessions for date range")
-            return sessions
+            let allSessions = try context.fetch(allSessionsRequest)
+            
+            // Group sessions into sleep periods (sessions within 2 hours of each other)
+            var sleepGroups: [[SleepSessionEntity]] = []
+            var currentGroup: [SleepSessionEntity] = []
+            
+            for session in allSessions {
+                if currentGroup.isEmpty {
+                    currentGroup = [session]
+                } else if let lastSession = currentGroup.last {
+                    let gap = session.startTime - lastSession.endTime
+                    if gap <= maxGapBetweenSessions {
+                        currentGroup.append(session)
+                    } else {
+                        sleepGroups.append(currentGroup)
+                        currentGroup = [session]
+                    }
+                }
+            }
+            if !currentGroup.isEmpty {
+                sleepGroups.append(currentGroup)
+            }
+            
+            // Find which group belongs to this day
+            // A sleep group belongs to the day its LAST session ends on
+            for group in sleepGroups {
+                guard let lastSession = group.last else { continue }
+                
+                let endDate = Date(timeIntervalSince1970: TimeInterval(lastSession.endTime))
+                if calendar.isDate(endDate, inSameDayAs: startDate) {
+                    print("📊 [SleepRepository] Found sleep group with \(group.count) sessions ending on selected day")
+                    return group
+                }
+            }
+            
+            print("📊 [SleepRepository] No sleep group ends on selected day")
+            return []
         } catch {
             print("❌ [SleepRepository] Failed to fetch sessions: \(error.localizedDescription)")
             return []

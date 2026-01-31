@@ -119,45 +119,107 @@ extension HealthService {
 // MARK: - Sleep Data API
 extension HealthService {
     
-    /// Save sleep session data to API (matching Android saveSleepData)
+    /// Upload sleep session data to API (matching Android CreateSleepData)
+    /// Sends JSON body directly (not wrapped in request object)
     /// - Parameters:
-    ///   - userId: User ID
-    ///   - sleepData: Sleep session with details
+    ///   - userId: User ID (sent as query parameter)
+    ///   - sleepData: Sleep session with details (sent as JSON body)
     ///   - completion: Callback with result
     func saveSleepData(
         userId: Int,
         sleepData: SleepSessionAPI,
         completion: @escaping (Result<SaveSleepDataResponse, NetworkError>) -> Void
     ) {
-        let request = SaveSleepDataRequest(userId: userId, sleepData: sleepData)
-        
+        // Send sleepData directly as body (not wrapped in request object)
         APIClient.shared.postJSON(
-            endpoint: APIEndpoints.saveSleepData,
-            body: request,
+            endpoint: APIEndpoints.createSleepData(userId: userId),
+            body: sleepData,
             responseType: SaveSleepDataResponse.self,
             completion: completion
         )
     }
     
-    /// Fetch sleep data by date range (matching Android getSleepDataByDateWise)
+    /// Get sleep data for a specific date (matching Android getSleepData)
     /// - Parameters:
     ///   - userId: User ID
-    ///   - startDate: Start date (yyyy-MM-dd)
-    ///   - endDate: End date (yyyy-MM-dd)
+    ///   - selectedDate: Date in format "MM/dd/yyyy" (e.g., "01/30/2026")
     ///   - completion: Callback with result
-    func getSleepDataByDateWise(
+    func getSleepData(
+        userId: Int,
+        selectedDate: String,
+        completion: @escaping (Result<SleepDataResponse, NetworkError>) -> Void
+    ) {
+        APIClient.shared.get(
+            endpoint: APIEndpoints.getSleepData(userId: userId, selectedDate: selectedDate),
+            responseType: SleepDataResponse.self,
+            completion: completion
+        )
+    }
+    
+    /// Get sleep data for a date range (matching Android getSleepDataByDateWise)
+    /// Used for weekly/monthly charts
+    /// - Parameters:
+    ///   - userId: User ID
+    ///   - startDate: Start date in format "MM/dd/yyyy"
+    ///   - endDate: End date in format "MM/dd/yyyy"
+    ///   - completion: Callback with result
+    func getSleepDataByDateRange(
         userId: Int,
         startDate: String,
         endDate: String,
-        completion: @escaping (Result<GetSleepDataResponse, NetworkError>) -> Void
+        completion: @escaping (Result<SleepDataResponse, NetworkError>) -> Void
+    ) {
+        print("📊 [HealthService] Getting sleep data for range: \(startDate) - \(endDate)")
+        print("   URL: getSleepData?user_id=\(userId)&startDate=\(startDate)&endDate=\(endDate)")
+        
+        APIClient.shared.get(
+            endpoint: APIEndpoints.getSleepDataByDateRange(userId: userId, startDate: startDate, endDate: endDate),
+            responseType: SleepDataResponse.self
+        ) { result in
+            switch result {
+            case .success(let response):
+                let sessionCount = response.data?.count ?? 0
+                print("✅ [HealthService] Got \(sessionCount) session(s) for range \(startDate) - \(endDate)")
+                
+                // Log each session summary
+                if let sessions = response.data {
+                    for (index, session) in sessions.enumerated() {
+                        let totalMinutes = session.totalTimes / 60
+                        let deepMinutes = session.deepSleepTimes / 60
+                        let lightMinutes = session.lightSleepTimes / 60
+                        let awakeMinutes = session.wakeupTimes / 60
+                        
+                        // Calculate REM from sleep_details
+                        let remMinutes = session.sleep_details
+                            .filter { $0.sleepType == 4 } // REM type
+                            .reduce(0) { $0 + Int(($1.endTime - $1.startTime) / 60) }
+                        
+                        print("   Session \(index + 1): \(session.startSleepHour):\(String(format: "%02d", session.startSleepMinute)) - \(session.endSleepHour):\(String(format: "%02d", session.endSleepMinute))")
+                        print("     Total: \(totalMinutes)min | Deep: \(deepMinutes)min | Light: \(lightMinutes)min | REM: \(remMinutes)min | Awake: \(awakeMinutes)min")
+                        print("     Details: \(session.sleep_details.count) segments")
+                    }
+                }
+                
+                completion(result)
+                
+            case .failure(let error):
+                print("❌ [HealthService] Failed to get sleep data: \(error.localizedDescription)")
+                completion(result)
+            }
+        }
+    }
+    
+    /// Get all sleep sessions (summaries only, no details)
+    /// - Parameters:
+    ///   - userId: User ID
+    ///   - completion: Callback with result
+    func getSleepSessions(
+        userId: Int,
+        completion: @escaping (Result<SleepSessionsResponse, NetworkError>) -> Void
     ) {
         APIClient.shared.get(
-            endpoint: APIEndpoints.getSleepDataByDateWise(
-                userId: userId,
-                startDate: startDate,
-                endDate: endDate
-            ),
-            responseType: GetSleepDataResponse.self,
+            endpoint: APIEndpoints.getSleepSessions(userId: userId),
+            responseType: SleepSessionsResponse.self,
             completion: completion
         )
     }
