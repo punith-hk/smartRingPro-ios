@@ -9,6 +9,10 @@ class SideMenuViewController: UIViewController {
     weak var delegate: SideMenuDelegate?
 
     private let menuWidth: CGFloat = 280
+    
+    // Header UI elements
+    private var profileImageView: UIImageView?
+    private var nameLabel: UILabel?
 
     private let items: [(String, String, SideMenuAction)] = [
         ("Family Members", "person.2", .familyMembers),
@@ -24,6 +28,12 @@ class SideMenuViewController: UIViewController {
         view.backgroundColor = .white
         setupHeader()
         setupMenu()
+        observeProfileUpdates()
+        loadSavedProfileData()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     override func viewDidLayoutSubviews() {
@@ -38,17 +48,71 @@ class SideMenuViewController: UIViewController {
         header.backgroundColor = UIColor(red: 0.85, green: 0.92, blue: 0.97, alpha: 1)
         view.addSubview(header)
 
-        let profileCircle = UIView(frame: CGRect(x: 20, y: 50, width: 60, height: 60))
-        profileCircle.backgroundColor = .white
-        profileCircle.layer.cornerRadius = 30
-        profileCircle.layer.borderWidth = 1
-        profileCircle.layer.borderColor = UIColor.lightGray.cgColor
-        header.addSubview(profileCircle)
+        let imageView = UIImageView(frame: CGRect(x: 20, y: 50, width: 60, height: 60))
+        imageView.backgroundColor = .white
+        imageView.layer.cornerRadius = 30
+        imageView.layer.borderWidth = 1
+        imageView.layer.borderColor = UIColor.lightGray.cgColor
+        imageView.clipsToBounds = true
+        imageView.contentMode = .scaleAspectFill
+        imageView.image = UIImage(systemName: "person.circle.fill")
+        imageView.tintColor = .lightGray
+        header.addSubview(imageView)
+        self.profileImageView = imageView
 
-        let nameLabel = UILabel(frame: CGRect(x: 100, y: 65, width: 160, height: 30))
-        nameLabel.text = "Welcome"
-        nameLabel.font = .systemFont(ofSize: 16, weight: .semibold)
-        header.addSubview(nameLabel)
+        let label = UILabel(frame: CGRect(x: 100, y: 65, width: 160, height: 30))
+        label.text = "Welcome"
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        header.addSubview(label)
+        self.nameLabel = label
+        
+        // Add tap gesture to header
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(headerTapped))
+        header.isUserInteractionEnabled = true
+        header.addGestureRecognizer(tapGesture)
+    }
+    
+    @objc private func headerTapped() {
+        delegate?.didSelectMenu(.profile)
+    }
+    
+    // MARK: - Profile Updates
+    private func observeProfileUpdates() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(updateProfileHeader),
+            name: .profileDataLoaded,
+            object: nil
+        )
+    }
+    
+    @objc private func updateProfileHeader(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let name = userInfo["name"] as? String,
+              let imageUrlString = userInfo["imageUrl"] as? String else { return }
+        
+        // Update name
+        if !name.isEmpty {
+            nameLabel?.text = name
+        }
+        
+        // Update profile image
+        if !imageUrlString.isEmpty, let url = URL(string: imageUrlString) {
+            profileImageView?.loadImage(from: url)
+        }
+    }
+    
+    private func loadSavedProfileData() {
+        // Load profile data from UserDefaults
+        if let name = UserDefaultsManager.shared.profileName, !name.isEmpty {
+            nameLabel?.text = name
+        }
+        
+        if let photoUrl = UserDefaultsManager.shared.profilePhotoUrl, 
+           !photoUrl.isEmpty,
+           let url = URL(string: photoUrl) {
+            profileImageView?.loadImage(from: url)
+        }
     }
 
     // MARK: - Menu Items

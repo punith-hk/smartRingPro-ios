@@ -1,4 +1,5 @@
 import UIKit
+import YCProductSDK
 
 class SideMenuContainerController: UIViewController, SideMenuDelegate {
 
@@ -164,8 +165,38 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
 
         closeMenu()
 
-        // Clear user session
+        // 🔥 BLE CLEANUP
+        YCProduct.disconnectDevice { _, _ in }
+        YCProduct.shared.isReconnectEnable = false
+
+        DeviceSessionManager.shared.clearDevice()
+        
+        // 🗄️ CLEAR ALL LOCAL DATABASE
+        print("🗑️ Clearing all local database data...")
+        
+        // Clear raw data
+        HeartRateRepository().deleteAll()
+        BloodPressureRepository().deleteAll()
+        HrvRepository().deleteAll()
+        BloodOxygenRepository().deleteAll()
+        BloodGlucoseRepository().deleteAll()
+        TemperatureRepository().deleteAll()
+        StepsRepository().deleteAll()
+        
+        // Clear daily stats
+        HeartRateDailyStatsRepository().deleteAll()
+        BloodPressureDailyStatsRepository().deleteAll()
+        HrvDailyStatsRepository().deleteAll()
+        BloodOxygenDailyStatsRepository().deleteAll()
+        BloodGlucoseDailyStatsRepository().deleteAll()
+        TemperatureDailyStatsRepository().deleteAll()
+        StepsDailyStatsRepository().deleteAll()
+        
+        print("✅ All local data cleared")
+
+        // Clear user session and profile data
         UserDefaults.standard.removeObject(forKey: "isLoggedIn")
+        UserDefaultsManager.shared.clearProfileData()
 
         let loginVC = LoginViewController()
         let nav = UINavigationController(rootViewController: loginVC)
@@ -176,5 +207,6 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
             sceneDelegate.setRootViewController(nav)
         }
     }
+
 
 }

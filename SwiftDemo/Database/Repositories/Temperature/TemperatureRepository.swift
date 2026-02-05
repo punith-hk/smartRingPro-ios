@@ -1,0 +1,240 @@
+import Foundation
+import CoreData
+
+/// Temperature Repository (equivalent to Android's TemperatureRepository)
+/// Handles all database operations for temperature data
+class TemperatureRepository {
+    
+    private let context: NSManagedObjectContext
+    private let TAG = "TemperatureRepository"
+    
+    init(context: NSManagedObjectContext = CoreDataManager.shared.context) {
+        self.context = context
+    }
+    
+    // MARK: - Save Operations
+    
+    /// Save new batch of temperature readings from BLE device
+    /// Equivalent to Android's saveNewBatch(readings: List<Pair<Long, String>>)
+    func saveNewBatch(readings: [(timestamp: Int64, temperatureValue: Double)], completion: @escaping (Bool, Int) -> Void) {
+        print("[\(TAG)] 🔵 saveNewBatch called with \(readings.count) readings")
+        
+        guard !readings.isEmpty else {
+            print("[\(TAG)] ⚠️ No readings to save")
+            completion(true, 0)
+            return
+        }
+        
+        print("[\(TAG)] 🔄 Starting background task...")
+        
+        CoreDataManager.shared.performBackgroundTask { [weak self] backgroundContext in
+            guard let self = self else {
+                print("[TemperatureRepository] ⚠️ Self is nil in background task")
+                return
+            }
+            
+            print("[\(self.TAG)] 🔵 Background task started")
+            
+            let batchTime = Int64(Date().timeIntervalSince1970)
+            print("[\(self.TAG)] 📅 Batch time: \(batchTime)")
+            
+            // Get existing timestamps to check for duplicates
+            let existingTimestamps = self.getExistingTimestamps(in: backgroundContext)
+            print("[\(self.TAG)] 📊 Found \(existingTimestamps.count) existing entries in DB")
+            
+            // Filter out duplicates
+            let newReadings = readings.filter { !existingTimestamps.contains($0.timestamp) }
+            print("[\(self.TAG)] 🔍 Filtered: \(readings.count) total, \(newReadings.count) new, \(readings.count - newReadings.count) duplicates")
+            
+            guard !newReadings.isEmpty else {
+                print("[\(self.TAG)] ℹ️ All readings already exist in DB")
+                DispatchQueue.main.async {
+                    completion(true, 0)
+                }
+                return
+            }
+            
+            // Insert new entries
+            for reading in newReadings {
+                TemperatureEntity.create(
+                    timestamp: reading.timestamp,
+                    temperatureValue: reading.temperatureValue,
+                    batchTime: batchTime,
+                    in: backgroundContext
+                )
+            }
+            
+            // Save context
+            do {
+                try backgroundContext.save()
+                print("[\(self.TAG)] ✅ Saved \(newReadings.count) new temperature entries")
+                DispatchQueue.main.async {
+                    completion(true, newReadings.count)
+                }
+            } catch {
+                print("[\(self.TAG)] ❌ Failed to save: \(error)")
+                DispatchQueue.main.async {
+                    completion(false, 0)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Fetch Operations
+    
+    /// Get all heart rates ordered by timestamp descending
+    func getAll() -> [TemperatureEntity] {
+        let request = TemperatureEntity.fetchAll()
+        
+        do {
+            let results = try context.fetch(request)
+            print("[\(TAG)] 📊 Fetched \(results.count) heart rate entries")
+            return results
+        } catch {
+            print("[\(TAG)] ❌ Failed to fetch all: \(error)")
+            return []
+        }
+    }
+    
+    /// Get latest temperature entry
+    func getLatestEntry() -> TemperatureEntity? {
+        let request = TemperatureEntity.fetchLatest()
+        
+        do {
+            let results = try context.fetch(request)
+            return results.first
+        } catch {
+            print("[\(TAG)] ❌ Failed to fetch latest: \(error)")
+            return nil
+        }
+    }
+    
+    /// Get latest batch of synced data
+    func getLatestBatch() -> [TemperatureEntity] {
+        let request = TemperatureEntity.fetchAll()
+        
+        do {
+            let allResults = try context.fetch(request)
+            guard let maxBatchTime = allResults.max(by: { $0.batchTime < $1.batchTime })?.batchTime else {
+                return []
+            }
+            
+            let latestBatch = allResults.filter { $0.batchTime == maxBatchTime }
+            print("[\(TAG)] 📦 Latest batch has \(latestBatch.count) entries")
+            return latestBatch
+        } catch {
+            print("[\(TAG)] ❌ Failed to fetch latest batch: \(error)")
+            return []
+        }
+    }
+    
+    /// Get heart rates for today
+    func getTodayLatestEntry() -> TemperatureEntity? {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: Date())
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        
+        let startTimestamp = Int64(startOfDay.timeIntervalSince1970)
+        let endTimestamp = Int64(endOfDay.timeIntervalSince1970)
+        
+        let request = TemperatureEntity.fetchByDateRange(start: startTimestamp, end: endTimestamp)
+        request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
+        request.fetchLimit = 1
+        
+        do {
+            let results = try context.fetch(request)
+            return results.first
+        } catch {
+            print("[\(TAG)] ❌ Failed to fetch today's entry: \(error)")
+            return nil
+        }
+    }
+    
+    /// Get heart rates for specific date range
+    func getByDateRange(start: Date, end: Date) -> [TemperatureEntity] {
+        let startTimestamp = Int64(start.timeIntervalSince1970)
+        let endTimestamp = Int64(end.timeIntervalSince1970)
+        
+        let request = TemperatureEntity.fetchByDateRange(start: startTimestamp, end: endTimestamp)
+        
+        do {
+            let results = try context.fetch(request)
+            print("[\(TAG)] 📊 Fetched \(results.count) entries for date range")
+            return results
+        } catch {
+            print("[\(TAG)] ❌ Failed to fetch by date range: \(error)")
+            return []
+        }
+    }
+    
+    // MARK: - Delete Operations
+    
+    /// Delete all heart rate data
+    func deleteAll() {
+        CoreDataManager.shared.deleteAllData(for: "HeartRateEntity")
+    }
+    
+    // MARK: - Helper Methods
+    
+    /// Get all existing timestamps (for duplicate checking)
+    private func getExistingTimestamps(in context: NSManagedObjectContext) -> Set<Int64> {
+        let request = NSFetchRequest<TemperatureEntity>(entityName: "TemperatureEntity")
+        request.propertiesToFetch = ["timestamp"]
+        
+        do {
+            let results = try context.fetch(request)
+            return Set(results.map { $0.timestamp })
+        } catch {
+            print("[\(TAG)] ❌ Failed to fetch existing timestamps: \(error)")
+            return []
+        }
+    }
+    
+    // MARK: - Debug Methods
+    
+    /// Print all saved heart rate data (for debugging)
+    func printAllData() {
+        let all = getAll()
+        print("[\(TAG)] 📊 Total records in database: \(all.count)")
+        print("[\(TAG)] 📋 Printing all entries:")
+        print("----------------------------------------")
+        
+        for (index, entry) in all.enumerated() {
+            let date = Date(timeIntervalSince1970: TimeInterval(entry.timestamp))
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+            let dateStr = formatter.string(from: date)
+            
+            print("  \(index + 1). Temp: \(entry.temperatureValue)°C | Time: \(dateStr) | Timestamp: \(entry.timestamp)")
+        }
+        print("----------------------------------------")
+    }
+    
+    /// Print summary statistics
+    func printSummary() {
+        let all = getAll()
+        guard !all.isEmpty else {
+            print("[\(TAG)] ℹ️ Database is empty")
+            return
+        }
+        
+        let tempValues = all.map { $0.temperatureValue }
+        let minTemp = tempValues.min() ?? 0
+        let maxTemp = tempValues.max() ?? 0
+        let avgTemp = tempValues.reduce(0, +) / Double(tempValues.count)
+        
+        let oldestDate = all.last?.timestampAsDate ?? Date()
+        let newestDate = all.first?.timestampAsDate ?? Date()
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        
+        print("[\(TAG)] 📊 Database Summary:")
+        print("  Total entries: \(all.count)")
+        print("  Min Temp: \(String(format: "%.1f", minTemp))°C")
+        print("  Max Temp: \(String(format: "%.1f", maxTemp))°C")
+        print("  Avg Temp: \(String(format: "%.1f", avgTemp))°C")
+        print("  Oldest: \(formatter.string(from: oldestDate))")
+        print("  Newest: \(formatter.string(from: newestDate))")
+    }
+}
