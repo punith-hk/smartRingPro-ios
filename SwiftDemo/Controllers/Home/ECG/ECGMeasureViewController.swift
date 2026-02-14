@@ -18,8 +18,25 @@ final class ECGMeasureViewController: BaseViewController {
     
     // MARK: - Properties
     private var hasShownTips = false
+    
+    // Vital signs
     private var currentHR: Int = 0
     private var currentHRV: Int = 0
+    private var currentSystolic: Int = 0
+    private var currentDiastolic: Int = 0
+    private var currentBloodOxygen: Int = 0
+    private var currentTemperature: Double = 0.0
+    
+    // ECG data collection
+    private var ecgWaveformData: [Int32] = []
+    private var processedECGData: [Int] = []  // For display/saving (drawLists)
+    private var rrIntervals: [Float] = []
+    private var measurementStartTime: Date?
+    
+    // Database & Loading
+    private let ecgRepository = ECGRecordRepository()
+    private let loadingView = UIActivityIndicatorView(style: .large)
+    private let loadingLabel = UILabel()
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -32,6 +49,7 @@ final class ECGMeasureViewController: BaseViewController {
         setupUI()
         setupBindings()
         setupNotifications()
+        setupLoadingView()
         
         // Initialize algorithm manager
         dataProcessor.setupAlgorithm()
@@ -131,6 +149,35 @@ final class ECGMeasureViewController: BaseViewController {
         ])
     }
     
+    private func setupLoadingView() {
+        // Loading spinner
+        loadingView.color = .white
+        loadingView.backgroundColor = UIColor.black.withAlphaComponent(0.8)
+        loadingView.layer.cornerRadius = 16
+        loadingView.hidesWhenStopped = true
+        loadingView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(loadingView)
+        
+        // Loading label
+        loadingLabel.text = "Generating AI Report..."
+        loadingLabel.textColor = .white
+        loadingLabel.font = .systemFont(ofSize: 16, weight: .medium)
+        loadingLabel.textAlignment = .center
+        loadingLabel.translatesAutoresizingMaskIntoConstraints = false
+        loadingView.addSubview(loadingLabel)
+        
+        NSLayoutConstraint.activate([
+            loadingView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            loadingView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            loadingView.widthAnchor.constraint(equalToConstant: 200),
+            loadingView.heightAnchor.constraint(equalToConstant: 120),
+            
+            loadingLabel.bottomAnchor.constraint(equalTo: loadingView.bottomAnchor, constant: -20),
+            loadingLabel.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor, constant: 12),
+            loadingLabel.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor, constant: -12)
+        ])
+    }
+    
     // MARK: - Bindings
     private func setupBindings() {
         // Tips overlay
@@ -149,21 +196,41 @@ final class ECGMeasureViewController: BaseViewController {
         
         // Data processor callbacks
         dataProcessor.onHRUpdate = { [weak self] hr in
+            print("[ECG] ✅ HR updated: \(hr) bpm")
             self?.currentHR = hr
             self?.measurementCard.hrValueLabel.text = "\(hr)"
         }
         
         dataProcessor.onBPUpdate = { [weak self] systolic, diastolic in
+            print("[ECG] ✅ BP updated: \(systolic)/\(diastolic) mmHg")
+            self?.currentSystolic = systolic
+            self?.currentDiastolic = diastolic
             self?.measurementCard.bpValueLabel.text = "\(systolic)/\(diastolic)"
         }
         
         dataProcessor.onHRVUpdate = { [weak self] hrv in
+            print("[ECG] ✅ HRV updated: \(hrv) ms")
             self?.currentHRV = hrv
             self?.measurementCard.hrvValueLabel.text = "\(hrv)"
         }
         
+        dataProcessor.onBloodOxygenUpdate = { [weak self] oxygen in
+            self?.currentBloodOxygen = oxygen
+        }
+        
+        dataProcessor.onTemperatureUpdate = { [weak self] temp in
+            self?.currentTemperature = temp
+        }
+        
+        dataProcessor.onRRIntervalUpdate = { [weak self] rr in
+            self?.rrIntervals.append(rr)
+        }
+        
         dataProcessor.onDrawECGValue = { [weak self] ecgValue in
             guard let self = self else { return }
+            
+            // Collect for saving (matches Android drawLists)
+            self.processedECGData.append(ecgValue)
             
             // Distance between points (same as reference implementation)
             let distance = 6.25 * 0.1 * 3  // CELL_SIZE * 0.1 * 3
@@ -211,6 +278,12 @@ final class ECGMeasureViewController: BaseViewController {
             return
         }
         
+        // Collect ECG waveform data
+        if let ecgData = (userInfo[YCReceivedRealTimeDataType.ecg.string] as? YCReceivedDeviceReportInfo)?.data as? [Int32] {
+            ecgWaveformData.append(contentsOf: ecgData)
+        }
+        
+        // Process other data
         dataProcessor.processRealTimeNotificationData(userInfo)
     }
     
@@ -245,6 +318,14 @@ final class ECGMeasureViewController: BaseViewController {
         // Reset state
         currentHR = 0
         currentHRV = 0
+        currentSystolic = 0
+        currentDiastolic = 0
+        currentBloodOxygen = 0
+        currentTemperature = 0.0
+        ecgWaveformData.removeAll()
+        processedECGData.removeAll()  // Reset processed data
+        rrIntervals.removeAll()
+        measurementStartTime = Date()
         
         // Reset UI
         measurementCard.hrValueLabel.text = "--"
@@ -305,11 +386,202 @@ final class ECGMeasureViewController: BaseViewController {
         
         measurementManager.getMeasurementResult(deviceHR: deviceHR, deviceHRV: deviceHRV) { [weak self] result in
             DispatchQueue.main.async {
-                print("[ECG] Final Results: HR=\(result.hearRate), HRV=\(result.hrv), Type=\(result.ecgMeasurementType.rawValue)")
+                guard let self = self else { return }
                 
-                // Navigate to report
-                self?.showMeasurementResults(result: result)
+                // Check if measurement failed (Type 0)
+                if result.ecgMeasurementType == .failed {
+                    print("[ECG] ⚠️ Measurement failed (Type 0) - NOT saving")
+                    self.showFailedMeasurementAlert()
+                    return
+                }
+                
+                // Valid measurement (Type 1-7) - Show loading and save
+                print("[ECG] ✅ Valid measurement (Type \(result.ecgMeasurementType.rawValue)) - saving...")
+                self.showLoadingAndSave(result: result)
             }
+        }
+    }
+    
+    private func logCompleteMeasurementData(result: YCECGMeasurementResult, bodyIndexes: YCECGBodyIndexResult?) {
+        let duration = measurementStartTime.map { -$0.timeIntervalSinceNow } ?? 0
+        let avgRR = rrIntervals.isEmpty ? 0 : rrIntervals.reduce(0, +) / Float(rrIntervals.count)
+        
+        // Determine final values (device priority)
+        let finalHR = currentHR > 0 ? currentHR : result.hearRate
+        let finalHRV = currentHRV > 0 ? currentHRV : result.hrv
+        
+        print("\n" + String(repeating: "=", count: 80))
+        print("📊 ECG MEASUREMENT COMPLETE - ALL COLLECTED DATA")
+        print(String(repeating: "=", count: 80))
+        
+        print("\n⏱️  MEASUREMENT INFO:")
+        print("   Duration: \(String(format: "%.1f", duration))s")
+        print("   Start Time: \(measurementStartTime?.description ?? "N/A")")
+        print("   Sample Count: \(ecgWaveformData.count)")
+        
+        print("\n💓 PRIMARY VITAL SIGNS (Algorithm Results):")
+        print("   Heart Rate: \(result.hearRate) bpm")
+        print("   HRV: \(result.hrv) ms")
+        print("   ECG Type: \(result.ecgMeasurementType.rawValue)")
+        print("   Diagnosis: \(getDiagnosisText(result.ecgMeasurementType))")
+        
+        print("\n📊 REAL-TIME MEASUREMENTS (if available):")
+        print("   RT Heart Rate: \(currentHR > 0 ? "\(currentHR) bpm" : "N/A")")
+        print("   RT HRV: \(currentHRV > 0 ? "\(currentHRV) ms" : "N/A")")
+        print("   Systolic BP: \(currentSystolic > 0 ? "\(currentSystolic) mmHg" : "N/A")")
+        print("   Diastolic BP: \(currentDiastolic > 0 ? "\(currentDiastolic) mmHg" : "N/A")")
+        print("   Blood Oxygen: \(currentBloodOxygen > 0 ? "\(currentBloodOxygen)%" : "N/A")")
+        print("   Temperature: \(currentTemperature > 0 ? String(format: "%.1f°C", currentTemperature) : "N/A")")
+        
+        print("\n✅ FINAL VALUES FOR SAVE (Device Priority):")
+        print("   Heart Rate: \(finalHR) bpm \(currentHR > 0 ? "(Device)" : "(Algorithm)")")
+        print("   HRV: \(finalHRV) ms \(currentHRV > 0 ? "(Device)" : "(Algorithm)")")
+        print("   Blood Pressure: \(currentSystolic)/\(currentDiastolic) mmHg (Device)")
+        print("   Blood Oxygen: \(currentBloodOxygen)% (Device)")
+        print("   Temperature: \(String(format: "%.3f", currentTemperature))°C (Device)")
+        
+        print("\n📉 RR INTERVALS:")
+        print("   Count: \(rrIntervals.count)")
+        print("   Average: \(String(format: "%.2f", avgRR)) ms")
+        if !rrIntervals.isEmpty {
+            print("   Min: \(String(format: "%.2f", rrIntervals.min() ?? 0)) ms")
+            print("   Max: \(String(format: "%.2f", rrIntervals.max() ?? 0)) ms")
+        }
+        
+        print("\n🌊 WAVEFORM DATA:")
+        print("   Total Samples: \(ecgWaveformData.count)")
+        if !ecgWaveformData.isEmpty {
+            print("   First 10: \(Array(ecgWaveformData.prefix(10)))")
+            print("   Last 10: \(Array(ecgWaveformData.suffix(10)))")
+        }
+        
+        if let bodyIndexes = bodyIndexes, bodyIndexes.isAvailable {
+            print("\n🏥 BODY INDEXES (AVAILABLE ✅):")
+            print("   HRV Index: \(String(format: "%.2f", bodyIndexes.hrvNorm))")
+            print("   Load Index: \(String(format: "%.2f", bodyIndexes.heavyLoad))")
+            print("   Pressure Index: \(String(format: "%.2f", bodyIndexes.pressure))")
+            print("   Body Index: \(String(format: "%.2f", bodyIndexes.body))")
+        } else {
+            print("\n🏥 BODY INDEXES: ❌ Not Available")
+        }
+        
+        print("\n📦 DATA FOR API UPLOAD:")
+        print("""
+        {
+          "timestamp": "\(ISO8601DateFormatter().string(from: Date()))",
+          "heartRate": \(finalHR),
+          "systolicBP": \(currentSystolic > 0 ? currentSystolic : 0),
+          "diastolicBP": \(currentDiastolic > 0 ? currentDiastolic : 0),
+          "hrv": \(finalHRV),
+          "diagnoseType": \(result.ecgMeasurementType.rawValue),
+          "isAfib": \(result.ecgMeasurementType == .atrialFibrillation),
+          "ecgDataCount": \(ecgWaveformData.count),
+          "bloodOxygen": \(currentBloodOxygen > 0 ? currentBloodOxygen : 0),
+          "temperature": \(currentTemperature > 0 ? currentTemperature : 0),
+          "avgRR": \(avgRR),
+          "hrvIndex": \(bodyIndexes?.isAvailable == true ? String(format: "%.2f", bodyIndexes!.hrvNorm) : "null"),
+          "loadIndex": \(bodyIndexes?.isAvailable == true ? String(format: "%.2f", bodyIndexes!.heavyLoad) : "null"),
+          "pressureIndex": \(bodyIndexes?.isAvailable == true ? String(format: "%.2f", bodyIndexes!.pressure) : "null"),
+          "bodyIndex": \(bodyIndexes?.isAvailable == true ? String(format: "%.2f", bodyIndexes!.body) : "null")
+        }
+        """)
+        
+        print(String(repeating: "=", count: 80) + "\n")
+    }
+    
+    private func showFailedMeasurementAlert() {
+        let alert = UIAlertController(
+            title: "Measurement Failed",
+            message: "Poor signal quality. Please ensure:\n\n• Ring fits snugly\n• Fingers firmly on metal contacts\n• Stay still during measurement\n\nWould you like to retry?",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "Retry", style: .default) { [weak self] _ in
+            self?.tipsOverlay.show()
+        })
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+            self?.navigationController?.popViewController(animated: true)
+        })
+        
+        present(alert, animated: true)
+    }
+    
+    private func showLoadingAndSave(result: YCECGMeasurementResult) {
+        // Show loading
+        loadingView.startAnimating()
+        view.bringSubviewToFront(loadingView)
+        
+        // Get body indexes
+        let bodyIndexes = measurementManager.getBodyIndexes()
+        
+        // Debug log
+        print("[ECG] 🔍 Stored values: HR=\(currentHR), HRV=\(currentHRV), BP=\(currentSystolic)/\(currentDiastolic)")
+        
+        // Log all collected data
+        logCompleteMeasurementData(result: result, bodyIndexes: bodyIndexes)
+        
+        // Prepare final values (device priority)
+        let finalHR = currentHR > 0 ? currentHR : result.hearRate
+        let finalHRV = currentHRV > 0 ? currentHRV : result.hrv
+        
+        // Format timestamp
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        let timestamp = dateFormatter.string(from: measurementStartTime ?? Date())
+        
+        // Save to database
+        ecgRepository.saveRecord(
+            timestamp: timestamp,
+            heartRate: finalHR,
+            sbp: currentSystolic,
+            dbp: currentDiastolic,
+            hrv: finalHRV,
+            ecgList: processedECGData,  // Use processed data
+            diagnoseType: Int(result.ecgMeasurementType.rawValue),
+            isAfib: result.ecgMeasurementType == .atrialFibrillation,
+            hrvIndex: bodyIndexes?.isAvailable == true ? Double(bodyIndexes!.hrvNorm) : 0.0,
+            loadIndex: bodyIndexes?.isAvailable == true ? Double(bodyIndexes!.heavyLoad) : 0.0,
+            pressureIndex: bodyIndexes?.isAvailable == true ? Double(bodyIndexes!.pressure) : 0.0,
+            bodyIndex: bodyIndexes?.isAvailable == true ? Double(bodyIndexes!.body) : 0.0,
+            bloodOxygen: currentBloodOxygen,
+            temperature: currentTemperature
+        ) { [weak self] success, error in
+            DispatchQueue.main.async {
+                self?.loadingView.stopAnimating()
+                
+                if success {
+                    print("[ECG] 💾 Saved to database successfully!")
+                    self?.showMeasurementResults(result: result)
+                } else {
+                    print("[ECG] ❌ Save failed: \(error ?? "unknown")")
+                    self?.showSaveErrorAlert()
+                }
+            }
+        }
+    }
+    
+    private func showSaveErrorAlert() {
+        let alert = UIAlertController(
+            title: "Save Failed",
+            message: "Unable to save ECG record. Please try again.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+    
+    private func getDiagnosisText(_ type: YCECGResultType) -> String {
+        switch type {
+        case .normal: return "Normal ECG"
+        case .atrialFibrillation: return "Suspected Atrial Fibrillation"
+        case .earlyHeartbeat: return "Suspected Atrial Premature Beats"
+        case .supraventricularHeartbeat: return "Suspected Ventricular Premature Beats"
+        case .atrialBradycardia: return "Suspected Bradycardia"
+        case .atrialTachycardia: return "Suspected Tachycardia"
+        case .atrialArrhythmi: return "Suspected Arrhythmia"
+        case .failed: return "Measurement Failed (Poor Signal)"
+        @unknown default: return "Unknown"
         }
     }
     
@@ -317,7 +589,7 @@ final class ECGMeasureViewController: BaseViewController {
         // TODO: Navigate to ECG report screen
         let alert = UIAlertController(
             title: "Measurement Complete",
-            message: "HR: \(result.hearRate) bpm\nHRV: \(result.hrv) ms\nType: \(result.ecgMeasurementType.rawValue)",
+            message: "HR: \(result.hearRate) bpm\nHRV: \(result.hrv) ms\nType: \(getDiagnosisText(result.ecgMeasurementType))",
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default))

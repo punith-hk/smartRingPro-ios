@@ -11,6 +11,9 @@
 		4BEF9B752DE93FE900439088 /* YCHenAIBloodPressureViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEF9B732DE93FE900439088 /* YCHenAIBloodPressureViewController.swift */; };
 		B29AE76B2F17EF2B0080E203 /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE7632F17EF2B0080E203 /* CoreDataManager.swift */; };
 		B29AE76D2F17EF2B0080E203 /* MannaHealData.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = B29AE7642F17EF2B0080E203 /* MannaHealData.xcdatamodeld */; };
+		B2C3AA0E2F408043002C36FA /* ECGRecordEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3AA0C2F408043002C36FA /* ECGRecordEntity+CoreDataProperties.swift */; };
+		B2C3AA0F2F408043002C36FA /* ECGRecordEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3AA0B2F408043002C36FA /* ECGRecordEntity+CoreDataClass.swift */; };
+		B2C3AA122F408072002C36FA /* ECGRecordRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3AA102F408072002C36FA /* ECGRecordRepository.swift */; };
 		B2FE6BCE2F1BF6960013E05A /* StepsDailyStatsEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FE6BCA2F1BF6960013E05A /* StepsDailyStatsEntity+CoreDataProperties.swift */; };
 		B2FE6BCF2F1BF6960013E05A /* StepsEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FE6BCC2F1BF6960013E05A /* StepsEntity+CoreDataProperties.swift */; };
 		B2FE6BD02F1BF6960013E05A /* StepsEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FE6BCB2F1BF6960013E05A /* StepsEntity+CoreDataClass.swift */; };
@@ -93,6 +96,9 @@
 		AA999FD1E4B8A9FF39FE17CC /* Pods-ObjcDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ObjcDemo.debug.xcconfig"; path = "Target Support Files/Pods-ObjcDemo/Pods-ObjcDemo.debug.xcconfig"; sourceTree = "<group>"; };
 		B29AE7632F17EF2B0080E203 /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
 		B29AE7662F17EF2B0080E203 /* MannaHealData.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = MannaHealData.xcdatamodel; sourceTree = "<group>"; };
+		B2C3AA0B2F408043002C36FA /* ECGRecordEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ECGRecordEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
+		B2C3AA0C2F408043002C36FA /* ECGRecordEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ECGRecordEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		B2C3AA102F408072002C36FA /* ECGRecordRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ECGRecordRepository.swift; sourceTree = "<group>"; };
 		B2FE6BCA2F1BF6960013E05A /* StepsDailyStatsEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StepsDailyStatsEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
 		B2FE6BCB2F1BF6960013E05A /* StepsEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StepsEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
 		B2FE6BCC2F1BF6960013E05A /* StepsEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StepsEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
@@ -267,6 +273,7 @@
 				B2AE585B2F19459200EB7757 /* Hrv */,
 				B2AE58592F19456900EB7757 /* HeartRate */,
 				B2FE6BCD2F1BF6960013E05A /* Steps */,
+				B2C3AA0D2F408043002C36FA /* ECG */,
 			);
 			path = Entities;
 			sourceTree = "<group>";
@@ -282,6 +289,7 @@
 				B2AE585C2F1945A300EB7757 /* Hrv */,
 				B2AE585A2F19458300EB7757 /* HeartRate */,
 				B2FE6BDB2F1BF8580013E05A /* Steps */,
+				B2C3AA112F408072002C36FA /* ECG */,
 			);
 			path = Repositories;
 			sourceTree = "<group>";
@@ -295,6 +303,23 @@
 				B29AE7642F17EF2B0080E203 /* MannaHealData.xcdatamodeld */,
 			);
 			path = Database;
+			sourceTree = "<group>";
+		};
+		B2C3AA0D2F408043002C36FA /* ECG */ = {
+			isa = PBXGroup;
+			children = (
+				B2C3AA0B2F408043002C36FA /* ECGRecordEntity+CoreDataClass.swift */,
+				B2C3AA0C2F408043002C36FA /* ECGRecordEntity+CoreDataProperties.swift */,
+			);
+			path = ECG;
+			sourceTree = "<group>";
+		};
+		B2C3AA112F408072002C36FA /* ECG */ = {
+			isa = PBXGroup;
+			children = (
+				B2C3AA102F408072002C36FA /* ECGRecordRepository.swift */,
+			);
+			path = ECG;
 			sourceTree = "<group>";
 		};
 		B2FE6BCD2F1BF6960013E05A /* Steps */ = {
@@ -829,6 +854,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B2C3AA0E2F408043002C36FA /* ECGRecordEntity+CoreDataProperties.swift in Sources */,
+				B2C3AA0F2F408043002C36FA /* ECGRecordEntity+CoreDataClass.swift in Sources */,
+				B2C3AA122F408072002C36FA /* ECGRecordRepository.swift in Sources */,
 				CA8AB871288005B800B91963 /* YCECGPhotoViewCell.swift in Sources */,
 				B2FE6BDE2F1BF87C0013E05A /* StepsDailyStatsRepository.swift in Sources */,
 				B2FE6BDF2F1BF87C0013E05A /* StepsRepository.swift in Sources */,

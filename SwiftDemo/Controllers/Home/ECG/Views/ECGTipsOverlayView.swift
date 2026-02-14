@@ -152,6 +152,13 @@ final class ECGTipsOverlayView: UIView {
         // Create constraint for instruction image that can be animated
         instructionImageCenterXConstraint = instructionImageView.centerXAnchor.constraint(equalTo: leftHandButton.centerXAnchor)
         
+        // Create card constraints with lower priority to avoid conflicts during initial layout
+        let cardLeadingConstraint = cardView.leadingAnchor.constraint(equalTo: overlayView.leadingAnchor, constant: 40)
+        cardLeadingConstraint.priority = .defaultHigh
+        
+        let cardTrailingConstraint = cardView.trailingAnchor.constraint(equalTo: overlayView.trailingAnchor, constant: -40)
+        cardTrailingConstraint.priority = .defaultHigh
+        
         NSLayoutConstraint.activate([
             overlayView.topAnchor.constraint(equalTo: topAnchor),
             overlayView.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -160,8 +167,9 @@ final class ECGTipsOverlayView: UIView {
             
             cardView.centerXAnchor.constraint(equalTo: overlayView.centerXAnchor),
             cardView.centerYAnchor.constraint(equalTo: overlayView.centerYAnchor),
-            cardView.leadingAnchor.constraint(equalTo: overlayView.leadingAnchor, constant: 40),
-            cardView.trailingAnchor.constraint(equalTo: overlayView.trailingAnchor, constant: -40),
+            cardLeadingConstraint,
+            cardTrailingConstraint,
+            cardView.widthAnchor.constraint(greaterThanOrEqualToConstant: 280),  // Minimum width
             
             titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 20),
             titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 20),

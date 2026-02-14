@@ -15,6 +15,7 @@ final class ECGMeasurementManager {
     private(set) var elapsedTime: Int = 0
     private var measurementTimer: Timer?
     private var audioPlayer: AVAudioPlayer?
+    private var ecgManagerInstance: YCECGManager?
     
     var onTimeUpdate: ((Int, Double) -> Void)?  // (seconds, progress)
     var onMeasurementComplete: (() -> Void)?
@@ -92,10 +93,29 @@ final class ECGMeasurementManager {
     // MARK: - Results
     func getMeasurementResult(deviceHR: Int?, deviceHRV: Int?, completion: @escaping (YCECGMeasurementResult) -> Void) {
         let ecgManager = YCECGManager()
+        self.ecgManagerInstance = ecgManager  // Store for body index access
+        
         ecgManager.getECGMeasurementResult(deviceHeartRate: deviceHR, deviceHRV: deviceHRV) { result in
             print("[ECG] Result: HR=\(result.hearRate), HRV=\(result.hrv), Type=\(result.ecgMeasurementType.rawValue)")
             completion(result)
         }
+    }
+    
+    func getBodyIndexes() -> YCECGBodyIndexResult? {
+        guard let manager = ecgManagerInstance else {
+            print("[ECG] ⚠️ No ECG manager instance - body indexes unavailable")
+            return nil
+        }
+        
+        let bodyIndexes = manager.getPhysicalIndexParameters()
+        
+        if bodyIndexes.isAvailable {
+            print("[ECG] ✅ Body indexes ARE available")
+        } else {
+            print("[ECG] ❌ Body indexes NOT available (isAvailable = false)")
+        }
+        
+        return bodyIndexes
     }
     
     // MARK: - Cleanup

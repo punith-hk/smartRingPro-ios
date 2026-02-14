@@ -24,24 +24,37 @@ final class ECGDataProcessor {
     private var lastDataReceivedTime: Date?
     private var electrodeStatusTimer: Timer?
     
+    // Device value priority flags
+    private var hasReceivedDeviceHR: Bool = false
+    private var hasReceivedDeviceHRV: Bool = false
+    
     var onHRUpdate: ((Int) -> Void)?
     var onBPUpdate: ((Int, Int) -> Void)?  // systolic, diastolic
     var onHRVUpdate: ((Int) -> Void)?
     var onDrawECGValue: ((Int) -> Void)?  // For progressive drawing
     var onHeartbeat: (() -> Void)?
     var onElectrodeStatusChange: ((Bool) -> Void)?
+    var onBloodOxygenUpdate: ((Int) -> Void)?
+    var onTemperatureUpdate: ((Double) -> Void)?
+    var onRRIntervalUpdate: ((Float) -> Void)?
     
     // MARK: - Data Processing
     func processRealTimeNotificationData(_ userInfo: [AnyHashable: Any]) {
-        // Process blood pressure data (includes HR, BP, HRV)
+        // Process blood pressure data (includes HR, BP, HRV, O2, temp)
         if let healthData = (userInfo[YCReceivedRealTimeDataType.bloodPressure.string] as? YCReceivedDeviceReportInfo)?.data as? YCReceivedRealTimeBloodPressureInfo {
             
             let hr = healthData.heartRate
             let systolic = healthData.systolicBloodPressure
             let diastolic = healthData.diastolicBloodPressure
             let hrv = healthData.hrv
+            let bloodOxygen = healthData.bloodOxygen
+            let temperature = healthData.temperature
+            
+            print("[ECG] 📡 Real-time BP data received: HR=\(hr), BP=\(systolic)/\(diastolic), HRV=\(hrv), O2=\(bloodOxygen), Temp=\(temperature)")
             
             if hr > 0 {
+                hasReceivedDeviceHR = true
+                print("[ECG] 🔒 Device HR priority locked - algorithm updates disabled")
                 onHRUpdate?(hr)
             }
             
@@ -50,8 +63,21 @@ final class ECGDataProcessor {
             }
             
             if hrv > 0 && hrv <= ECG_HRV_LIMIT_VALUE {
+                hasReceivedDeviceHRV = true
+                print("[ECG] 🔒 Device HRV priority locked - algorithm updates disabled")
                 onHRVUpdate?(hrv)
             }
+            
+            if bloodOxygen > 0 {
+                onBloodOxygenUpdate?(bloodOxygen)
+            }
+            
+            if temperature > 0 {
+                onTemperatureUpdate?(temperature)
+            }
+        } else {
+            // Log when BP data is NOT present in notification
+            print("[ECG] ⚠️ No BP data in notification - only ECG waveform")
         }
         
         // Process ECG waveform data
@@ -190,22 +216,40 @@ final class ECGDataProcessor {
         
         // Setup with callbacks for RR interval and HRV
         ecgManager.setupManagerInfo { [weak self] rr, heartRate in
-            // RR interval detected (heartbeat)
-            print("[ECG] RR interval detected: \(rr), HR: \(heartRate)")
-            self?.onHeartbeat?()
-            
-        } hrv: { [weak self] hrv in
-            // HRV calculated
-            print("[ECG] HRV calculated: \(hrv)")
-            
             guard let self = self else { return }
             
-            var finalHRV = hrv
-            if hrv >= self.ECG_HRV_LIMIT_VALUE {
-                finalHRV = self.ECG_HRV_LIMIT_VALUE
+            // RR interval detected (heartbeat)
+            print("[ECG] 💓 Algorithm: RR=\(rr) ms, HR=\(heartRate) bpm")
+            
+            // Update HR from algorithm ONLY if device value not received
+            if heartRate > 0 && !self.hasReceivedDeviceHR {
+                self.onHRUpdate?(heartRate)
+            } else if heartRate > 0 && self.hasReceivedDeviceHR {
+                print("[ECG] ⏭️  Algorithm HR ignored (device priority)")
             }
             
-            self.onHRVUpdate?(finalHRV)
+            // Store RR interval (always needed)
+            self.onRRIntervalUpdate?(rr)
+            
+            // Play heartbeat sound
+            self.onHeartbeat?()
+            
+        } hrv: { [weak self] hrv in
+            guard let self = self else { return }
+            
+            // HRV calculated
+            print("[ECG] 📊 Algorithm HRV calculated: \(hrv) ms")
+            
+            // Update HRV from algorithm ONLY if device value not received
+            if !self.hasReceivedDeviceHRV {
+                var finalHRV = hrv
+                if hrv >= self.ECG_HRV_LIMIT_VALUE {
+                    finalHRV = self.ECG_HRV_LIMIT_VALUE
+                }
+                self.onHRVUpdate?(finalHRV)
+            } else {
+                print("[ECG] ⏭️  Algorithm HRV ignored (device priority)")
+            }
         }
         
         print("[ECG] Algorithm setup complete")
@@ -219,6 +263,8 @@ final class ECGDataProcessor {
         drawLineIndex = 0
         isReceivingECGData = false
         lastDataReceivedTime = nil
+        hasReceivedDeviceHR = false
+        hasReceivedDeviceHRV = false
         
         stopDrawLineTimer()
         stopElectrodeStatusMonitor()
@@ -227,8 +273,12 @@ final class ECGDataProcessor {
         setupAlgorithm()
         
         print("[ECG] Algorithm reset")
-    }
-    
+    }    
+    // MARK: - Data Access
+    func getCollectedECGData() -> [Int32] {
+        // Return collected ECG data for report generation
+        return []  // Will be implemented with proper storage
+    }    
     // MARK: - Data Access
     var collectedDataCount: Int {
         return ecgDataCount
