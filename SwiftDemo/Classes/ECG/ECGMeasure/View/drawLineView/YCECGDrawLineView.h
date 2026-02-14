@@ -52,4 +52,7 @@ typedef NS_ENUM (NSUInteger, YCECGLineReferenceWaveformStyle) {
 /// ECG参考波形X方向的偏移量
 @property (nonatomic, assign) CGFloat referenceWaveformOffsetX;
 
+/// 网格X方向的偏移量
+@property (nonatomic, assign) CGFloat gridOffsetX;
+
 @end

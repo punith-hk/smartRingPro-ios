@@ -376,9 +376,10 @@ final class ECGViewController: AppBaseViewController {
 
     // MARK: - Actions
     @objc private func startMeasurementTapped() {
-        // TODO: Navigate to ECG measurement screen
+        // Navigate to ECG measurement screen
         print("🟢 Start ECG Measurement tapped")
-        Toast.show(message: "ECG Measurement will be implemented in next phase", in: self.view)
+        let vc = ECGMeasureViewController()
+        navigationController?.pushViewController(vc, animated: true)
     }
 
     @objc private func trendTrackingTapped() {

@@ -213,7 +213,7 @@
     
     // 纵向
     gridCount = 0;
-    CGFloat startX = 1;
+    CGFloat startX = 1 + self.gridOffsetX;
     while (startX < width) {
         
         if (gridCount % (CELL_GROUP_COUNT * CELL_GROUP_COUNT) == 0) {
