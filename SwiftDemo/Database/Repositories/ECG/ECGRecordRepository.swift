@@ -171,6 +171,27 @@ class ECGRecordRepository {
         }
     }
     
+    /// Mark record as unsynced
+    func markAsUnsynced(timestamp: String, completion: @escaping (Bool) -> Void) {
+        let fetchRequest: NSFetchRequest<ECGRecordEntity> = ECGRecordEntity.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "timestamp == %@", timestamp)
+        
+        do {
+            let entities = try context.fetch(fetchRequest)
+            if let entity = entities.first {
+                entity.isSynced = false
+                try context.save()
+                print("[\(TAG)] ⚠️ Marked as unsynced: \(timestamp)")
+                completion(true)
+            } else {
+                completion(false)
+            }
+        } catch {
+            print("[\(TAG)] ❌ Mark unsynced failed: \(error)")
+            completion(false)
+        }
+    }
+    
     // MARK: - Delete Operations
     
     /// Delete record by timestamp

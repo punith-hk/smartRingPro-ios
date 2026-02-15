@@ -645,8 +645,13 @@ class HealthDashboardViewController: AppBaseViewController {
                     let data = response.data
                     let fullName = "\(data.first_name ?? "") \(data.last_name ?? "")".trimmingCharacters(in: .whitespaces)
                     
-                    // Save to UserDefaults
-                    UserDefaultsManager.shared.saveProfileData(name: fullName, photoUrl: data.patient_image_url ?? "")
+                    // Save to UserDefaults including age and gender
+                    UserDefaultsManager.shared.saveProfileData(
+                        name: fullName,
+                        photoUrl: data.patient_image_url ?? "",
+                        age: data.age,
+                        gender: data.gender
+                    )
                     
                     // Post notification to update side menu
                     NotificationCenter.default.post(

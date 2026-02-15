@@ -224,3 +224,54 @@ extension HealthService {
         )
     }
 }
+
+// MARK: - ECG Records API
+extension HealthService {
+    
+    /// Fetch ECG records from server
+    /// - Parameters:
+    ///   - userId: User ID
+    ///   - limit: Maximum number of records to fetch
+    ///   - offset: Offset for pagination
+    ///   - completion: Callback with fetched records or error
+    func fetchECGRecords(
+        userId: Int,
+        limit: Int = 100,
+        offset: Int = 0,
+        completion: @escaping (Result<ECGFetchResponse, NetworkError>) -> Void
+    ) {
+        print("[HealthService] 📥 Fetching ECG records from API (limit: \(limit), offset: \(offset))...")
+        
+        APIClient.shared.get(
+            endpoint: APIEndpoints.getECGRecords(userId: userId, limit: limit, offset: offset),
+            responseType: ECGFetchResponse.self,
+            completion: completion
+        )
+    }
+    
+    /// Upload ECG records to server (batch upload)
+    /// - Parameters:
+    ///   - userId: User ID
+    ///   - records: Array of ECG records to upload
+    ///   - completion: Callback with success/failure
+    func uploadECGRecords(
+        userId: Int,
+        records: [ECGRecord],
+        completion: @escaping (Result<ECGUploadResponse, NetworkError>) -> Void
+    ) {
+        // Convert ECGRecord to ECGRecordUpload format
+        let uploadRecords = records.map { ECGRecordUpload(from: $0) }
+        
+        // Create request with userId and type at root level (matches Android)
+        let request = ECGUploadRequest(userId: userId, records: uploadRecords)
+        
+        print("[HealthService] 📤 Uploading \(uploadRecords.count) ECG record(s) to API...")
+        
+        APIClient.shared.postJSON(
+            endpoint: APIEndpoints.uploadECGRecords,
+            body: request,
+            responseType: ECGUploadResponse.self,
+            completion: completion
+        )
+    }
+}

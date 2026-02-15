@@ -315,6 +315,14 @@ final class ECGMeasureViewController: BaseViewController {
     private func startMeasurement() {
         print("[ECG] Starting measurement...")
         
+        // Check device connection before starting
+        let connected = BLEStateManager.shared.hasConnectedDevice() || BLEStateManager.shared.isConnected
+        if !connected {
+            print("🔴 ECG Measurement: Device not connected, cannot start")
+            Toast.show(message: "Device not connected", in: self.view)
+            return
+        }
+        
         // Reset state
         currentHR = 0
         currentHRV = 0
@@ -530,6 +538,15 @@ final class ECGMeasureViewController: BaseViewController {
         dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         let timestamp = dateFormatter.string(from: measurementStartTime ?? Date())
         
+        // Convert raw Int32 waveform to Int array for storage
+        let rawDataForStorage = ecgWaveformData.map { Int($0) }
+        
+        print("[ECG] 💾 Saving to database...")
+        print("[ECG] 💾 Raw waveform data count: \(ecgWaveformData.count)")
+        print("[ECG] 💾 rawDataForStorage count: \(rawDataForStorage.count)")
+        print("[ECG] 💾 First 10 raw values: \(Array(rawDataForStorage.prefix(10)))")
+        print("[ECG] 💾 Min/Max: \(rawDataForStorage.min() ?? 0) to \(rawDataForStorage.max() ?? 0)")
+        
         // Save to database
         ecgRepository.saveRecord(
             timestamp: timestamp,
@@ -537,7 +554,7 @@ final class ECGMeasureViewController: BaseViewController {
             sbp: currentSystolic,
             dbp: currentDiastolic,
             hrv: finalHRV,
-            ecgList: processedECGData,  // Use processed data
+            ecgList: rawDataForStorage,  // Save RAW waveform (not processed) for AI report
             diagnoseType: Int(result.ecgMeasurementType.rawValue),
             isAfib: result.ecgMeasurementType == .atrialFibrillation,
             hrvIndex: bodyIndexes?.isAvailable == true ? Double(bodyIndexes!.hrvNorm) : 0.0,
@@ -547,15 +564,64 @@ final class ECGMeasureViewController: BaseViewController {
             bloodOxygen: currentBloodOxygen,
             temperature: currentTemperature
         ) { [weak self] success, error in
-            DispatchQueue.main.async {
-                self?.loadingView.stopAnimating()
+            guard let self = self else { return }
+            
+            if success {
+                print("[ECG] 💾 Saved to database successfully!")
                 
-                if success {
-                    print("[ECG] 💾 Saved to database successfully!")
-                    self?.showMeasurementResults(result: result)
-                } else {
-                    print("[ECG] ❌ Save failed: \(error ?? "unknown")")
-                    self?.showSaveErrorAlert()
+                // Upload to API in background
+                self.uploadECGRecordToAPI(timestamp: timestamp)
+                
+                // Stop loading and show results
+                DispatchQueue.main.async {
+                    self.loadingView.stopAnimating()
+                    self.showMeasurementResults(result: result)
+                }
+            } else {
+                print("[ECG] ❌ Save failed: \(error ?? "unknown")")
+                DispatchQueue.main.async {
+                    self.loadingView.stopAnimating()
+                    self.showSaveErrorAlert()
+                }
+            }
+        }
+    }
+    
+    /// Upload ECG record to API server
+    private func uploadECGRecordToAPI(timestamp: String) {
+        let userId = UserDefaultsManager.shared.userId
+        guard userId > 0 else {
+            print("[ECG] ⚠️ No user ID found, skipping API upload")
+            return
+        }
+        
+        // Fetch the saved record
+        ecgRepository.fetchRecord(timestamp: timestamp) { [weak self] record in
+            guard let record = record else {
+                print("[ECG] ❌ Failed to fetch record for upload")
+                return
+            }
+            
+            // Upload to server
+            print("[ECG] 📤 Uploading ECG record to API...")
+            HealthService.shared.uploadECGRecords(userId: userId, records: [record]) { [weak self] result in
+                switch result {
+                case .success(let response):
+                    print("[ECG] ✅ Upload successful: \(response.message)")
+                    if let uploaded = response.data?.uploaded {
+                        print("[ECG] 📊 Uploaded \(uploaded) record(s)")
+                    }
+                    
+                    // Mark as synced in database
+                    self?.ecgRepository.markAsSynced(timestamp: timestamp) { success in
+                        if success {
+                            print("[ECG] 🔄 Marked as synced in database")
+                        }
+                    }
+                    
+                case .failure(let error):
+                    print("[ECG] ❌ Upload failed: \(error)")
+                    // Don't show error to user, record is saved locally
                 }
             }
         }
@@ -586,14 +652,32 @@ final class ECGMeasureViewController: BaseViewController {
     }
     
     private func showMeasurementResults(result: YCECGMeasurementResult) {
-        // TODO: Navigate to ECG report screen
-        let alert = UIAlertController(
-            title: "Measurement Complete",
-            message: "HR: \(result.hearRate) bpm\nHRV: \(result.hrv) ms\nType: \(getDiagnosisText(result.ecgMeasurementType))",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
+        // Navigate to AI ECG Report screen
+        print("[ECG] 📊 Showing AI Report...")
+        
+        let ecgInfo = YCHealthLocalECGInfo()
+        
+        // Use final values (device priority)
+        ecgInfo.heartRate = currentHR > 0 ? currentHR : result.hearRate
+        ecgInfo.hrv = currentHRV > 0 ? currentHRV : result.hrv
+        ecgInfo.systolicBloodPressure = currentSystolic
+        ecgInfo.diastolicBloodPressure = currentDiastolic
+        ecgInfo.afflag = result.ecgMeasurementType == .atrialFibrillation
+        ecgInfo.qrsType = Int(result.ecgMeasurementType.rawValue)
+        
+        // Add user profile data
+        ecgInfo.age = UserDefaultsManager.shared.profileAge
+        ecgInfo.gender = UserDefaultsManager.shared.profileGender ?? "Male"
+        
+        // Use original waveform data for accurate report
+        ecgInfo.ecgDatas = ecgWaveformData
+        
+        print("[ECG] ✅ Report data prepared - HR=\(ecgInfo.heartRate), Count=\(ecgInfo.ecgDatas.count)")
+        
+        let reportVC = YCECGReportViewController()
+        reportVC.ecgInfo = ecgInfo
+        
+        navigationController?.pushViewController(reportVC, animated: true)
     }
     
     private func showToast(message: String) {

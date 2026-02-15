@@ -137,6 +137,19 @@ enum APIEndpoints {
 
     // MARK: - Diseases
     static let getDiseaseList = "diseases/list"
+    
+    // MARK: - ECG Records
+    /// Fetch ECG records from server
+    /// GET /api/ecg-records/{userId}?limit={limit}&offset={offset}
+    static func getECGRecords(userId: Int, limit: Int = 100, offset: Int = 0) -> String {
+        return "ecg-records/\(userId)?limit=\(limit)&offset=\(offset)"
+    }
+    
+    /// Upload ECG records (batch upload)
+    /// POST /api/ecg-records (userId in body)
+    static var uploadECGRecords: String {
+        return "ecg-records"
+    }
 
     // MARK: - Firebase
     static let fcmToken = "user/fcm-token"

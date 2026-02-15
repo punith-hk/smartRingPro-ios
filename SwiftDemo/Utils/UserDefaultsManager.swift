@@ -72,13 +72,31 @@ final class UserDefaultsManager {
         set { defaults.set(newValue, forKey: "profilePhotoUrl") }
     }
     
-    func saveProfileData(name: String, photoUrl: String) {
+    var profileAge: Int {
+        get { defaults.integer(forKey: "profileAge") }
+        set { defaults.set(newValue, forKey: "profileAge") }
+    }
+    
+    var profileGender: String? {
+        get { defaults.string(forKey: "profileGender") }
+        set { defaults.set(newValue, forKey: "profileGender") }
+    }
+    
+    func saveProfileData(name: String, photoUrl: String, age: Int = 0, gender: String? = nil) {
         defaults.set(name, forKey: "profileName")
         defaults.set(photoUrl, forKey: "profilePhotoUrl")
+        if age > 0 {
+            defaults.set(age, forKey: "profileAge")
+        }
+        if let gender = gender, !gender.isEmpty {
+            defaults.set(gender, forKey: "profileGender")
+        }
     }
     
     func clearProfileData() {
         defaults.removeObject(forKey: "profileName")
         defaults.removeObject(forKey: "profilePhotoUrl")
+        defaults.removeObject(forKey: "profileAge")
+        defaults.removeObject(forKey: "profileGender")
     }
 }

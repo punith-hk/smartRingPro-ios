@@ -74,11 +74,15 @@ class YCECGPhotoViewCell: UITableViewCell {
     /// 设置ecg的信息
     private func setupECGInfo() {
         
-        ageLabel.text =
-            "Age" + ": " + "20"
-        genderLabel.text =
-            "Gender" + ": " + "Male"
+        // Use actual user age or default to "--"
+        let ageText = ecgInfo.age > 0 ? "\(ecgInfo.age)" : "--"
+        ageLabel.text = "Age" + ": " + ageText
         
+        // Use actual user gender or default to "--"
+        let genderText = !ecgInfo.gender.isEmpty ? ecgInfo.gender : "--"
+        genderLabel.text = "Gender" + ": " + genderText
+        
+        // Blood pressure display
         if ecgInfo.systolicBloodPressure == 0 ||
             ecgInfo.diastolicBloodPressure == 0 {
             
@@ -98,6 +102,15 @@ class YCECGPhotoViewCell: UITableViewCell {
         super.awakeFromNib()
         
         selectionStyle = .none
+        
+        // Configure labels to prevent text truncation
+        ageLabel.adjustsFontSizeToFitWidth = true
+        ageLabel.minimumScaleFactor = 0.7
+        genderLabel.adjustsFontSizeToFitWidth = true
+        genderLabel.minimumScaleFactor = 0.7
+        bloodPressureLabel.adjustsFontSizeToFitWidth = true
+        bloodPressureLabel.minimumScaleFactor = 0.7
+        bloodPressureLabel.numberOfLines = 1
         
         let tap =
             UITapGestureRecognizer(

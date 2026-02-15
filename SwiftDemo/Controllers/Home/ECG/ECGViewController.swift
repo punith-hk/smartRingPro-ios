@@ -4,6 +4,8 @@ import YCProductSDK
 final class ECGViewController: AppBaseViewController {
 
     private let userId = UserDefaultsManager.shared.userId
+    private let ecgRepository = ECGRecordRepository()
+    private let CELL_SIZE: CGFloat = 6.25
 
     // MARK: - Scroll
     private let scrollView = UIScrollView()
@@ -14,6 +16,8 @@ final class ECGViewController: AppBaseViewController {
     private let cardTitleLabel = UILabel()
     private let cardDateLabel = UILabel()
     private let ecgGraphPlaceholder = UIView()
+    private let ecgScrollView = UIScrollView()
+    private let ecgLineView = YCECGDrawLineView()
     private let graphInfoLabel = UILabel()
     
     // MARK: - Metrics Stack
@@ -41,6 +45,7 @@ final class ECGViewController: AppBaseViewController {
     private let historyCard = UIView()
     private let historyIconView = UIView()
     private let historyTitleLabel = UILabel()
+    private let historyArrowImageView = UIImageView()
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -55,6 +60,11 @@ final class ECGViewController: AppBaseViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        
+        // Check if device is connected
+        checkDeviceConnection()
+        
+        // Refresh local UI with latest measurement
         loadLatestECGData()
     }
 
@@ -113,14 +123,36 @@ final class ECGViewController: AppBaseViewController {
         ecgGraphPlaceholder.backgroundColor = UIColor(red: 0.97, green: 0.97, blue: 0.97, alpha: 1)
         ecgGraphPlaceholder.layer.cornerRadius = 8
         ecgGraphPlaceholder.translatesAutoresizingMaskIntoConstraints = false
+        ecgGraphPlaceholder.clipsToBounds = true
         ecgMeasurementCard.addSubview(ecgGraphPlaceholder)
+        
+        // ECG Scroll View (inside placeholder)
+        ecgScrollView.translatesAutoresizingMaskIntoConstraints = false
+        ecgScrollView.showsHorizontalScrollIndicator = true
+        ecgScrollView.backgroundColor = .clear
+        ecgGraphPlaceholder.addSubview(ecgScrollView)
+        
+        // ECG Line View (inside scroll view)
+        ecgLineView.backgroundColor = .clear
+        ecgLineView.drawReferenceWaveformStype = .top
+        ecgScrollView.addSubview(ecgLineView)
+        
+        NSLayoutConstraint.activate([
+            ecgScrollView.topAnchor.constraint(equalTo: ecgGraphPlaceholder.topAnchor),
+            ecgScrollView.leadingAnchor.constraint(equalTo: ecgGraphPlaceholder.leadingAnchor),
+            ecgScrollView.trailingAnchor.constraint(equalTo: ecgGraphPlaceholder.trailingAnchor),
+            ecgScrollView.bottomAnchor.constraint(equalTo: ecgGraphPlaceholder.bottomAnchor)
+        ])
 
-        // Graph Info Label
+        // Graph Info Label (overlay on chart)
         graphInfoLabel.text = "Gain: 10mm/mv Speed: 25mm/s Lead I"
         graphInfoLabel.font = .systemFont(ofSize: 10)
         graphInfoLabel.textColor = .darkGray
+        graphInfoLabel.textAlignment = .center
+        graphInfoLabel.numberOfLines = 0
+        graphInfoLabel.backgroundColor = UIColor.white.withAlphaComponent(0.8)
         graphInfoLabel.translatesAutoresizingMaskIntoConstraints = false
-        ecgMeasurementCard.addSubview(graphInfoLabel)
+        ecgGraphPlaceholder.addSubview(graphInfoLabel)
 
         // Metrics Stack
         metricsStack.axis = .horizontal
@@ -174,12 +206,12 @@ final class ECGViewController: AppBaseViewController {
             ecgGraphPlaceholder.topAnchor.constraint(equalTo: cardTitleLabel.bottomAnchor, constant: 12),
             ecgGraphPlaceholder.leadingAnchor.constraint(equalTo: ecgMeasurementCard.leadingAnchor, constant: 16),
             ecgGraphPlaceholder.trailingAnchor.constraint(equalTo: ecgMeasurementCard.trailingAnchor, constant: -16),
-            ecgGraphPlaceholder.heightAnchor.constraint(equalToConstant: 120),
+            ecgGraphPlaceholder.heightAnchor.constraint(equalToConstant: 240),
 
-            graphInfoLabel.topAnchor.constraint(equalTo: ecgGraphPlaceholder.bottomAnchor, constant: 8),
-            graphInfoLabel.leadingAnchor.constraint(equalTo: ecgGraphPlaceholder.leadingAnchor),
+            graphInfoLabel.bottomAnchor.constraint(equalTo: ecgGraphPlaceholder.bottomAnchor, constant: -8),
+            graphInfoLabel.leadingAnchor.constraint(equalTo: ecgGraphPlaceholder.leadingAnchor, constant: 8),
 
-            metricsStack.topAnchor.constraint(equalTo: graphInfoLabel.bottomAnchor, constant: 16),
+            metricsStack.topAnchor.constraint(equalTo: ecgGraphPlaceholder.bottomAnchor, constant: 8),
             metricsStack.leadingAnchor.constraint(equalTo: ecgMeasurementCard.leadingAnchor, constant: 16),
             metricsStack.trailingAnchor.constraint(equalTo: ecgMeasurementCard.trailingAnchor, constant: -16),
             metricsStack.heightAnchor.constraint(equalToConstant: 50),
@@ -337,6 +369,13 @@ final class ECGViewController: AppBaseViewController {
         historyTitleLabel.translatesAutoresizingMaskIntoConstraints = false
         historyCard.addSubview(historyTitleLabel)
 
+        // Arrow
+        historyArrowImageView.image = UIImage(systemName: "chevron.right")
+        historyArrowImageView.tintColor = .lightGray
+        historyArrowImageView.contentMode = .scaleAspectFit
+        historyArrowImageView.translatesAutoresizingMaskIntoConstraints = false
+        historyCard.addSubview(historyArrowImageView)
+
         NSLayoutConstraint.activate([
             historyCard.topAnchor.constraint(equalTo: trendTrackingCard.bottomAnchor, constant: 16),
             historyCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
@@ -355,27 +394,130 @@ final class ECGViewController: AppBaseViewController {
             iconImageView.heightAnchor.constraint(equalToConstant: 20),
 
             historyTitleLabel.centerYAnchor.constraint(equalTo: historyCard.centerYAnchor),
-            historyTitleLabel.leadingAnchor.constraint(equalTo: historyIconView.trailingAnchor, constant: 12)
+            historyTitleLabel.leadingAnchor.constraint(equalTo: historyIconView.trailingAnchor, constant: 12),
+
+            historyArrowImageView.centerYAnchor.constraint(equalTo: historyCard.centerYAnchor),
+            historyArrowImageView.trailingAnchor.constraint(equalTo: historyCard.trailingAnchor, constant: -16),
+            historyArrowImageView.widthAnchor.constraint(equalToConstant: 16),
+            historyArrowImageView.heightAnchor.constraint(equalToConstant: 16)
         ])
     }
 
     // MARK: - Data Loading
     private func loadLatestECGData() {
-        // TODO: Load latest ECG data from local DB
-        // For now, display placeholder values matching screenshot
+        ecgRepository.fetchAllRecords { [weak self] records in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                guard let latestRecord = records.first else {
+                    // No data available - show placeholder
+                    self.showPlaceholderData()
+                    return
+                }
+                
+                // Update date
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+                if let date = dateFormatter.date(from: latestRecord.timestamp) {
+                    dateFormatter.dateFormat = "yyyy.MM.dd HH:mm"
+                    self.cardDateLabel.text = dateFormatter.string(from: date)
+                }
+                
+                // Update metrics
+                self.hrValueLabel.text = "\(latestRecord.heartRate)"
+                self.bpValueLabel.text = "\(latestRecord.sbp)/\(latestRecord.dbp)"
+                self.hrvValueLabel.text = "\(latestRecord.hrv)"
+                
+                // Render ECG chart
+                if !latestRecord.ecgList.isEmpty {
+                    self.renderECGChart(ecgData: latestRecord.ecgList)
+                }
+            }
+        }
+    }
+    
+    private func showPlaceholderData() {
+        cardDateLabel.text = "--:--"
         
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy.MM.dd HH:mm"
-        cardDateLabel.text = dateFormatter.string(from: Date())
+        hrValueLabel.text = "--"
+        bpValueLabel.text = "--"
+        hrvValueLabel.text = "--"
         
-        // Default values from screenshot
-        hrValueLabel.text = "77"
-        bpValueLabel.text = "105/69"
-        hrvValueLabel.text = "0"
+        // Clear ECG chart
+        ecgLineView.datas.removeAllObjects()
+        ecgLineView.setNeedsDisplay()
+        
+        // Show "No history data available" message
+        graphInfoLabel.text = "No history data available"
+        graphInfoLabel.font = .systemFont(ofSize: 14, weight: .medium)
+        graphInfoLabel.textColor = .gray
+        graphInfoLabel.isHidden = false
+    }
+    
+    private func renderECGChart(ecgData: [Int]) {
+        // Reset graphInfoLabel to default style when showing data
+        graphInfoLabel.text = "Gain: 10mm/mv Speed: 25mm/s Lead I"
+        graphInfoLabel.font = .systemFont(ofSize: 10)
+        graphInfoLabel.textColor = .darkGray
+        graphInfoLabel.isHidden = false
+        
+        // ecgData is already processed draw data, convert to NSMutableArray
+        let dataArray = NSMutableArray()
+        for value in ecgData {
+            dataArray.add(NSNumber(value: value))
+        }
+        
+        // Each data point width: 0.1 * gridSize * 3
+        let pointWidth = CELL_SIZE * 0.3
+        var totalWidth = CGFloat(ecgData.count) * pointWidth
+        
+        // Ensure minimum width is screen width
+        let screenWidth = UIScreen.main.bounds.width
+        if totalWidth < screenWidth {
+            totalWidth = screenWidth
+        }
+        
+        // Set frame for line view
+        let chartHeight: CGFloat = 240
+        ecgLineView.frame = CGRect(x: 0, y: 0, width: totalWidth, height: chartHeight)
+        
+        // Set content size for scroll view
+        ecgScrollView.contentSize = CGSize(width: totalWidth, height: chartHeight)
+        
+        // Update line view with processed data
+        ecgLineView.datas = dataArray
+        ecgLineView.setNeedsDisplay()
+    }
+
+    // MARK: - Device Connection
+    private func checkDeviceConnection() {
+        print("🟡 ECGViewController - Checking device connection")
+        
+        let hasPeripheral = BLEStateManager.shared.hasConnectedDevice()
+        let isConnected = BLEStateManager.shared.isConnected
+        
+        print("  - Has peripheral: \(hasPeripheral)")
+        print("  - Is connected: \(isConnected)")
+        
+        if !isConnected {
+            print("🔴 Device NOT connected")
+            // Note: Not showing toast here to avoid interrupting user on screen load
+            // Toast will be shown when user attempts to start measurement
+        } else {
+            print("✅ Device IS connected")
+        }
     }
 
     // MARK: - Actions
     @objc private func startMeasurementTapped() {
+        // Check device connection before starting measurement
+        let connected = BLEStateManager.shared.hasConnectedDevice() || BLEStateManager.shared.isConnected
+        if !connected {
+            print("🔴 ECG: Start requested but device not connected")
+            Toast.show(message: "Device not connected", in: self.view)
+            return
+        }
+        
         // Navigate to ECG measurement screen
         print("🟢 Start ECG Measurement tapped")
         let vc = ECGMeasureViewController()
@@ -383,14 +525,14 @@ final class ECGViewController: AppBaseViewController {
     }
 
     @objc private func trendTrackingTapped() {
-        // TODO: Navigate to ECG trend tracking screen
         print("📊 ECG Trend Tracking tapped")
-        Toast.show(message: "ECG Trend Tracking coming soon", in: self.view)
+        let vc = ECGTrendTrackingViewController()
+        navigationController?.pushViewController(vc, animated: true)
     }
 
     @objc private func historyTapped() {
-        // TODO: Navigate to ECG history screen
         print("🕐 ECG History tapped")
-        Toast.show(message: "ECG History coming soon", in: self.view)
+        let vc = ECGHistoryViewController()
+        navigationController?.pushViewController(vc, animated: true)
     }
 }
