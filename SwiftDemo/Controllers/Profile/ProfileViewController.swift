@@ -597,7 +597,12 @@ class ProfileViewController: AppBaseViewController {
         )
         
         // Save to UserDefaults for persistence
-        UserDefaultsManager.shared.saveProfileData(name: fullName, photoUrl: data.patient_image_url ?? "")
+        UserDefaultsManager.shared.saveProfileData(
+            name: fullName,
+            photoUrl: data.patient_image_url ?? "",
+            age: 0,
+            gender: data.gender
+        )
 
         emailField.text = data.email ?? ""
         mobileField.text = data.phone_number
@@ -796,6 +801,9 @@ class ProfileViewController: AppBaseViewController {
                 case .success(let response):
                     Toast.show(message: response.message, in: self.view)
                     self.scrollView.setContentOffset(.zero, animated: true)
+                    
+                    // Fetch updated profile data and update local storage
+                    self.fetchUserProfile()
 
                 case .failure:
                     Toast.show(message: "Failed to save profile", in: self.view)

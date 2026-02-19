@@ -17,12 +17,27 @@ enum APIEndpoints {
 
     // MARK: - Doctors / Departments
     static let departments = "departments"
+    
+    /// Get doctors for a specific department
+    /// GET /api/departments/{id}
+    static func getDoctors(departmentId: Int) -> String {
+        return "departments/\(departmentId)"
+    }
+    
     static func doctors(id: Int) -> String {
         return "departments/\(id)"
     }
-    static func schedules(id: Int) -> String {
-        return "doctors/\(id)/schedules"
+    
+    /// Get doctor's weekly schedule
+    /// GET /api/doctors/{id}/schedules
+    static func getDoctorSchedules(doctorId: Int) -> String {
+        return "doctors/\(doctorId)/schedules"
     }
+    
+    // MARK: - Symptoms
+    /// Get all symptoms for male and female body parts
+    /// GET /api/getAllSymptoms
+    static let getAllSymptoms = "getAllSymptoms"
 
     // MARK: - Profile
     static func patientProfile(id: Int) -> String {
@@ -31,8 +46,13 @@ enum APIEndpoints {
 
     // MARK: - Appointments
     static let getAppointments = "patients/myappointments"
-    static let getDoctorAppointments = "doctors/myappointments"
     static let bookAppointment = "appointments"
+    
+    /// Get doctor's appointments with query parameter
+    /// GET /api/doctors/myappointments?doctor_id={id}
+    static func getDoctorAppointments(doctorId: Int) -> String {
+        return "doctors/myappointments?doctor_id=\(doctorId)"
+    }
 
     static func getPrescription(appointmentId: Int) -> String {
         return "appointments/\(appointmentId)/answers"
@@ -59,9 +79,6 @@ enum APIEndpoints {
         static let verifyCaretakerOtp = "caretaker/verify"
 
         static let getLastRingData = "getLastRingData"
-
-    // MARK: - Symptoms
-    static let getAllSymptoms = "getAllSymptoms"
 
     static func saveSymptoms(userId: Int) -> String {
         return "patients/\(userId)/symptoms"
