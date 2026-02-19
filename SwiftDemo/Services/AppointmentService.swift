@@ -39,6 +39,23 @@ final class AppointmentService {
         )
     }
     
+    /// Fetch patient's appointments
+    /// - Parameters:
+    ///   - patientId: Patient ID
+    ///   - completion: Callback with result
+    func getMyAppointments(
+        patientId: Int,
+        completion: @escaping (Result<MyAppointmentsResponse, NetworkError>) -> Void
+    ) {
+        print("[AppointmentService] 📅 Fetching appointments for patient: \(patientId)")
+        
+        APIClient.shared.get(
+            endpoint: APIEndpoints.getMyAppointments(patientId: patientId),
+            responseType: MyAppointmentsResponse.self,
+            completion: completion
+        )
+    }
+    
     /// Book an appointment with a doctor
     /// - Parameters:
     ///   - appointmentDate: Date in "yyyy-MM-dd" format
@@ -108,6 +125,23 @@ let body: [String: Any] = [
             endpoint: APIEndpoints.saveSymptoms(userId: patientId),
             body: body,
             responseType: SubmitSymptomsResponse.self,
+            completion: completion
+        )
+    }
+    
+    /// Fetch appointment details including vitals, symptoms, and prescriptions
+    /// - Parameters:
+    ///   - appointmentId: Appointment ID
+    ///   - completion: Callback with result
+    func getAppointmentDetails(
+        appointmentId: Int,
+        completion: @escaping (Result<[AppointmentDetailsResponse], NetworkError>) -> Void
+    ) {
+        print("[AppointmentService] 📋 Fetching details for appointment: \(appointmentId)")
+        
+        APIClient.shared.get(
+            endpoint: APIEndpoints.getAppointmentDetails(appointmentId: appointmentId),
+            responseType: [AppointmentDetailsResponse].self,
             completion: completion
         )
     }

@@ -121,7 +121,7 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
                 mainTabsVC.pushScreen(vc, title: "Family Members")
 
         case .appointmentSummary:
-            let vc = AppointmentsViewController()
+            let vc = AppointmentsViewController(defaultTab: .summary)
             mainTabsVC.pushScreen(vc, title: "Appointments")
 
 //        case .vitals:

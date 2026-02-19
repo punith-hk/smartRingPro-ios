@@ -45,13 +45,24 @@ enum APIEndpoints {
     }
 
     // MARK: - Appointments
-    static let getAppointments = "patients/myappointments"
+    /// Get patient's appointments with query parameter
+    /// GET /api/patients/myappointments?patient_id={id}
+    static func getMyAppointments(patientId: Int) -> String {
+        return "patients/myappointments?patient_id=\(patientId)"
+    }
+    
     static let bookAppointment = "appointments"
     
     /// Get doctor's appointments with query parameter
     /// GET /api/doctors/myappointments?doctor_id={id}
     static func getDoctorAppointments(doctorId: Int) -> String {
         return "doctors/myappointments?doctor_id=\(doctorId)"
+    }
+    
+    /// Get appointment details with vitals, symptoms, prescriptions
+    /// GET /api/appointments/{id}/answers
+    static func getAppointmentDetails(appointmentId: Int) -> String {
+        return "appointments/\(appointmentId)/answers"
     }
 
     static func getPrescription(appointmentId: Int) -> String {

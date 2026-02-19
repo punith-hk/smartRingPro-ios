@@ -86,3 +86,71 @@ struct SubmitSymptomsResponse: Codable {
 struct SymptomSubmissionData: Codable {
     let symptom: String
 }
+
+// MARK: - My Appointments Response
+struct MyAppointmentsResponse: Codable {
+    let response: Int
+    let data: [PatientAppointment]
+}
+
+struct PatientAppointment: Codable {
+    let apptId: Int
+    let apptDate: String
+    let apptTime: String
+    let doctorId: Int
+    let patientId: Int
+    let dependentId: Int
+    let purpose: String
+    let status: Int // 1=Confirmed, 2=Canceled, 3=Completed
+    let doctorName: String
+    let doctorDepartment: String
+    let doctorImageUrl: String?
+    let patientName: String
+    let patientCode: String
+    let patientType: String
+    let patientImageUrl: String?
+    let patientStatus: Int
+    let patientPhone: String
+    
+    enum CodingKeys: String, CodingKey {
+        case apptId = "appt_id"
+        case apptDate = "appt_date"
+        case apptTime = "appt_time"
+        case doctorId = "doctor_id"
+        case patientId = "patient_id"
+        case dependentId = "dependent_id"
+        case purpose
+        case status
+        case doctorName = "doctor_name"
+        case doctorDepartment = "doctor_department"
+        case doctorImageUrl = "doctor_image_url"
+        case patientName = "patient_name"
+        case patientCode = "patient_code"
+        case patientType = "patient_type"
+        case patientImageUrl = "patient_image_url"
+        case patientStatus = "patient_status"
+        case patientPhone = "patient_phone"
+    }
+    
+    var statusText: String {
+        switch status {
+        case 1: return "Confirmed"
+        case 2: return "Canceled"
+        case 3: return "Completed"
+        default: return "Unknown"
+        }
+    }
+    
+    var statusColor: UIColor {
+        switch status {
+        case 1: return UIColor.systemGreen
+        case 2: return UIColor.systemRed
+        case 3: return UIColor.systemBlue
+        default: return UIColor.gray
+        }
+    }
+    
+    var isCompleted: Bool {
+        return status == 3
+    }
+}
