@@ -240,6 +240,9 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
                             // 🔥 BLE INIT
                                     YCProduct.setLogLevel(.normal, saveLevel: .error)
                                     _ = YCProduct.shared
+                            
+                            // 🚨 REQUEST LOCATION PERMISSION (for emergency health monitoring)
+                            LocationManager.shared.requestLocationPermission()
 
                             let rootVC = SideMenuContainerController()
 

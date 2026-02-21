@@ -468,6 +468,8 @@ class ConnectedDeviceViewController: AppBaseViewController {
 //            populateDeviceInfo()
             populateConnectedDeviceInfo()
             fetchAndUpdateDeviceBasicInfo()
+            
+            // Note: BLEStateManager handles saving status & API call centrally
 
         case .disconnected:
             // Sometimes the SDK emits transient 'disconnected' while the peripheral object
@@ -483,10 +485,12 @@ class ConnectedDeviceViewController: AppBaseViewController {
                 } else {
                     print("❌ Device disconnected (different peripheral) - start blinking")
                     startBlinking()
+                    // Note: BLEStateManager handles saving status & API call centrally
                 }
             } else {
                 print("❌ Device disconnected (no currentPeripheral) - start blinking")
                 startBlinking()
+                // Note: BLEStateManager handles saving status & API call centrally
             }
 
         default:
@@ -513,10 +517,14 @@ class ConnectedDeviceViewController: AppBaseViewController {
                 }
 
                 // ✅ Battery
+                let batteryLevel = Int(info.batteryPower)
                 self.updateBatteryUI(
-                    power: Int(info.batteryPower),
+                    power: batteryLevel,
                     status: info.batterystatus
                 )
+                
+                // 💾 Save battery to UserDefaults
+                DeviceInfoManager.shared.saveBattery(batteryLevel)
 
                 // ✅ Firmware
                 self.updateFirmware(info.mcuFirmware)
@@ -534,7 +542,11 @@ class ConnectedDeviceViewController: AppBaseViewController {
 //        let text = String(describing: version)
         
         // replace later with actual
-        firmwareValueLabel.text = "1.13"
+        let firmwareVersion = "1.13"
+        firmwareValueLabel.text = firmwareVersion
+        
+        // 💾 Save firmware version to UserDefaults
+        DeviceInfoManager.shared.saveFirmwareVersion(firmwareVersion)
     }
     
     // MARK: - Battery UI

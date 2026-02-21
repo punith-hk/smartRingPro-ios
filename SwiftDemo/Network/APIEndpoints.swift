@@ -179,6 +179,11 @@ enum APIEndpoints {
         return "ecg-records"
     }
 
+    // MARK: - Device Status
+    /// Upload device status (battery, location, ring connection, etc.)
+    /// POST /api/user-app-details
+    static let deviceStatus = "user-app-details"
+
     // MARK: - Firebase
     static let fcmToken = "user/fcm-token"
 }

@@ -23,10 +23,17 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let window = UIWindow(windowScene: windowScene)
         self.window = window
         window.overrideUserInterfaceStyle = .light
+        
+        // 💾 Initialize static device info (app version, OS version)
+        DeviceInfoManager.shared.initializeStaticInfo()
 
         // 🔁 Decide root WITHOUT initializing BLE
         if UserDefaultsManager.shared.isLoggedIn() {
             initializeBLEIfNeeded()   // ✅ BLE init only if logged in
+            
+            // 🚨 REQUEST LOCATION PERMISSION (for emergency health monitoring)
+            LocationManager.shared.requestLocationPermission()
+            
             window.rootViewController = SideMenuContainerController()
         } else {
             let nav = UINavigationController(rootViewController: LoginViewController())
