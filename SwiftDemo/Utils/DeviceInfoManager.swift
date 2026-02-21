@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import CoreBluetooth
+import UserNotifications
 import YCProductSDK
 
 /// Manages device-related information for API uploads
@@ -29,6 +30,9 @@ final class DeviceInfoManager {
     func saveBattery(_ level: Int) {
         UserDefaults.standard.set(String(level), forKey: Keys.battery)
         print("[DeviceInfoManager] 🔋 Saved battery: \(level)%")
+        
+        // Check for low battery and show notification
+        checkLowBatteryAndNotify(level: level)
     }
     
     /// Save Bluetooth status ("1" = on, "0" = off)
@@ -67,6 +71,73 @@ final class DeviceInfoManager {
         let version = UIDevice.current.systemVersion
         UserDefaults.standard.set(version, forKey: Keys.osVersion)
         print("[DeviceInfoManager] 🍎 Saved iOS version: \(version)")
+    }
+    
+    // MARK: - Low Battery Notification
+    
+    /// Check battery level and show notification if below 20%
+    private func checkLowBatteryAndNotify(level: Int) {
+        // Only notify if battery is below 20%
+        guard level <= 20 else { return }
+        
+        // Check if we already notified recently (prevent spam)
+        let lastNotificationKey = "lastLowBatteryNotification"
+        if let lastNotification = UserDefaults.standard.object(forKey: lastNotificationKey) as? Date {
+            let hoursSinceLastNotification = Date().timeIntervalSince(lastNotification) / 3600
+            // Only notify once every 6 hours
+            if hoursSinceLastNotification < 6 {
+                print("[DeviceInfoManager] ⏭️ Low battery notification already sent recently")
+                return
+            }
+        }
+        
+        // Show notification
+        showLowBatteryNotification(level: level)
+        
+        // Save notification time
+        UserDefaults.standard.set(Date(), forKey: lastNotificationKey)
+    }
+    
+    /// Show local notification for low battery
+    private func showLowBatteryNotification(level: Int) {
+        let content = UNMutableNotificationContent()
+        content.title = "Ring Battery Low"
+        content.body = "Your smart ring battery is at \(level)%. Please charge soon."
+        content.sound = .default
+        content.badge = 1
+        
+        // Add action buttons
+        let chargeAction = UNNotificationAction(
+            identifier: "CHARGE_ACTION",
+            title: "OK",
+            options: []
+        )
+        
+        let category = UNNotificationCategory(
+            identifier: "LOW_BATTERY",
+            actions: [chargeAction],
+            intentIdentifiers: [],
+            options: []
+        )
+        
+        UNUserNotificationCenter.current().setNotificationCategories([category])
+        content.categoryIdentifier = "LOW_BATTERY"
+        
+        // Trigger immediately
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "ring_low_battery_\(Date().timeIntervalSince1970)",
+            content: content,
+            trigger: trigger
+        )
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("[DeviceInfoManager] ❌ Failed to show notification: \(error.localizedDescription)")
+            } else {
+                print("[DeviceInfoManager] 🔔 Low battery notification sent (\(level)%)")
+            }
+        }
     }
     
     // MARK: - Get Methods

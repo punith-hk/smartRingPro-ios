@@ -230,6 +230,15 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
 
                         // ✅ Save session
                         UserDefaultsManager.shared.saveOtpResponse(response)
+                        
+                        // ✅ Send FCM token to server
+                        FCMService.forceSendTokenToServer { success, message in
+                            if success {
+                                print("✅ FCM token sent to server after login")
+                            } else {
+                                print("⚠️ Failed to send FCM token: \(message ?? "unknown")")
+                            }
+                        }
 
                         // ✅ Small toast
                         Toast.show(message: "OTP verified successfully", in: self.view)

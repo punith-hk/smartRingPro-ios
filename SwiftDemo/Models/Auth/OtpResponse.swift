@@ -8,5 +8,6 @@ struct OtpResponse: Codable {
     let email: String?
     let role_code: String?
     let mobile_number: String?
-    let id: Int?
+    let id: Int?           // Session/record ID
+    let user_id: Int?      // Actual user ID (this is what we need!)
 }

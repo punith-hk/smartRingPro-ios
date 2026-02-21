@@ -13,7 +13,8 @@ final class UserDefaultsManager {
         defaults.set(response.email, forKey: "email")
         defaults.set(response.role_code, forKey: "roleCode")
         defaults.set(response.mobile_number, forKey: "mobileNumber")
-        defaults.set(response.id, forKey: "id")
+        defaults.set(response.id, forKey: "id")  // Regular ID for most APIs
+        defaults.set(response.user_id, forKey: "user_id")  // Actual user_id for FCM
         defaults.set(true, forKey: "isLoggedIn")
     }
 
@@ -30,7 +31,11 @@ final class UserDefaultsManager {
         defaults.removeObject(forKey: "roleCode")
         defaults.removeObject(forKey: "mobileNumber")
         defaults.removeObject(forKey: "id")
+        defaults.removeObject(forKey: "user_id")  // Clear FCM user_id
         defaults.set(false, forKey: "isLoggedIn")
+        
+        // Reset FCM token sent flag so it gets sent again on next login
+        FCMService.resetTokenSentFlag()
     }
 
     // =====================================================
@@ -39,6 +44,11 @@ final class UserDefaultsManager {
 
     var userId: Int {
         defaults.integer(forKey: "id")
+    }
+    
+    // For FCM API only - uses actual user_id from OTP response
+    var fcmUserId: Int {
+        defaults.integer(forKey: "user_id")
     }
 
     var accessToken: String? {
