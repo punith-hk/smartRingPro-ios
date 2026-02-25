@@ -10,6 +10,12 @@
 		1342AC999AA69912402E8F9F /* libPods-ObjcDemo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1AACC44B80B9F1098D557E90 /* libPods-ObjcDemo.a */; };
 		4BEF9B752DE93FE900439088 /* YCHenAIBloodPressureViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEF9B732DE93FE900439088 /* YCHenAIBloodPressureViewController.swift */; };
 		703A84D983BC2980BDF7C1C4 /* libPods-SwiftDemo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = EF9FEBA8B7B9F9BF437F9DB5 /* libPods-SwiftDemo.a */; };
+		B242E8412F4F5E8100FF2B21 /* StressDailyStatsEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B242E83C2F4F5E8100FF2B21 /* StressDailyStatsEntity+CoreDataClass.swift */; };
+		B242E8422F4F5E8100FF2B21 /* StressEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B242E83E2F4F5E8100FF2B21 /* StressEntity+CoreDataClass.swift */; };
+		B242E8432F4F5E8100FF2B21 /* StressEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B242E83F2F4F5E8100FF2B21 /* StressEntity+CoreDataProperties.swift */; };
+		B242E8442F4F5E8100FF2B21 /* StressDailyStatsEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B242E83D2F4F5E8100FF2B21 /* StressDailyStatsEntity+CoreDataProperties.swift */; };
+		B242E8482F4F5ED400FF2B21 /* StressRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B242E8462F4F5ED400FF2B21 /* StressRepository.swift */; };
+		B242E8492F4F5ED400FF2B21 /* StressDailyStatsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B242E8452F4F5ED400FF2B21 /* StressDailyStatsRepository.swift */; };
 		B29AE76B2F17EF2B0080E203 /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29AE7632F17EF2B0080E203 /* CoreDataManager.swift */; };
 		B29AE76D2F17EF2B0080E203 /* MannaHealData.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = B29AE7642F17EF2B0080E203 /* MannaHealData.xcdatamodeld */; };
 		B29DCB272F4A3EBE0076DC41 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = B29DCB262F4A3EBE0076DC41 /* GoogleService-Info.plist */; };
@@ -95,6 +101,12 @@
 		4BEF9B732DE93FE900439088 /* YCHenAIBloodPressureViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YCHenAIBloodPressureViewController.swift; sourceTree = "<group>"; };
 		53A832FD1C96D4E9D44CA48D /* Pods-ObjcDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ObjcDemo.release.xcconfig"; path = "Target Support Files/Pods-ObjcDemo/Pods-ObjcDemo.release.xcconfig"; sourceTree = "<group>"; };
 		B0A85F29BD0BE9FA5FB723B3 /* Pods-SwiftDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SwiftDemo.release.xcconfig"; path = "Target Support Files/Pods-SwiftDemo/Pods-SwiftDemo.release.xcconfig"; sourceTree = "<group>"; };
+		B242E83C2F4F5E8100FF2B21 /* StressDailyStatsEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StressDailyStatsEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
+		B242E83D2F4F5E8100FF2B21 /* StressDailyStatsEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StressDailyStatsEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		B242E83E2F4F5E8100FF2B21 /* StressEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StressEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
+		B242E83F2F4F5E8100FF2B21 /* StressEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StressEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		B242E8452F4F5ED400FF2B21 /* StressDailyStatsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StressDailyStatsRepository.swift; sourceTree = "<group>"; };
+		B242E8462F4F5ED400FF2B21 /* StressRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StressRepository.swift; sourceTree = "<group>"; };
 		B29AE7632F17EF2B0080E203 /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
 		B29AE7662F17EF2B0080E203 /* MannaHealData.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = MannaHealData.xcdatamodel; sourceTree = "<group>"; };
 		B29DCB262F4A3EBE0076DC41 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -260,6 +272,26 @@
 			path = Pods;
 			sourceTree = "<group>";
 		};
+		B242E8402F4F5E8100FF2B21 /* Stress */ = {
+			isa = PBXGroup;
+			children = (
+				B242E83C2F4F5E8100FF2B21 /* StressDailyStatsEntity+CoreDataClass.swift */,
+				B242E83D2F4F5E8100FF2B21 /* StressDailyStatsEntity+CoreDataProperties.swift */,
+				B242E83E2F4F5E8100FF2B21 /* StressEntity+CoreDataClass.swift */,
+				B242E83F2F4F5E8100FF2B21 /* StressEntity+CoreDataProperties.swift */,
+			);
+			path = Stress;
+			sourceTree = "<group>";
+		};
+		B242E8472F4F5ED400FF2B21 /* Stress */ = {
+			isa = PBXGroup;
+			children = (
+				B242E8452F4F5ED400FF2B21 /* StressDailyStatsRepository.swift */,
+				B242E8462F4F5ED400FF2B21 /* StressRepository.swift */,
+			);
+			path = Stress;
+			sourceTree = "<group>";
+		};
 		B29AE75F2F17EF2B0080E203 /* Entities */ = {
 			isa = PBXGroup;
 			children = (
@@ -272,6 +304,7 @@
 				B2AE58592F19456900EB7757 /* HeartRate */,
 				B2FE6BCD2F1BF6960013E05A /* Steps */,
 				B2C3AA0D2F408043002C36FA /* ECG */,
+				B242E8402F4F5E8100FF2B21 /* Stress */,
 			);
 			path = Entities;
 			sourceTree = "<group>";
@@ -288,6 +321,7 @@
 				B2AE585A2F19458300EB7757 /* HeartRate */,
 				B2FE6BDB2F1BF8580013E05A /* Steps */,
 				B2C3AA112F408072002C36FA /* ECG */,
+				B242E8472F4F5ED400FF2B21 /* Stress */,
 			);
 			path = Repositories;
 			sourceTree = "<group>";
@@ -877,6 +911,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				B2C3AA0E2F408043002C36FA /* ECGRecordEntity+CoreDataProperties.swift in Sources */,
+				B242E8482F4F5ED400FF2B21 /* StressRepository.swift in Sources */,
+				B242E8492F4F5ED400FF2B21 /* StressDailyStatsRepository.swift in Sources */,
+				B242E8412F4F5E8100FF2B21 /* StressDailyStatsEntity+CoreDataClass.swift in Sources */,
+				B242E8422F4F5E8100FF2B21 /* StressEntity+CoreDataClass.swift in Sources */,
+				B242E8432F4F5E8100FF2B21 /* StressEntity+CoreDataProperties.swift in Sources */,
+				B242E8442F4F5E8100FF2B21 /* StressDailyStatsEntity+CoreDataProperties.swift in Sources */,
 				B2C3AA0F2F408043002C36FA /* ECGRecordEntity+CoreDataClass.swift in Sources */,
 				B2C3AA122F408072002C36FA /* ECGRecordRepository.swift in Sources */,
 				CA8AB871288005B800B91963 /* YCECGPhotoViewCell.swift in Sources */,
@@ -1092,7 +1132,7 @@
 				CODE_SIGN_ENTITLEMENTS = SwiftDemo/SwiftDemo.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 78L9V5BF5Y;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1128,7 +1168,7 @@
 				CODE_SIGN_ENTITLEMENTS = SwiftDemo/SwiftDemo.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 78L9V5BF5Y;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",

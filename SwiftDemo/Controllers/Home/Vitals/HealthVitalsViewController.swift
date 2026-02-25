@@ -79,6 +79,10 @@ final class HealthVitalsViewController: AppBaseViewController {
     private var bloodGlucoseDailySyncHelper: BloodGlucoseDailySyncHelper?
     private var temperatureDailySyncHelper: TemperatureDailySyncHelper?
     
+    // Stress sync helpers
+    private var stressSyncHelper: StressSyncHelper?
+    private var stressDailySyncHelper: StressDailySyncHelper?
+    
     // Store completion for day view
     private var dayDataCompletion: (([VitalDataPoint]) -> Void)?
     private var weekMonthDataCompletion: (([VitalDataPoint]) -> Void)?
@@ -203,6 +207,14 @@ final class HealthVitalsViewController: AppBaseViewController {
                 temperatureDailySyncHelper?.fetchDailyData(userId: userId) { _ in }
             }
             
+        case .stress:
+            stressSyncHelper = StressSyncHelper(listener: self)
+            stressDailySyncHelper = StressDailySyncHelper(listener: self)
+            
+            if userId > 0 {
+                stressDailySyncHelper?.fetchDailyData(userId: userId) { _ in }
+            }
+            
         case .calories:
             // Calories doesn't use HealthVitalsViewController, has its own CaloriesViewController
             break
@@ -221,6 +233,9 @@ final class HealthVitalsViewController: AppBaseViewController {
             
         case .hrv, .temperature, .bloodGlucose, .bloodOxygen:
             combinedDataSyncHelper?.startSync()
+            
+        case .stress:
+            stressSyncHelper?.startSync()
             
         case .calories:
             // Calories doesn't use HealthVitalsViewController
@@ -629,6 +644,19 @@ extension HealthVitalsViewController: VitalChartDataSource {
                 }
             }
             
+        case .stress:
+            switch range {
+            case .day:
+                dayDataCompletion = completion
+                stressSyncHelper?.fetchDataForDate(userId: userId, date: date)
+                
+            case .week, .month:
+                stressDailySyncHelper?.loadDataForDateRange(userId: userId, range: range, selectedDate: date) { [weak self] dataPoints in
+                    completion(dataPoints)
+                    self?.updateStats(with: dataPoints)
+                }
+            }
+            
         case .calories:
             // Calories doesn't use HealthVitalsViewController, has its own CaloriesViewController
             completion([])
@@ -689,7 +717,8 @@ extension HealthVitalsViewController: VitalChartDelegate {
 // HeartRateSyncListener and CombinedDataSyncListener both have onSyncFailed(error:)
 extension HealthVitalsViewController: HeartRateSyncHelper.HeartRateSyncListener,
                                        BloodPressureSyncHelper.BloodPressureSyncListener,
-                                       CombinedDataSyncHelper.CombinedDataSyncListener {
+                                       CombinedDataSyncHelper.CombinedDataSyncListener,
+                                       StressSyncHelper.StressSyncListener {
     
     // MARK: - Temperature Conversion Helper
     private func convertTemperatureDataIfNeeded(_ dataPoints: [VitalDataPoint]) -> [VitalDataPoint] {
@@ -869,7 +898,36 @@ extension HealthVitalsViewController: HeartRateSyncHelper.HeartRateSyncListener,
         }
     }
     
-    // Shared method: onSyncFailed (used by both protocols)
+    // Stress Sync Listener methods
+    func onStressDataFetched(_ data: [YCHealthDataBodyIndexData]) {
+        print("✅ Received \(data.count) stress entries from ring")
+        if let first = data.first {
+            print("   📊 Sample stress (pressureIndex): \(first.pressureIndex) at timestamp \(first.startTimeStamp)")
+        }
+        chartView.reloadData()
+    }
+    
+    func onLocalDataFetched(_ data: [(timestamp: Int64, level: Int)]) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            print("📊 [Stress] Loaded \(data.count) readings from local DB")
+            if let first = data.first {
+                print("   📊 First stress level: \(first.level)")
+            }
+            
+            let dataPoints = data.map { VitalDataPoint(timestamp: $0.timestamp, value: Double($0.level)) }
+            
+            // Update stats
+            self.updateStats(with: dataPoints)
+            
+            // Call chart completion
+            self.dayDataCompletion?(dataPoints)
+            self.dayDataCompletion = nil
+        }
+    }
+    
+    // Shared method: onSyncFailed (used by all protocols)
     func onSyncFailed(error: String) {
         print("❌ [\(vitalType.displayName)] Sync failed: \(error)")
     }
@@ -888,7 +946,8 @@ extension HealthVitalsViewController: HeartRateDailySyncHelper.HeartRateDailySyn
                                        HRVDailySyncHelper.HRVDailySyncListener,
                                        BloodOxygenDailySyncHelper.BloodOxygenDailySyncListener,
                                        BloodGlucoseDailySyncHelper.BloodGlucoseDailySyncListener,
-                                       TemperatureDailySyncHelper.TemperatureDailySyncListener {
+                                       TemperatureDailySyncHelper.TemperatureDailySyncListener,
+                                       StressDailySyncHelper.StressDailySyncListener {
     
     func onLocalDailyDataFetched(_ data: [VitalDataPoint]) {
         print("📊 [\(vitalType.displayName) Daily] Loaded \(data.count) daily entries from local DB")
@@ -940,6 +999,8 @@ extension HealthVitalsViewController {
             return UIImage(systemName: "waveform.path.ecg")
         case .calories:
             return UIImage(systemName: "flame.fill")
+        case .stress:
+            return UIImage(systemName: "brain.head.profile")
         }
     }
 }

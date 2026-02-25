@@ -9,6 +9,7 @@ enum VitalType {
     case bloodOxygen
     case hrv
     case calories
+    case stress
     
     var displayName: String {
         switch self {
@@ -19,6 +20,7 @@ enum VitalType {
         case .bloodOxygen: return "Blood Oxygen"
         case .hrv: return "HRV"
         case .calories: return "Calories"
+        case .stress: return "Stress"
         }
     }
     
@@ -31,6 +33,7 @@ enum VitalType {
         case .bloodOxygen: return "%"
         case .hrv: return "ms"
         case .calories: return "kcal"
+        case .stress: return "level"
         }
     }
     
@@ -43,6 +46,7 @@ enum VitalType {
         case .bloodOxygen: return .systemBlue
         case .hrv: return .systemGreen
         case .calories: return .systemYellow
+        case .stress: return .systemPink
         }
     }
     
@@ -55,6 +59,7 @@ enum VitalType {
         case .bloodOxygen: return 30
         case .hrv: return 20
         case .calories: return 5
+        case .stress: return 10
         }
     }
     

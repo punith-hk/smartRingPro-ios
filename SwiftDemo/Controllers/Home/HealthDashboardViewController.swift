@@ -61,6 +61,12 @@ class HealthDashboardViewController: AppBaseViewController {
         value: "0%"
     )
     
+    private lazy var stressCard = VitalCardView(
+        icon: UIImage(systemName: "brain.head.profile"),
+        title: "Stress",
+        value: "-- level"
+    )
+    
     private var lastHealthResponse: GetLastUserHealthDataResponse?
 
     // MARK: - Lifecycle
@@ -343,6 +349,7 @@ class HealthDashboardViewController: AppBaseViewController {
             createRow(left: ecgCard, right: sleepCard),
             createRow(left: heartRateCard, right: hrvCard),
             createRow(left: temperatureCard, right: bloodOxygenCard),
+            createRow(left: stressCard, right: UIView()), // Stress card with empty placeholder
         ].forEach { gridStack.addArrangedSubview($0) }
     }
 
@@ -402,6 +409,11 @@ class HealthDashboardViewController: AppBaseViewController {
             self?.navigationController?.pushViewController(vc, animated: true)
         }
         
+        stressCard.onTap = { [weak self] in
+            let vc = HealthVitalsViewController(vitalType: .stress)
+            self?.navigationController?.pushViewController(vc, animated: true)
+        }
+        
         
     }
 
@@ -444,6 +456,7 @@ class HealthDashboardViewController: AppBaseViewController {
             let tempRepo = TemperatureRepository()
             let stepsRepo = StepsRepository()
             let sleepRepo = SleepRepository()
+            let stressRepo = StressRepository()
             
             let latestHR = heartRateRepo.getLatestEntry()
             let latestBP = bpRepo.getLatestEntry()
@@ -451,6 +464,7 @@ class HealthDashboardViewController: AppBaseViewController {
             let latestO2 = bloodOxygenRepo.getLatestEntry()
             let latestGlucose = bloodGlucoseRepo.getLatestEntry()
             let latestTemp = tempRepo.getLatestEntry()
+            let latestStress = stressRepo.getLatestEntry()
             
             // Fetch today's steps data
             let calendar = Calendar.current
@@ -503,6 +517,13 @@ class HealthDashboardViewController: AppBaseViewController {
                     self.bloodOxygenCard.updateValue("\(o2.oxygenValue) %")
                 } else {
                     self.bloodOxygenCard.updateValue("-- %")
+                }
+                
+                // Stress
+                if let stress = latestStress {
+                    self.stressCard.updateValue("\(stress.level) level")
+                } else {
+                    self.stressCard.updateValue("-- level")
                 }
                 
                 // Blood Glucose
