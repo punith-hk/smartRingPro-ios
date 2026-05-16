@@ -37,12 +37,12 @@ final class LastSyncedBannerView: UIView {
 
         // Label
         textLabel.font      = .systemFont(ofSize: 13, weight: .medium)
-        textLabel.textColor = UIColor(red: 0.33, green: 0.43, blue: 0.47, alpha: 1)
+        textLabel.textColor = UIColor(red: 0.31, green: 0.76, blue: 0.97, alpha: 1)
         textLabel.translatesAutoresizingMaskIntoConstraints = false
         addSubview(textLabel)
 
         // Spinner (shown during active sync; replaces dot)
-        spinner.color = UIColor(red: 0.33, green: 0.43, blue: 0.47, alpha: 1)
+        spinner.color = UIColor(red: 0.31, green: 0.76, blue: 0.97, alpha: 1)
         spinner.hidesWhenStopped = true
         spinner.translatesAutoresizingMaskIntoConstraints = false
         addSubview(spinner)
@@ -50,14 +50,14 @@ final class LastSyncedBannerView: UIView {
         // Sync button (↻)
         let icon = UIImage(systemName: "arrow.clockwise")?.withRenderingMode(.alwaysTemplate)
         syncButton.setImage(icon, for: .normal)
-        syncButton.tintColor = UIColor(red: 0.12, green: 0.47, blue: 0.71, alpha: 1)
+        syncButton.tintColor = UIColor(red: 0.31, green: 0.76, blue: 0.97, alpha: 1)
         syncButton.addTarget(self, action: #selector(syncTapped), for: .touchUpInside)
         syncButton.translatesAutoresizingMaskIntoConstraints = false
         addSubview(syncButton)
 
         NSLayoutConstraint.activate([
             // Dot
-            dotView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+            dotView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
             dotView.centerYAnchor.constraint(equalTo: centerYAnchor),
             dotView.widthAnchor.constraint(equalToConstant: 10),
             dotView.heightAnchor.constraint(equalToConstant: 10),
@@ -72,10 +72,10 @@ final class LastSyncedBannerView: UIView {
             textLabel.trailingAnchor.constraint(lessThanOrEqualTo: syncButton.leadingAnchor, constant: -8),
 
             // Sync button (right side)
-            syncButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            syncButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
             syncButton.centerYAnchor.constraint(equalTo: centerYAnchor),
-            syncButton.widthAnchor.constraint(equalToConstant: 32),
-            syncButton.heightAnchor.constraint(equalToConstant: 32),
+            syncButton.widthAnchor.constraint(equalToConstant: 24),
+            syncButton.heightAnchor.constraint(equalToConstant: 24),
         ])
 
         updateDisplay()

@@ -23,9 +23,9 @@ final class HealthScoreGaugeView: UIView {
     private let compareLabel = UILabel()      // "↑ 3pts vs Yesterday"
 
     // MARK: - Constants
-    private let startAngle: CGFloat  = .pi * 0.65    // ~117° from right (lower-left)
-    private let endAngle: CGFloat    = .pi * 2.35    // ~423° (lower-right)
-    private let lineWidth: CGFloat   = 18
+    private let startAngle: CGFloat  = .pi * (5.0 / 6.0)   // 8 o'clock (150° from right)
+    private let endAngle: CGFloat    = .pi * (13.0 / 6.0)  // 4 o'clock — 240° span
+    private let lineWidth: CGFloat   = 30
 
     // MARK: - Init
     override init(frame: CGRect) {
@@ -71,9 +71,9 @@ final class HealthScoreGaugeView: UIView {
     }
 
     private func layoutArc() {
-        let cx   = bounds.midX
-        let cy   = bounds.midY + 10   // shift centre slightly down so arch sits higher
         let r    = min(bounds.width, bounds.height) / 2 - lineWidth / 2 - 4
+        let cx   = bounds.midX
+        let cy   = r + lineWidth / 2 + 2   // top of arc flush with view top edge
         let centre = CGPoint(x: cx, y: cy)
 
         let trackPath = UIBezierPath(
@@ -103,10 +103,12 @@ final class HealthScoreGaugeView: UIView {
     }
 
     private func layoutWhiteCircle() {
-        let size: CGFloat = bounds.width * 0.60
+        let size: CGFloat = bounds.width * 0.38
+        let r    = min(bounds.width, bounds.height) / 2 - lineWidth / 2 - 4
+        let cy   = r + lineWidth / 2 + 2
         whiteCircle.frame = CGRect(
             x: bounds.midX - size / 2,
-            y: bounds.midY - size / 2 + 8,
+            y: cy - size / 2,
             width: size,
             height: size
         )
@@ -123,7 +125,7 @@ final class HealthScoreGaugeView: UIView {
         outOfLabel.sizeToFit()
         let gap: CGFloat = 2
         let rowW = scoreLabel.bounds.width + gap + outOfLabel.bounds.width
-        let rowY = cy - 38
+        let rowY = cy - 58
         scoreLabel.frame   = CGRect(x: cx - rowW / 2, y: rowY, width: scoreLabel.bounds.width, height: scoreLabel.bounds.height)
         outOfLabel.frame   = CGRect(x: scoreLabel.frame.maxX + gap, y: rowY + 16, width: outOfLabel.bounds.width, height: outOfLabel.bounds.height)
 
@@ -139,26 +141,23 @@ final class HealthScoreGaugeView: UIView {
         let bW = badgeLabel.bounds.width + 20
         let bH: CGFloat = 22
         badgeLabel.frame = CGRect(x: cx - bW / 2,
-                                  y: titleLabel.frame.maxY + 6,
+                                  y: titleLabel.frame.maxY + 12,
                                   width: bW,
                                   height: bH)
 
         // Comparison
         compareLabel.sizeToFit()
         compareLabel.frame = CGRect(x: cx - compareLabel.bounds.width / 2,
-                                    y: badgeLabel.frame.maxY + 4,
+                                    y: badgeLabel.frame.maxY + 12,
                                     width: compareLabel.bounds.width,
                                     height: compareLabel.bounds.height)
     }
 
     // MARK: - Sub-views Setup
     private func setupSubviews() {
-        // White circle
-        whiteCircle.backgroundColor  = .white
-        whiteCircle.layer.shadowColor   = UIColor.black.cgColor
-        whiteCircle.layer.shadowOpacity = 0.08
-        whiteCircle.layer.shadowRadius  = 8
-        whiteCircle.layer.shadowOffset  = CGSize(width: 0, height: 2)
+        // Inner circle — transparent, no background
+        whiteCircle.backgroundColor  = .clear
+        whiteCircle.layer.shadowOpacity = 0
         addSubview(whiteCircle)
 
         // Score value label

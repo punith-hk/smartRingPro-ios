@@ -29,7 +29,11 @@ final class DashboardSectionView: UIView {
     private func setup(title: String, color: UIColor) {
         backgroundColor      = color
         layer.cornerRadius   = 16
-        layer.masksToBounds  = true
+        layer.masksToBounds  = false
+        layer.shadowColor    = UIColor.black.cgColor
+        layer.shadowOpacity  = 0.10
+        layer.shadowRadius   = 10
+        layer.shadowOffset   = CGSize(width: 0, height: 4)
 
         // Title
         titleLabel.text      = title
@@ -59,6 +63,17 @@ final class DashboardSectionView: UIView {
 
     // MARK: - Public API
 
+    /// Apply a visible border around the section card.
+    func setBorder(color: UIColor, width: CGFloat = 1.5) {
+        layer.borderColor = color.cgColor
+        layer.borderWidth = width
+    }
+
+    /// Add a full-width custom view inside the section (below the title).
+    func addContent(_ view: UIView) {
+        stackView.addArrangedSubview(view)
+    }
+
     /// Add a row of 1–3 cards. Pass fewer than 3 and empty spacers fill the gaps.
     func addRow(cards: [UIView]) {
         let row = UIStackView()
@@ -78,7 +93,7 @@ final class DashboardSectionView: UIView {
         views.forEach { row.addArrangedSubview($0) }
 
         // Fixed card height
-        row.heightAnchor.constraint(equalToConstant: 130).isActive = true
+        row.heightAnchor.constraint(equalToConstant: 120).isActive = true
         stackView.addArrangedSubview(row)
     }
 }

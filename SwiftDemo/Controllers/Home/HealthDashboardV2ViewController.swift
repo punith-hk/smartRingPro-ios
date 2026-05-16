@@ -21,6 +21,8 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
 
     // MARK: - Header
     private let headerView  = UIView()
+    private let ellipseView = UIView()   // large light-blue oval, top-clipped
+    private let topHalfView = UIView()      // light blue top partition with convex bottom
     private let gaugeView   = HealthScoreGaugeView()
 
     // MARK: - Sync Banner
@@ -74,11 +76,10 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         super.viewDidLoad()
         setScreenTitle("Health")
         showHamburger()
-        view.backgroundColor = UIColor(red: 245/255, green: 247/255, blue: 250/255, alpha: 1)
+        view.backgroundColor = .white
 
         setupScrollView()
         setupHeader()
-        setupSyncBanner()
         buildCardioSection()
         buildMetabolicSection()
         buildSleepSection()
@@ -97,6 +98,24 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         applyEllipseClipToHeader()
+        applyConvexBottomMask()
+    }
+
+    private func applyConvexBottomMask() {
+        let b = topHalfView.bounds
+        guard b.width > 0, b.height > 0 else { return }
+        // Sides stop 40pt above bottom; center bows all the way down → visible convex curve
+        let curve: CGFloat = 40
+        let path = UIBezierPath()
+        path.move(to: CGPoint(x: 0, y: 0))
+        path.addLine(to: CGPoint(x: b.width, y: 0))
+        path.addLine(to: CGPoint(x: b.width, y: b.height - curve))
+        path.addQuadCurve(to: CGPoint(x: 0, y: b.height - curve),
+                          controlPoint: CGPoint(x: b.width / 2, y: b.height))
+        path.close()
+        let mask = CAShapeLayer()
+        mask.path = path.cgPath
+        topHalfView.layer.mask = mask
     }
 
     // MARK: - ScrollView Setup
@@ -107,7 +126,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scrollView)
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.topAnchor),
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
@@ -124,45 +143,30 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         ])
     }
 
-    // MARK: - Header (light-blue ellipse + gauge)
+    // MARK: - Header
 
     private func setupHeader() {
-        headerView.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
-        headerView.clipsToBounds   = true
+        headerView.backgroundColor = .white
+        headerView.layer.cornerRadius = 32
+        headerView.layer.maskedCorners = [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+        headerView.clipsToBounds = true
         headerView.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(headerView)
 
-        gaugeView.translatesAutoresizingMaskIntoConstraints = false
-        headerView.addSubview(gaugeView)
-
+        // Top-half light blue partition with convex bottom (curve applied in viewDidLayoutSubviews)
+        topHalfView.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
+        topHalfView.translatesAutoresizingMaskIntoConstraints = false
+        headerView.insertSubview(topHalfView, at: 0)
         NSLayoutConstraint.activate([
-            headerView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            headerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            headerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            headerView.heightAnchor.constraint(equalToConstant: 300),
-
-            gaugeView.centerXAnchor.constraint(equalTo: headerView.centerXAnchor),
-            gaugeView.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-            gaugeView.widthAnchor.constraint(equalToConstant: 240),
-            gaugeView.heightAnchor.constraint(equalToConstant: 240)
+            topHalfView.topAnchor.constraint(equalTo: headerView.topAnchor),
+            topHalfView.leadingAnchor.constraint(equalTo: headerView.leadingAnchor),
+            topHalfView.trailingAnchor.constraint(equalTo: headerView.trailingAnchor),
+            topHalfView.heightAnchor.constraint(equalTo: headerView.heightAnchor, multiplier: 0.66),
         ])
-    }
 
-    private func applyEllipseClipToHeader() {
-        let path = UIBezierPath(
-            roundedRect: headerView.bounds,
-            byRoundingCorners: [.bottomLeft, .bottomRight],
-            cornerRadii: CGSize(width: 60, height: 60))
-        let mask = CAShapeLayer()
-        mask.path = path.cgPath
-        headerView.layer.mask = mask
-    }
-
-    // MARK: - Sync Banner
-
-    private func setupSyncBanner() {
+        syncBanner.backgroundColor = .clear
         syncBanner.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(syncBanner)
+        headerView.addSubview(syncBanner)
         syncBanner.onSyncTapped = { [weak self] in
             self?.syncBanner.setSyncing(true)
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
@@ -171,7 +175,44 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
                 UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "last_sync_timestamp")
             }
         }
+
+        gaugeView.translatesAutoresizingMaskIntoConstraints = false
+        headerView.addSubview(gaugeView)
+
+        // White circle to block light-blue from showing inside/around the gauge arc
+        let gaugeInnerMask = UIView()
+        gaugeInnerMask.backgroundColor = .white
+        gaugeInnerMask.layer.cornerRadius = 125
+        gaugeInnerMask.translatesAutoresizingMaskIntoConstraints = false
+        headerView.insertSubview(gaugeInnerMask, belowSubview: gaugeView)
+
+        NSLayoutConstraint.activate([
+            headerView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            headerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            headerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            headerView.heightAnchor.constraint(equalToConstant: 270),
+
+            syncBanner.topAnchor.constraint(equalTo: headerView.topAnchor),
+            syncBanner.leadingAnchor.constraint(equalTo: headerView.leadingAnchor),
+            syncBanner.trailingAnchor.constraint(equalTo: headerView.trailingAnchor),
+            syncBanner.heightAnchor.constraint(equalToConstant: 28),
+
+            gaugeView.topAnchor.constraint(equalTo: syncBanner.bottomAnchor, constant: 18),
+            gaugeView.centerXAnchor.constraint(equalTo: headerView.centerXAnchor),
+            gaugeView.widthAnchor.constraint(equalToConstant: 270),
+            gaugeView.heightAnchor.constraint(equalToConstant: 250),
+
+            // Position white circle: arc center at gaugeView.top+123, radius=133 (outer arc=121 + 12pt padding)
+            gaugeInnerMask.widthAnchor.constraint(equalToConstant: 250),
+            gaugeInnerMask.heightAnchor.constraint(equalToConstant: 250),
+            gaugeInnerMask.centerXAnchor.constraint(equalTo: gaugeView.centerXAnchor),
+            gaugeInnerMask.topAnchor.constraint(equalTo: gaugeView.topAnchor, constant: -2),
+        ])
     }
+
+    private func applyEllipseClipToHeader() { /* no-op */ }
+
+
 
     // MARK: - Build Sections
 
@@ -200,7 +241,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             icon: UIImage(systemName: "waveform.path.ecg"),
             iconTint: UIColor(red: 0.33, green: 0.43, blue: 1, alpha: 1),
             iconBg: UIColor(red: 0.88, green: 0.89, blue: 1, alpha: 1),
-            title: "ECG", value: "--", unit: "scores")
+            title: "ECG", value: "--", unit: "score")
         ecgCard.onTap = { [weak self] in
             self?.push(ECGViewController())
         }
@@ -211,6 +252,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             iconTint: UIColor(red: 1, green: 0.70, blue: 0, alpha: 1),
             iconBg: UIColor(red: 1, green: 0.96, blue: 0.88, alpha: 1),
             title: "ECG Details", value: "--", unit: "")
+        ecgDetailsCard.setValueFontSize(14)
         ecgDetailsCard.onTap = { [weak self] in
             self?.push(ECGViewController())
         }
@@ -220,6 +262,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             iconTint: UIColor(red: 0.30, green: 0.69, blue: 0.31, alpha: 1),
             iconBg: UIColor(red: 0.88, green: 1, blue: 0.91, alpha: 1),
             title: "Blood Pressure", value: "--/--", unit: "mmHg")
+        bloodPressCard.setUnitBelow()
         bloodPressCard.onTap = { [weak self] in
             self?.push(BloodPressureViewController())
         }
@@ -289,6 +332,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         }
 
         metabolicSection.translatesAutoresizingMaskIntoConstraints = false
+        metabolicSection.setBorder(color: UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1))
         metabolicSection.addRow(cards: [caloriesCard, stepsCard, bmiCard])
         // Third slot in row 2 is empty (spacer auto-added by DashboardSectionView)
         metabolicSection.addRow(cards: [glucoseCard, bodyTempCard])
@@ -319,6 +363,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             iconTint: UIColor(white: 0.6, alpha: 1),
             iconBg: UIColor(white: 0.94, alpha: 1),
             title: "Stress", value: "Coming\nSoon", unit: "")
+        stressCard.setValueFontSize(14)
         stressCard.updateStatus(text: "Feature coming soon", color: UIColor(white: 0.6, alpha: 1))
 
         sleepSection.translatesAutoresizingMaskIntoConstraints = false
@@ -328,115 +373,170 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     // ---- Insights & Alerts ----
     private func buildInsightsSection() {
         insightsSection.translatesAutoresizingMaskIntoConstraints = false
+        insightsSection.setBorder(color: UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1))
+        insightsSection.layer.masksToBounds = false
+        insightsSection.clipsToBounds = false
 
-        // Alert card layout
-        alertCard.backgroundColor     = .white
-        alertCard.layer.cornerRadius  = 12
-        alertCard.layer.shadowColor   = UIColor.black.cgColor
-        alertCard.layer.shadowOpacity = 0.08
-        alertCard.layer.shadowRadius  = 6
-        alertCard.layer.shadowOffset  = CGSize(width: 0, height: 2)
-        alertCard.layer.masksToBounds = false
-        alertCard.translatesAutoresizingMaskIntoConstraints = false
+        let alerts: [(icon: String, iconTint: UIColor, iconBg: UIColor, title: String, body: String, date: String)] = [
+            (
+                icon: "bell.fill",
+                iconTint: UIColor(red: 0.96, green: 0.62, blue: 0.04, alpha: 1),
+                iconBg:   UIColor(red: 1,    green: 0.95, blue: 0.88, alpha: 1),
+                title: "Health Alert",
+                body:  "Low blood oxygen and heart rate detected. Monitor closely and seek medical attention if symptoms worsen.",
+                date:  "May 09"
+            ),
+            (
+                icon: "moon.fill",
+                iconTint: UIColor(red: 0.91, green: 0.12, blue: 0.39, alpha: 1),
+                iconBg:   UIColor(red: 1,    green: 0.88, blue: 0.92, alpha: 1),
+                title: "Sleep Needs Improvement",
+                body:  "You had 6h 10m of sleep. Aim for better rest tonight!",
+                date:  "Last night"
+            ),
+            (
+                icon: "figure.walk",
+                iconTint: UIColor(red: 0.40, green: 0.23, blue: 0.72, alpha: 1),
+                iconBg:   UIColor(red: 0.93, green: 0.90, blue: 0.98, alpha: 1),
+                title: "Keep Moving!",
+                body:  "You've taken 1591 steps and burned 62 kcal. You're 15% to your goal!",
+                date:  "Today"
+            )
+        ]
 
-        alertIconContainer.backgroundColor     = UIColor(white: 0.92, alpha: 1)
-        alertIconContainer.layer.cornerRadius  = 14
-        alertIconContainer.translatesAutoresizingMaskIntoConstraints = false
+        for alert in alerts {
+            let card = UIView()
+            card.backgroundColor = .white
+            card.layer.cornerRadius = 12
+            card.layer.shadowColor = UIColor.black.cgColor
+            card.layer.shadowOpacity = 0.08
+            card.layer.shadowRadius = 6
+            card.layer.shadowOffset = CGSize(width: 0, height: 2)
+            card.layer.masksToBounds = false
+            card.translatesAutoresizingMaskIntoConstraints = false
 
-        alertIconView.image       = UIImage(systemName: "bell.fill")?.withRenderingMode(.alwaysTemplate)
-        alertIconView.tintColor   = UIColor(white: 0.5, alpha: 1)
-        alertIconView.contentMode = .scaleAspectFit
-        alertIconView.translatesAutoresizingMaskIntoConstraints = false
+            let row = makeAlertRow(
+                icon: UIImage(systemName: alert.icon),
+                iconTint: alert.iconTint,
+                iconBg: alert.iconBg,
+                title: alert.title,
+                body: alert.body,
+                date: alert.date
+            )
+            card.addSubview(row)
+            NSLayoutConstraint.activate([
+                row.topAnchor.constraint(equalTo: card.topAnchor),
+                row.leadingAnchor.constraint(equalTo: card.leadingAnchor),
+                row.trailingAnchor.constraint(equalTo: card.trailingAnchor),
+                row.bottomAnchor.constraint(equalTo: card.bottomAnchor),
+            ])
 
-        alertTitleLabel.font      = .systemFont(ofSize: 14, weight: .semibold)
-        alertTitleLabel.textColor = .black
-        alertTitleLabel.text      = "Health Alert"
-        alertTitleLabel.translatesAutoresizingMaskIntoConstraints = false
+            insightsSection.addContent(card)
+        }
+    }
 
-        alertBodyLabel.font          = .systemFont(ofSize: 12)
-        alertBodyLabel.textColor     = UIColor(white: 0.5, alpha: 1)
-        alertBodyLabel.text          = "No new alerts"
-        alertBodyLabel.numberOfLines = 2
-        alertBodyLabel.translatesAutoresizingMaskIntoConstraints = false
+    private func makeAlertRow(icon: UIImage?, iconTint: UIColor, iconBg: UIColor,
+                              title: String, body: String, date: String) -> UIView {
+        let row = UIView()
+        row.translatesAutoresizingMaskIntoConstraints = false
+        row.isUserInteractionEnabled = true
 
-        alertTimeLabel.font          = .systemFont(ofSize: 11)
-        alertTimeLabel.textColor     = UIColor(white: 0.6, alpha: 1)
-        alertTimeLabel.textAlignment = .right
-        alertTimeLabel.translatesAutoresizingMaskIntoConstraints = false
+        let iconBgView = UIView()
+        iconBgView.backgroundColor = iconBg
+        iconBgView.layer.cornerRadius = 24
+        iconBgView.translatesAutoresizingMaskIntoConstraints = false
 
-        alertIconContainer.addSubview(alertIconView)
-        alertCard.addSubview(alertIconContainer)
-        alertCard.addSubview(alertTitleLabel)
-        alertCard.addSubview(alertBodyLabel)
-        alertCard.addSubview(alertTimeLabel)
+        let iconView = UIImageView()
+        iconView.image = icon?.withRenderingMode(.alwaysTemplate)
+        iconView.tintColor = iconTint
+        iconView.contentMode = .scaleAspectFit
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+        iconBgView.addSubview(iconView)
+
+        let titleLbl = UILabel()
+        titleLbl.font = .systemFont(ofSize: 14, weight: .bold)
+        titleLbl.textColor = .black
+        titleLbl.text = title
+        titleLbl.translatesAutoresizingMaskIntoConstraints = false
+
+        let bodyLbl = UILabel()
+        bodyLbl.font = .systemFont(ofSize: 12)
+        bodyLbl.textColor = UIColor(white: 0.45, alpha: 1)
+        bodyLbl.text = body
+        bodyLbl.numberOfLines = 2
+        bodyLbl.translatesAutoresizingMaskIntoConstraints = false
+
+        let dateLbl = UILabel()
+        dateLbl.font = .systemFont(ofSize: 11)
+        dateLbl.textColor = UIColor(white: 0.60, alpha: 1)
+        dateLbl.text = date
+        dateLbl.translatesAutoresizingMaskIntoConstraints = false
+
+        let chevron = UIImageView()
+        chevron.image = UIImage(systemName: "chevron.right")?.withRenderingMode(.alwaysTemplate)
+        chevron.tintColor = UIColor(white: 0.65, alpha: 1)
+        chevron.contentMode = .scaleAspectFit
+        chevron.translatesAutoresizingMaskIntoConstraints = false
+
+        [iconBgView, titleLbl, bodyLbl, dateLbl, chevron].forEach { row.addSubview($0) }
 
         NSLayoutConstraint.activate([
-            alertIconView.centerXAnchor.constraint(equalTo: alertIconContainer.centerXAnchor),
-            alertIconView.centerYAnchor.constraint(equalTo: alertIconContainer.centerYAnchor),
-            alertIconView.widthAnchor.constraint(equalToConstant: 18),
-            alertIconView.heightAnchor.constraint(equalToConstant: 18),
+            iconView.centerXAnchor.constraint(equalTo: iconBgView.centerXAnchor),
+            iconView.centerYAnchor.constraint(equalTo: iconBgView.centerYAnchor),
+            iconView.widthAnchor.constraint(equalToConstant: 22),
+            iconView.heightAnchor.constraint(equalToConstant: 22),
 
-            alertIconContainer.centerYAnchor.constraint(equalTo: alertCard.centerYAnchor),
-            alertIconContainer.leadingAnchor.constraint(equalTo: alertCard.leadingAnchor, constant: 12),
-            alertIconContainer.widthAnchor.constraint(equalToConstant: 28),
-            alertIconContainer.heightAnchor.constraint(equalToConstant: 28),
+            iconBgView.leadingAnchor.constraint(equalTo: row.leadingAnchor, constant: 14),
+            iconBgView.centerYAnchor.constraint(equalTo: row.centerYAnchor),
+            iconBgView.widthAnchor.constraint(equalToConstant: 48),
+            iconBgView.heightAnchor.constraint(equalToConstant: 48),
 
-            alertTitleLabel.topAnchor.constraint(equalTo: alertCard.topAnchor, constant: 14),
-            alertTitleLabel.leadingAnchor.constraint(equalTo: alertIconContainer.trailingAnchor, constant: 10),
-            alertTitleLabel.trailingAnchor.constraint(equalTo: alertTimeLabel.leadingAnchor, constant: -8),
+            chevron.trailingAnchor.constraint(equalTo: row.trailingAnchor, constant: -14),
+            chevron.centerYAnchor.constraint(equalTo: row.centerYAnchor),
+            chevron.widthAnchor.constraint(equalToConstant: 9),
+            chevron.heightAnchor.constraint(equalToConstant: 15),
 
-            alertBodyLabel.topAnchor.constraint(equalTo: alertTitleLabel.bottomAnchor, constant: 4),
-            alertBodyLabel.leadingAnchor.constraint(equalTo: alertTitleLabel.leadingAnchor),
-            alertBodyLabel.trailingAnchor.constraint(equalTo: alertCard.trailingAnchor, constant: -12),
-            alertBodyLabel.bottomAnchor.constraint(lessThanOrEqualTo: alertCard.bottomAnchor, constant: -14),
+            titleLbl.topAnchor.constraint(equalTo: row.topAnchor, constant: 14),
+            titleLbl.leadingAnchor.constraint(equalTo: iconBgView.trailingAnchor, constant: 12),
+            titleLbl.trailingAnchor.constraint(equalTo: chevron.leadingAnchor, constant: -8),
 
-            alertTimeLabel.topAnchor.constraint(equalTo: alertCard.topAnchor, constant: 14),
-            alertTimeLabel.trailingAnchor.constraint(equalTo: alertCard.trailingAnchor, constant: -12),
-            alertTimeLabel.widthAnchor.constraint(equalToConstant: 80),
+            bodyLbl.topAnchor.constraint(equalTo: titleLbl.bottomAnchor, constant: 4),
+            bodyLbl.leadingAnchor.constraint(equalTo: titleLbl.leadingAnchor),
+            bodyLbl.trailingAnchor.constraint(equalTo: titleLbl.trailingAnchor),
 
-            alertCard.heightAnchor.constraint(greaterThanOrEqualToConstant: 68)
+            dateLbl.topAnchor.constraint(equalTo: bodyLbl.bottomAnchor, constant: 4),
+            dateLbl.leadingAnchor.constraint(equalTo: titleLbl.leadingAnchor),
+            dateLbl.bottomAnchor.constraint(equalTo: row.bottomAnchor, constant: -14),
         ])
 
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(alertCardTapped))
-        alertCard.addGestureRecognizer(tapGesture)
-        alertCard.isUserInteractionEnabled = true
-
-        insightsSection.addArrangedSubview(alertCard, padding: UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10))
+        return row
     }
 
     // MARK: - Stack Layout in ContentView
 
     private func layoutStackInContentView() {
-        let sections: [UIView] = [
-            syncBanner, cardioSection, metabolicSection, sleepSection, insightsSection
-        ]
-        sections.forEach { contentView.addSubview($0) }
-
-        // syncBanner below headerView
-        NSLayoutConstraint.activate([
-            syncBanner.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 8),
-            syncBanner.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            syncBanner.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
-        ])
-
-        let sectionPairs: [(UIView, UIView?)] = [
-            (cardioSection,    syncBanner),
-            (metabolicSection, cardioSection),
-            (sleepSection,     metabolicSection),
-            (insightsSection,  sleepSection)
-        ]
-
-        for (section, above) in sectionPairs {
-            let topAnchor = above.map { $0.bottomAnchor } ?? contentView.topAnchor
-            NSLayoutConstraint.activate([
-                section.topAnchor.constraint(equalTo: topAnchor, constant: 12),
-                section.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
-                section.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12)
-            ])
+        [cardioSection, metabolicSection, sleepSection, insightsSection].forEach {
+            contentView.addSubview($0)
         }
 
-        insightsSection.bottomAnchor.constraint(
-            equalTo: contentView.bottomAnchor, constant: -24).isActive = true
+        NSLayoutConstraint.activate([
+            cardioSection.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 4),
+            cardioSection.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            cardioSection.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+
+            metabolicSection.topAnchor.constraint(equalTo: cardioSection.bottomAnchor, constant: 12),
+            metabolicSection.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            metabolicSection.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+
+            sleepSection.topAnchor.constraint(equalTo: metabolicSection.bottomAnchor, constant: 12),
+            sleepSection.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            sleepSection.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+
+            insightsSection.topAnchor.constraint(equalTo: sleepSection.bottomAnchor, constant: 12),
+            insightsSection.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            insightsSection.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            insightsSection.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -80),
+        ])
     }
 
     // MARK: - Data Loading
@@ -533,7 +633,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     }
 
     private func applyECGData(score: Int, statusText: String) {
-        ecgCard.updateValue(score > 0 ? "\(score)" : "--", unit: "scores")
+        ecgCard.updateValue(score > 0 ? "\(score)" : "--", unit: "score")
         let (ecgCardStatus, ecgColor) = ecgCardStatus(score)
         ecgCard.updateStatus(text: ecgCardStatus, color: ecgColor)
 

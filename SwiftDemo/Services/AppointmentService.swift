@@ -38,7 +38,7 @@ final class AppointmentService {
             completion: completion
         )
     }
-    
+
     /// Fetch patient's appointments
     /// - Parameters:
     ///   - patientId: Patient ID

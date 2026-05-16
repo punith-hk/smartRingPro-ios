@@ -56,8 +56,9 @@ final class DashboardVitalCardV2: UIView {
         backgroundColor          = .white
         layer.cornerRadius       = 12
         layer.shadowColor        = UIColor.black.cgColor
-        layer.shadowOpacity      = 0.08
-        layer.shadowRadius       = 6
+        layer.shadowOpacity      = 0.12
+        layer.shadowRadius       = 8
+        layer.shadowOffset       = CGSize(width: 0, height: 3)
         layer.shadowOffset       = CGSize(width: 0, height: 2)
         layer.masksToBounds      = false
 
@@ -86,15 +87,17 @@ final class DashboardVitalCardV2: UIView {
         // Value
         valueLabel.font          = .systemFont(ofSize: 26, weight: .bold)
         valueLabel.textColor     = .black
-        valueLabel.numberOfLines = 1
+        valueLabel.numberOfLines = 2
+        valueLabel.textAlignment = .left
         valueLabel.adjustsFontSizeToFitWidth = true
-        valueLabel.minimumScaleFactor = 0.7
+        valueLabel.minimumScaleFactor = 0.6
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
 
         // Unit
         unitLabel.font           = .systemFont(ofSize: 11, weight: .regular)
         unitLabel.textColor      = UIColor(white: 0.5, alpha: 1)
         unitLabel.numberOfLines  = 2
+        unitLabel.textAlignment  = .left
         unitLabel.translatesAutoresizingMaskIntoConstraints = false
 
         // Status dot
@@ -128,14 +131,14 @@ final class DashboardVitalCardV2: UIView {
             titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
         ])
 
-        // Value + unit row: below icon, left-aligned
+        // Value + unit: side by side, pushed down vertically
         NSLayoutConstraint.activate([
-            valueLabel.topAnchor.constraint(equalTo: iconContainer.bottomAnchor, constant: 8),
+            valueLabel.topAnchor.constraint(equalTo: iconContainer.bottomAnchor, constant: 14),
             valueLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
+            valueLabel.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -6),
 
             unitLabel.bottomAnchor.constraint(equalTo: valueLabel.bottomAnchor, constant: -2),
             unitLabel.leadingAnchor.constraint(equalTo: valueLabel.trailingAnchor, constant: 3),
-            unitLabel.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -6),
         ])
 
         // Status row: pinned to bottom-left
@@ -174,6 +177,25 @@ final class DashboardVitalCardV2: UIView {
     func updateValue(_ value: String, unit: String? = nil) {
         valueLabel.text = value
         if let u = unit { unitLabel.text = u }
+    }
+
+    func setValueFontSize(_ size: CGFloat) {
+        valueLabel.font = .systemFont(ofSize: size, weight: .bold)
+    }
+
+    /// Repositions unit label: directly below value, right-aligned to card edge.
+    func setUnitBelow() {
+        unitLabel.textAlignment = .right
+        // Remove existing unitLabel constraints and re-pin below valueLabel
+        unitLabel.constraints.forEach { unitLabel.removeConstraint($0) }
+        NSLayoutConstraint.deactivate(unitLabel.superview?.constraints.filter {
+            $0.firstItem === unitLabel || $0.secondItem === unitLabel
+        } ?? [])
+        NSLayoutConstraint.activate([
+            unitLabel.topAnchor.constraint(equalTo: valueLabel.bottomAnchor, constant: 0),
+            unitLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
+            unitLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
+        ])
     }
 
     func updateStatus(text: String, color: UIColor) {
