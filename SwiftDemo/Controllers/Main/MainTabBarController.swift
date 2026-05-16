@@ -21,7 +21,7 @@ class MainTabBarController: UITabBarController {
     private func setupTabs() {
 
         let home = createNav(
-            vc: HealthDashboardViewController(),
+            vc: HealthDashboardV2ViewController(),
             title: "Health",
             icon: "waveform.path.ecg",
             selectedIcon: "waveform.path.ecg"
