@@ -17,7 +17,7 @@ final class FamilyMembersViewController: AppBaseViewController {
             label.textAlignment = .center
             label.numberOfLines = 0
             label.font = .systemFont(ofSize: 15, weight: .medium)
-            label.textColor = .white.withAlphaComponent(0.9)
+            label.textColor = UIColor(white: 0.3, alpha: 1)
             label.isHidden = true
             label.translatesAutoresizingMaskIntoConstraints = false
             return label
@@ -34,7 +34,7 @@ final class FamilyMembersViewController: AppBaseViewController {
     private func setupUI() {
 
         title = "Family members"
-        view.backgroundColor = UIColor(red: 0.27, green: 0.60, blue: 0.96, alpha: 1)
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
 
         // Add Dependents Button
         addButton.setTitle("+ Add Dependents", for: .normal)

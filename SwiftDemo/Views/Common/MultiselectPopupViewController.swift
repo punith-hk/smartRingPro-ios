@@ -136,6 +136,20 @@ final class MultiSelectPopupViewController: UIViewController {
 
     private func applyPreselection() {
         tableView.reloadData()
+        // Scroll to the first pre-selected item so it's visible and highlighted on open
+        if let first = selectedItems.first,
+           let index = options.firstIndex(of: first) {
+            DispatchQueue.main.async {
+                // Scroll so the selected row appears near the top but leaves 2 rows visible below
+                let rowHeight: CGFloat = 44
+                let targetOffset = CGFloat(max(0, index - 1)) * rowHeight
+                let maxOffset = max(0, self.tableView.contentSize.height - self.tableView.bounds.height)
+                self.tableView.setContentOffset(
+                    CGPoint(x: 0, y: min(targetOffset, maxOffset)),
+                    animated: false
+                )
+            }
+        }
     }
 
     // MARK: - Actions

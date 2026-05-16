@@ -31,4 +31,13 @@ struct FamilyMember: Codable {
 
     let existing_diseases: String?
     let existing_medications: String?
+
+    let height: String?
+    let weight: String?
+
+    let address: String?
+    let country: String?
+    let state: String?
+    let city: String?
+    let pincode: String?
 }

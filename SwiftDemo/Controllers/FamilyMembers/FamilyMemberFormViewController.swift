@@ -30,14 +30,24 @@ final class FamilyMemberFormViewController: AppBaseViewController {
     private let bloodGroupField = UITextField()
     private let diseasesField = UITextField()
     private let medicationField = UITextField()
+    private let heightField = UITextField()
+    private let weightField = UITextField()
+    private let emergencyPhoneField = UITextField()
+    private let addressField = UITextField()
+    private let countryField = UITextField()
+    private let stateField = UITextField()
+    private let cityField = UITextField()
+    private let zipField = UITextField()
 
     private let saveButton = UIButton(type: .system)
 
     // MARK: - Data
     private var compressedImageData: Data?
+    private var selectedMedications: [MedicationEntry] = []
+    private var selectedCountryCode: String = ""
 
     private let relationOptions = ["Father", "Mother", "Spouse", "Son", "Daughter", "Sibling", "Other"]
-    private let genderOptions = ["Male", "Female"]
+    private let genderOptions = ["Male", "Female", "Other"]
     private let bloodGroups = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]
 
     private let diseases = [
@@ -100,10 +110,12 @@ final class FamilyMemberFormViewController: AppBaseViewController {
     // MARK: - UI Setup
     private func setupUI() {
 
-        view.backgroundColor = UIColor(red: 0.27, green: 0.60, blue: 0.96, alpha: 1)
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
 
         scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         contentView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
 
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
@@ -133,7 +145,7 @@ final class FamilyMemberFormViewController: AppBaseViewController {
         contentView.addSubview(header)
 
         profileImageView.image = UIImage(systemName: "person.circle.fill")
-        profileImageView.tintColor = .white
+        profileImageView.tintColor = UIColor(red: 0.27, green: 0.60, blue: 0.96, alpha: 1)
         profileImageView.layer.cornerRadius = 40
         profileImageView.clipsToBounds = true
         profileImageView.translatesAutoresizingMaskIntoConstraints = false
@@ -146,7 +158,7 @@ final class FamilyMemberFormViewController: AppBaseViewController {
 
         uploadHintLabel.text = "JPG / PNG • Max 2MB"
         uploadHintLabel.font = .systemFont(ofSize: 12)
-        uploadHintLabel.textColor = .white
+        uploadHintLabel.textColor = .darkGray
         uploadHintLabel.translatesAutoresizingMaskIntoConstraints = false
 
         let rightStack = UIStackView(arrangedSubviews: [uploadButton, uploadHintLabel])
@@ -179,11 +191,19 @@ final class FamilyMemberFormViewController: AppBaseViewController {
         let fields: [(String, UITextField, String, String?)] = [
             ("Name", nameField, "Enter name", nil),
             ("Relation", relationField, "Select relation", "chevron.down"),
-            ("Date of Birth", dobField, "yyyy-mm-dd", "calendar"),
+            ("Emergency Contact Number", emergencyPhoneField, "Emergency phone number", nil),
+            ("Date of Birth", dobField, "dd-mm-yyyy", "calendar"),
             ("Gender", genderField, "Select gender", "chevron.down"),
             ("Blood Group", bloodGroupField, "Select blood group", "chevron.down"),
+            ("Height", heightField, "Select Height", "chevron.down"),
+            ("Weight", weightField, "Select Weight", "chevron.down"),
             ("Existing Diseases", diseasesField, "Select diseases", "chevron.down"),
-            ("Existing Medications", medicationField, "Enter medication", nil)
+            ("Existing Medications", medicationField, "Tap to add medications", "chevron.down"),
+            ("Address", addressField, "House no, street, area", nil),
+            ("Country", countryField, "Select country", "chevron.down"),
+            ("State", stateField, "Select state", "chevron.down"),
+            ("City", cityField, "Select city", "chevron.down"),
+            ("Zip Code", zipField, "Pincode", nil)
         ]
 
         var topAnchor = contentView.subviews.last!.bottomAnchor
@@ -222,7 +242,7 @@ final class FamilyMemberFormViewController: AppBaseViewController {
         let label = UILabel()
         label.text = labelText
         label.font = .systemFont(ofSize: 13, weight: .medium)
-        label.textColor = .white
+        label.textColor = UIColor(white: 0.15, alpha: 1)
         label.translatesAutoresizingMaskIntoConstraints = false
 
         // Field container (your existing style)
@@ -292,7 +312,7 @@ final class FamilyMemberFormViewController: AppBaseViewController {
         contentView.addSubview(saveButton)
 
         NSLayoutConstraint.activate([
-            saveButton.topAnchor.constraint(equalTo: medicationField.superview!.bottomAnchor, constant: 32),
+            saveButton.topAnchor.constraint(equalTo: zipField.superview!.bottomAnchor, constant: 32),
             saveButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             saveButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             saveButton.heightAnchor.constraint(equalToConstant: 48),
@@ -303,11 +323,13 @@ final class FamilyMemberFormViewController: AppBaseViewController {
     // MARK: - Keyboard & Tap Handling (FROM PROFILE)
     private func configureTapAndKeyboards() {
 
+        emergencyPhoneField.keyboardType = .numberPad
+
         let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         tap.cancelsTouchesInView = false
         view.addGestureRecognizer(tap)
 
-        [nameField, medicationField].forEach {
+        [nameField, emergencyPhoneField].forEach {
             addDoneToolbar(to: $0)
         }
     }
@@ -363,6 +385,12 @@ final class FamilyMemberFormViewController: AppBaseViewController {
         configureDropdown(field: genderField, action: #selector(openGenderSelector))
         configureDropdown(field: bloodGroupField, action: #selector(openBloodGroupSelector))
         configureDropdown(field: diseasesField, action: #selector(openDiseaseSelector))
+        configureDropdown(field: heightField, action: #selector(openHeightSelector))
+        configureDropdown(field: weightField, action: #selector(openWeightSelector))
+        configureDropdown(field: medicationField, action: #selector(openMedicationPicker))
+        configureDropdown(field: countryField, action: #selector(openCountrySelector))
+        configureDropdown(field: stateField, action: #selector(openStateSelector))
+        configureDropdown(field: cityField, action: #selector(openCitySelector))
     }
 
     private func configureDropdown(field: UITextField, action: Selector) {
@@ -426,22 +454,104 @@ final class FamilyMemberFormViewController: AppBaseViewController {
     }
 
     @objc private func openDiseaseSelector() {
-
-        let preselected = diseasesField.text?
+        let current = diseasesField.text?
             .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) } ?? []
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty } ?? []
+
+        let picker = DiseasePickerViewController(current: current)
+        picker.onConfirm = { [weak self] diseases in
+            self?.diseasesField.text = diseases.joined(separator: ", ")
+        }
+        present(picker, animated: true)
+    }
+
+    @objc private func openHeightSelector() {
+        let options = (100...250).map { "\($0) CM" }
+        let current = heightField.text ?? ""
+        let preselected = current.isEmpty ? [] : [current]
 
         let popup = MultiSelectPopupViewController(
-            title: "Select Diseases",
-            options: diseases,
+            title: "Select Height",
+            options: options,
             preselected: preselected,
-            maxSelection: 4
+            maxSelection: 1
         )
-
         popup.onConfirm = { [weak self] selected in
-            self?.diseasesField.text = selected.joined(separator: ", ")
+            self?.heightField.text = selected.first
         }
+        present(popup, animated: true)
+    }
 
+    @objc private func openWeightSelector() {
+        let options = (20...200).map { "\($0) KG" }
+        let current = weightField.text ?? ""
+        let preselected = current.isEmpty ? [] : [current]
+
+        let popup = MultiSelectPopupViewController(
+            title: "Select Weight",
+            options: options,
+            preselected: preselected,
+            maxSelection: 1
+        )
+        popup.onConfirm = { [weak self] selected in
+            self?.weightField.text = selected.first
+        }
+        present(popup, animated: true)
+    }
+
+    @objc private func openMedicationPicker() {
+        let picker = MedicationPickerViewController(current: selectedMedications)
+        picker.onConfirm = { [weak self] entries in
+            guard let self = self else { return }
+            self.selectedMedications = entries
+            self.medicationField.text = MedicationEntry.toString(entries)
+        }
+        present(picker, animated: true)
+    }
+
+    @objc private func openCountrySelector() {
+        let options = CountryLocationData.countries.map { $0.name }
+        let preselected = (countryField.text ?? "").isEmpty ? [] : [countryField.text!]
+        let popup = MultiSelectPopupViewController(title: "Select Country", options: options, preselected: preselected, maxSelection: 1)
+        popup.onConfirm = { [weak self] selected in
+            guard let self = self, let country = selected.first else { return }
+            self.countryField.text = country
+            self.stateField.text = ""
+            self.cityField.text = ""
+            self.selectedCountryCode = CountryLocationData.countryCode(for: country)
+        }
+        present(popup, animated: true)
+    }
+
+    @objc private func openStateSelector() {
+        let states = CountryLocationData.states(for: selectedCountryCode)
+        guard !states.isEmpty else {
+            Toast.show(message: "Please select a country first", in: self.view)
+            return
+        }
+        let preselected = (stateField.text ?? "").isEmpty ? [] : [stateField.text!]
+        let popup = MultiSelectPopupViewController(title: "Select State", options: states, preselected: preselected, maxSelection: 1)
+        popup.onConfirm = { [weak self] selected in
+            guard let self = self, let state = selected.first else { return }
+            self.stateField.text = state
+            self.cityField.text = ""
+        }
+        present(popup, animated: true)
+    }
+
+    @objc private func openCitySelector() {
+        let selectedState = stateField.text ?? ""
+        let cities = CountryLocationData.cities(for: selectedCountryCode, state: selectedState)
+        guard !cities.isEmpty else {
+            Toast.show(message: "Please select a state first", in: self.view)
+            return
+        }
+        let preselected = (cityField.text ?? "").isEmpty ? [] : [cityField.text!]
+        let popup = MultiSelectPopupViewController(title: "Select City", options: cities, preselected: preselected, maxSelection: 1)
+        popup.onConfirm = { [weak self] selected in
+            self?.cityField.text = selected.first
+        }
         present(popup, animated: true)
     }
 
@@ -469,11 +579,55 @@ final class FamilyMemberFormViewController: AppBaseViewController {
 
         nameField.text = member.name
         relationField.text = member.relation
-        dobField.text = member.dob
-        genderField.text = member.gender == "M" ? "Male" : "Female"
-        bloodGroupField.text = member.blood_group
-        diseasesField.text = member.existing_diseases
-        medicationField.text = member.existing_medications
+        emergencyPhoneField.text = member.emergency_phone ?? ""
+
+        // DOB — server sends yyyy-MM-dd, display as dd-MM-yyyy
+        if let dob = member.dob, !dob.isEmpty {
+            let serverFmt = DateFormatter()
+            serverFmt.dateFormat = "yyyy-MM-dd"
+            let displayFmt = DateFormatter()
+            displayFmt.dateFormat = "dd-MM-yyyy"
+            if let date = serverFmt.date(from: dob) {
+                dobField.text = displayFmt.string(from: date)
+                dobPicker.date = date
+            } else {
+                dobField.text = dob
+            }
+        }
+
+        if member.gender == "M" {
+            genderField.text = "Male"
+        } else if member.gender == "F" {
+            genderField.text = "Female"
+        } else if member.gender == "O" {
+            genderField.text = "Other"
+        }
+
+        bloodGroupField.text = member.blood_group ?? ""
+
+        if let h = member.height, let val = Double(h) {
+            heightField.text = "\(Int(val)) CM"
+        } else {
+            heightField.text = member.height ?? ""
+        }
+
+        if let w = member.weight, let val = Double(w) {
+            weightField.text = "\(Int(val)) KG"
+        } else {
+            weightField.text = member.weight ?? ""
+        }
+
+        diseasesField.text = member.existing_diseases ?? ""
+
+        selectedMedications = MedicationEntry.parse(from: member.existing_medications ?? "")
+        medicationField.text = MedicationEntry.toString(selectedMedications)
+
+        addressField.text = member.address ?? ""
+        countryField.text = member.country ?? ""
+        selectedCountryCode = CountryLocationData.countryCode(for: member.country ?? "")
+        stateField.text = member.state ?? ""
+        cityField.text = member.city ?? ""
+        zipField.text = member.pincode ?? ""
 
         if let urlString = member.dependent_image_url,
            let url = URL(string: urlString) {
@@ -484,15 +638,48 @@ final class FamilyMemberFormViewController: AppBaseViewController {
     // MARK: - Save
     @objc private func saveTapped() {
 
+        guard let name = nameField.text, !name.trimmingCharacters(in: .whitespaces).isEmpty else {
+            Toast.show(message: "Please enter a name", in: self.view)
+            return
+        }
+
+        // Map gender to API code
+        let genderCode: String
+        switch genderField.text {
+        case "Male":   genderCode = "M"
+        case "Female": genderCode = "F"
+        case "Other":  genderCode = "O"
+        default:       genderCode = ""
+        }
+
+        // DOB — convert dd-MM-yyyy back to yyyy-MM-dd for API
+        let apiDob: String
+        if let displayDob = dobField.text, !displayDob.isEmpty {
+            let displayFmt = DateFormatter()
+            displayFmt.dateFormat = "dd-MM-yyyy"
+            let apiFmt = DateFormatter()
+            apiFmt.dateFormat = "yyyy-MM-dd"
+            apiDob = displayFmt.date(from: displayDob).map { apiFmt.string(from: $0) } ?? displayDob
+        } else {
+            apiDob = ""
+        }
+
         let params: [String: String] = [
-            "name": nameField.text ?? "",
+            "name": name,
             "relation": relationField.text ?? "",
-            "gender": genderField.text == "Male" ? "M" : "F",
-            "dob": dobField.text ?? "",
+            "gender": genderCode,
+            "dob": apiDob,
             "blood_group": bloodGroupField.text ?? "",
+            "emergency_phone": emergencyPhoneField.text ?? "",
+            "height": (heightField.text ?? "").replacingOccurrences(of: " CM", with: "").trimmingCharacters(in: .whitespaces),
+            "weight": (weightField.text ?? "").replacingOccurrences(of: " KG", with: "").trimmingCharacters(in: .whitespaces),
             "existing_diseases": diseasesField.text ?? "",
-            "existing_medications": medicationField.text ?? "",
-            "emergency_phone": ""
+            "existing_medications": MedicationEntry.toString(selectedMedications),
+            "address": addressField.text ?? "",
+            "country": countryField.text ?? "",
+            "state": stateField.text ?? "",
+            "city": cityField.text ?? "",
+            "pincode": zipField.text ?? ""
         ]
 
         switch mode {

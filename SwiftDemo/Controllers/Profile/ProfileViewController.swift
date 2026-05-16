@@ -37,6 +37,9 @@ class ProfileViewController: AppBaseViewController {
     private let zipField = UITextField()
     private let diseasesField = UITextField()
     private let medicationField = UITextField()
+    private let emergencyPhoneField = UITextField()
+    private var selectedMedications: [MedicationEntry] = []
+    private var selectedCountryCode: String = ""
 
     // MARK: - Save Button
     private let saveButton = UIButton(type: .system)
@@ -68,7 +71,7 @@ class ProfileViewController: AppBaseViewController {
         "Infectious diseases"
     ]
     
-    private let genderOptions = ["Male", "Female"]
+    private let genderOptions = ["Male", "Female", "Other"]
 
     private let bloodGroups = [
         "A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"
@@ -87,7 +90,7 @@ class ProfileViewController: AppBaseViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        view.backgroundColor = UIColor(red: 0.27, green: 0.60, blue: 0.96, alpha: 1)
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
 
         setupScroll()
         setupProfileHeader()
@@ -107,7 +110,9 @@ class ProfileViewController: AppBaseViewController {
     private func setupScroll() {
 
         scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         contentView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
 
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
@@ -136,7 +141,7 @@ class ProfileViewController: AppBaseViewController {
         // Profile Image (LEFT)
         profileImageView.translatesAutoresizingMaskIntoConstraints = false
         profileImageView.image = UIImage(systemName: "person.circle.fill")
-        profileImageView.tintColor = .white
+        profileImageView.tintColor = UIColor(red: 0.27, green: 0.60, blue: 0.96, alpha: 1)
         profileImageView.contentMode = .scaleAspectFill
         profileImageView.layer.cornerRadius = 40
         profileImageView.clipsToBounds = true
@@ -151,7 +156,7 @@ class ProfileViewController: AppBaseViewController {
         // Hint Text
         uploadHintLabel.text = "Allowed JPG, PNG or GIF\nmax size of 2MB"
         uploadHintLabel.font = .systemFont(ofSize: 12)
-        uploadHintLabel.textColor = .white
+        uploadHintLabel.textColor = .darkGray
         uploadHintLabel.numberOfLines = 2
         uploadHintLabel.translatesAutoresizingMaskIntoConstraints = false
 
@@ -234,7 +239,13 @@ class ProfileViewController: AppBaseViewController {
             ),
 
             createLabeledField(
-                labelText: "Date of Birth (yyyy-mm-dd)",
+                labelText: "Emergency Contact Number",
+                textField: emergencyPhoneField,
+                placeholder: "Emergency phone number"
+            ),
+
+            createLabeledField(
+                labelText: "Date of Birth",
                 textField: dobField,
                 placeholder: "dd-mm-yyyy",
                 rightIcon: "calendar"
@@ -255,15 +266,17 @@ class ProfileViewController: AppBaseViewController {
             ),
 
             createLabeledField(
-                labelText: "Height in CM",
+                labelText: "Height",
                 textField: heightField,
-                placeholder: "in cm"
+                placeholder: "Select Height",
+                rightIcon: "chevron.down"
             ),
 
             createLabeledField(
-                labelText: "Weight in KG",
+                labelText: "Weight",
                 textField: weightField,
-                placeholder: "in kg"
+                placeholder: "Select Weight",
+                rightIcon: "chevron.down"
             ),
 
             createLabeledField(
@@ -275,19 +288,22 @@ class ProfileViewController: AppBaseViewController {
             createLabeledField(
                 labelText: "Country",
                 textField: countryField,
-                placeholder: "Country"
+                placeholder: "Select Country",
+                rightIcon: "chevron.down"
             ),
 
             createLabeledField(
                 labelText: "State",
                 textField: stateField,
-                placeholder: "State"
+                placeholder: "Select State",
+                rightIcon: "chevron.down"
             ),
 
             createLabeledField(
                 labelText: "City",
                 textField: cityField,
-                placeholder: "City"
+                placeholder: "Select City",
+                rightIcon: "chevron.down"
             ),
 
             createLabeledField(
@@ -304,9 +320,10 @@ class ProfileViewController: AppBaseViewController {
             ),
 
             createLabeledField(
-                labelText: "Existing Medication",
+                labelText: "Existing Medications",
                 textField: medicationField,
-                placeholder: "Enter medication"
+                placeholder: "Tap to add medications",
+                rightIcon: "chevron.down"
             )
         ]
 
@@ -339,7 +356,7 @@ class ProfileViewController: AppBaseViewController {
         let label = UILabel()
         label.text = labelText
         label.font = .systemFont(ofSize: 13, weight: .medium)
-        label.textColor = .white
+        label.textColor = UIColor(white: 0.15, alpha: 1)
         label.translatesAutoresizingMaskIntoConstraints = false
 
         // Field container (your existing style)
@@ -401,8 +418,7 @@ class ProfileViewController: AppBaseViewController {
     private func configureTapAndKeyboards() {
         emailField.keyboardType = .emailAddress
         mobileField.keyboardType = .numberPad
-        heightField.keyboardType = .numberPad
-        weightField.keyboardType = .numberPad
+        emergencyPhoneField.keyboardType = .numberPad
         zipField.keyboardType = .numberPad
         
         let tapGesture = UITapGestureRecognizer(
@@ -417,14 +433,9 @@ class ProfileViewController: AppBaseViewController {
             lastNameField,
             emailField,
             mobileField,
-            heightField,
-            weightField,
+            emergencyPhoneField,
             addressField,
-            countryField,
-            stateField,
-            cityField,
             zipField,
-            medicationField,
         ].forEach {
             addDoneToolbar(to: $0)
         }
@@ -539,6 +550,36 @@ class ProfileViewController: AppBaseViewController {
             field: bloodGroupField,
             action: #selector(openBloodGroupSelector)
         )
+
+        configureDropdown(
+            field: heightField,
+            action: #selector(openHeightSelector)
+        )
+
+        configureDropdown(
+            field: weightField,
+            action: #selector(openWeightSelector)
+        )
+
+        configureDropdown(
+            field: medicationField,
+            action: #selector(openMedicationPicker)
+        )
+
+        configureDropdown(
+            field: countryField,
+            action: #selector(openCountrySelector)
+        )
+
+        configureDropdown(
+            field: stateField,
+            action: #selector(openStateSelector)
+        )
+
+        configureDropdown(
+            field: cityField,
+            action: #selector(openCitySelector)
+        )
     }
     
     private func configureDropdown(
@@ -606,26 +647,58 @@ class ProfileViewController: AppBaseViewController {
 
         emailField.text = data.email ?? ""
         mobileField.text = data.phone_number
-        dobField.text = data.dob ?? ""
+        emergencyPhoneField.text = data.emergency_phone ?? ""
+
+        // DOB — server sends yyyy-MM-dd, display as dd-MM-yyyy
+        if let dob = data.dob, !dob.isEmpty {
+            let serverFmt = DateFormatter()
+            serverFmt.dateFormat = "yyyy-MM-dd"
+            let displayFmt = DateFormatter()
+            displayFmt.dateFormat = "dd-MM-yyyy"
+            if let date = serverFmt.date(from: dob) {
+                dobField.text = displayFmt.string(from: date)
+                dobPicker.date = date
+            } else {
+                dobField.text = dob
+            }
+        }
 
         if data.gender == "M" {
             genderField.text = "Male"
         } else if data.gender == "F" {
             genderField.text = "Female"
+        } else if data.gender == "O" {
+            genderField.text = "Other"
         }
 
         bloodGroupField.text = data.blood_group ?? ""
-        heightField.text = data.height
-        weightField.text = data.weight
+
+        // Height — server sends numeric string, display as "175 CM"
+        if let h = data.height, let val = Double(h) {
+            heightField.text = "\(Int(val)) CM"
+        } else {
+            heightField.text = data.height ?? ""
+        }
+
+        // Weight — server sends numeric string, display as "70 KG"
+        if let w = data.weight, let val = Double(w) {
+            weightField.text = "\(Int(val)) KG"
+        } else {
+            weightField.text = data.weight ?? ""
+        }
 
         addressField.text = data.address ?? ""
         countryField.text = data.country ?? ""
+        selectedCountryCode = CountryLocationData.countryCode(for: data.country ?? "")
         stateField.text = data.state ?? ""
         cityField.text = data.city ?? ""
         zipField.text = data.pincode ?? ""
 
         diseasesField.text = data.existing_diseases ?? ""
-        medicationField.text = data.existing_medications ?? ""
+
+        // Medications — parse "Dolo (1-0-1), ..." into entries
+        selectedMedications = MedicationEntry.parse(from: data.existing_medications ?? "")
+        medicationField.text = MedicationEntry.toString(selectedMedications)
 
         if let imageUrl = data.patient_image_url,
            let url = URL(string: imageUrl) {
@@ -720,7 +793,7 @@ class ProfileViewController: AppBaseViewController {
         params["last_name"] = lastNameField.text
         params["email"] = emailField.text
         params["phone_number"] = mobileField.text
-        params["emergency_phone"] = ""
+        params["emergency_phone"] = emergencyPhoneField.text
         params["dob"] = apiDOB(from: dobField.text)
 
         // Gender mapping
@@ -728,6 +801,8 @@ class ProfileViewController: AppBaseViewController {
             params["gender"] = "M"
         } else if genderField.text == "Female" {
             params["gender"] = "F"
+        } else if genderField.text == "Other" {
+            params["gender"] = "O"
         }
 
         params["blood_group"] = bloodGroupField.text
@@ -737,14 +812,18 @@ class ProfileViewController: AppBaseViewController {
         params["country"] = countryField.text
         params["pincode"] = zipField.text
 
-        params["height"] = cleanNumericValue(heightField.text)
-        params["weight"] = cleanNumericValue(weightField.text)
+        // Strip unit suffix before sending to API
+        params["height"] = heightField.text?
+            .replacingOccurrences(of: " CM", with: "")
+            .trimmingCharacters(in: .whitespaces)
+        params["weight"] = weightField.text?
+            .replacingOccurrences(of: " KG", with: "")
+            .trimmingCharacters(in: .whitespaces)
         
         params["existing_diseases"] =
             diseasesField.text?.trimmingCharacters(in: .whitespaces) ?? ""
 
-        params["existing_medications"] =
-            medicationField.text?.trimmingCharacters(in: .whitespaces) ?? ""
+        params["existing_medications"] = MedicationEntry.toString(selectedMedications)
 
 
         params["status"] = "1"
@@ -870,37 +949,51 @@ class ProfileViewController: AppBaseViewController {
             return false
         }
 
+        let dob = dobField.text?.trimmingCharacters(in: .whitespaces) ?? ""
+        if dob.isEmpty {
+            Toast.show(message: "Please select your date of birth", in: self.view)
+            return false
+        }
+
+        let gender = genderField.text?.trimmingCharacters(in: .whitespaces) ?? ""
+        if gender.isEmpty {
+            Toast.show(message: "Please select your gender", in: self.view)
+            return false
+        }
+
+        let bloodGroup = bloodGroupField.text?.trimmingCharacters(in: .whitespaces) ?? ""
+        if bloodGroup.isEmpty {
+            Toast.show(message: "Please select your blood group", in: self.view)
+            return false
+        }
+
+        let height = heightField.text?.trimmingCharacters(in: .whitespaces) ?? ""
+        if height.isEmpty {
+            Toast.show(message: "Please select your height", in: self.view)
+            return false
+        }
+
+        let weight = weightField.text?.trimmingCharacters(in: .whitespaces) ?? ""
+        if weight.isEmpty {
+            Toast.show(message: "Please select your weight", in: self.view)
+            return false
+        }
+
         return true
     }
 
     
     @objc private func openDiseaseSelector() {
-
-        // Get previously selected diseases (if any)
-        let preselected = diseasesField.text?
+        let current = diseasesField.text?
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty } ?? []
 
-        let popup = MultiSelectPopupViewController(
-            title: "Select Diseases",
-            options: diseases,
-            preselected: preselected,
-            maxSelection: 4   // ✅ LIMIT TO 4
-        )
-
-        popup.onConfirm = { [weak self] selectedItems in
-            guard let self = self else { return }
-
-            let joined = selectedItems.joined(separator: ", ")
-            self.diseasesField.text = joined
+        let picker = DiseasePickerViewController(current: current)
+        picker.onConfirm = { [weak self] diseases in
+            self?.diseasesField.text = diseases.joined(separator: ", ")
         }
-
-        popup.onCancel = {
-            // nothing needed
-        }
-
-        present(popup, animated: true)
+        present(picker, animated: true)
     }
     
     @objc private func openGenderSelector() {
@@ -936,6 +1029,95 @@ class ProfileViewController: AppBaseViewController {
             self?.bloodGroupField.text = selected.first
         }
 
+        present(popup, animated: true)
+    }
+
+    @objc private func openHeightSelector() {
+        let options = (100...250).map { "\($0) CM" }
+        let current = heightField.text ?? ""
+        let preselected = current.isEmpty ? [] : [current]
+
+        let popup = MultiSelectPopupViewController(
+            title: "Select Height",
+            options: options,
+            preselected: preselected,
+            maxSelection: 1
+        )
+        popup.onConfirm = { [weak self] selected in
+            self?.heightField.text = selected.first
+        }
+        present(popup, animated: true)
+    }
+
+    @objc private func openWeightSelector() {
+        let options = (20...200).map { "\($0) KG" }
+        let current = weightField.text ?? ""
+        let preselected = current.isEmpty ? [] : [current]
+
+        let popup = MultiSelectPopupViewController(
+            title: "Select Weight",
+            options: options,
+            preselected: preselected,
+            maxSelection: 1
+        )
+        popup.onConfirm = { [weak self] selected in
+            self?.weightField.text = selected.first
+        }
+        present(popup, animated: true)
+    }
+
+    @objc private func openMedicationPicker() {
+        let picker = MedicationPickerViewController(current: selectedMedications)
+        picker.onConfirm = { [weak self] entries in
+            guard let self = self else { return }
+            self.selectedMedications = entries
+            self.medicationField.text = MedicationEntry.toString(entries)
+        }
+        present(picker, animated: true)
+    }
+
+    @objc private func openCountrySelector() {
+        let options = CountryLocationData.countries.map { $0.name }
+        let preselected = (countryField.text ?? "").isEmpty ? [] : [countryField.text!]
+        let popup = MultiSelectPopupViewController(title: "Select Country", options: options, preselected: preselected, maxSelection: 1)
+        popup.onConfirm = { [weak self] selected in
+            guard let self = self, let country = selected.first else { return }
+            self.countryField.text = country
+            self.stateField.text = ""
+            self.cityField.text = ""
+            self.selectedCountryCode = CountryLocationData.countryCode(for: country)
+        }
+        present(popup, animated: true)
+    }
+
+    @objc private func openStateSelector() {
+        let states = CountryLocationData.states(for: selectedCountryCode)
+        guard !states.isEmpty else {
+            Toast.show(message: "Please select a country first", in: self.view)
+            return
+        }
+        let preselected = (stateField.text ?? "").isEmpty ? [] : [stateField.text!]
+        let popup = MultiSelectPopupViewController(title: "Select State", options: states, preselected: preselected, maxSelection: 1)
+        popup.onConfirm = { [weak self] selected in
+            guard let self = self, let state = selected.first else { return }
+            self.stateField.text = state
+            self.cityField.text = ""
+        }
+        present(popup, animated: true)
+    }
+
+    @objc private func openCitySelector() {
+        let selectedState = stateField.text ?? ""
+        let cities = CountryLocationData.cities(for: selectedCountryCode, state: selectedState)
+        guard !cities.isEmpty else {
+            Toast.show(message: "Please select a state first", in: self.view)
+            return
+        }
+        let preselected = (cityField.text ?? "").isEmpty ? [] : [cityField.text!]
+        let popup = MultiSelectPopupViewController(title: "Select City", options: cities, preselected: preselected, maxSelection: 1)
+        popup.onConfirm = { [weak self] selected in
+            self?.cityField.text = selected.first
+        }
         present(popup, animated: true)
     }
 
