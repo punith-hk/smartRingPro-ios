@@ -648,9 +648,19 @@ final class FamilyMemberFormViewController: AppBaseViewController {
             return
         }
 
+        guard let relation = relationField.text, !relation.trimmingCharacters(in: .whitespaces).isEmpty else {
+            Toast.show(message: "Please select a relation", in: self.view)
+            return
+        }
+
+        guard let gender = genderField.text, !gender.trimmingCharacters(in: .whitespaces).isEmpty else {
+            Toast.show(message: "Please select a gender", in: self.view)
+            return
+        }
+
         // Map gender to API code
         let genderCode: String
-        switch genderField.text {
+        switch gender {
         case "Male":   genderCode = "M"
         case "Female": genderCode = "F"
         case "Other":  genderCode = "O"

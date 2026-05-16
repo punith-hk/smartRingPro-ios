@@ -55,7 +55,10 @@ final class AppointmentsViewController: AppBaseViewController {
 
         // Set initial tab UI state
         updateTabUI()
-        
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
         fetchAppointments()
     }
     

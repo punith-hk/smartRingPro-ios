@@ -14,7 +14,7 @@ struct FamilyMember: Codable {
 
     let name: String
     let relation: String
-    let gender: String
+    let gender: String?
 
     let blood_group: String?
     let allergy: Int?
