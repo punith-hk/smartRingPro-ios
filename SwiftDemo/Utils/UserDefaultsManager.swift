@@ -96,7 +96,7 @@ final class UserDefaultsManager {
         set { defaults.set(newValue, forKey: "profileGender") }
     }
     
-    func saveProfileData(name: String, photoUrl: String, age: Int = 0, gender: String? = nil) {
+    func saveProfileData(name: String, photoUrl: String, age: Int = 0, gender: String? = nil, phone: String? = nil) {
         defaults.set(name, forKey: "profileName")
         defaults.set(photoUrl, forKey: "profilePhotoUrl")
         if age > 0 {
@@ -104,6 +104,9 @@ final class UserDefaultsManager {
         }
         if let gender = gender, !gender.isEmpty {
             defaults.set(gender, forKey: "profileGender")
+        }
+        if let phone = phone, !phone.isEmpty {
+            defaults.set(phone, forKey: "mobileNumber")
         }
     }
     

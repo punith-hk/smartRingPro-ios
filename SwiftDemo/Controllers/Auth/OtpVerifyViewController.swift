@@ -187,7 +187,7 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
     @objc private func resendTapped() {
         if remainingSeconds > 0 { return }
 
-        Loader.shared.show(on: view)
+        Loader.shared.show(on: view, message: "Resending OTP...", timeout: 10)
 
         AuthService.shared.login(mobile: mobileNumber) { [weak self] result in
             DispatchQueue.main.async {
@@ -216,7 +216,7 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
             return
         }
 
-        Loader.shared.show(on: view)
+        Loader.shared.show(on: view, message: "Verifying OTP...", timeout: 10)
 
         AuthService.shared.verifyOtp(userId: userId, otp: otp) { [weak self] result in
             DispatchQueue.main.async {
@@ -230,6 +230,32 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
 
                         // ✅ Save session
                         UserDefaultsManager.shared.saveOtpResponse(response)
+
+                        // ✅ Background-fetch profile so side menu shows name + photo immediately
+                        let userId = UserDefaultsManager.shared.userId
+                        if userId > 0 {
+                            ProfileService.shared.getUserProfile(userId: userId) { result in
+                                if case .success(let profileResponse) = result {
+                                    let data = profileResponse.data
+                                    let fullName = "\(data.first_name ?? "") \(data.last_name ?? "")".trimmingCharacters(in: .whitespaces)
+                                    DispatchQueue.main.async {
+                                        UserDefaultsManager.shared.saveProfileData(
+                                            name: fullName,
+                                            photoUrl: data.patient_image_url ?? ""
+                                        )
+                                        NotificationCenter.default.post(
+                                            name: .profileDataLoaded,
+                                            object: nil,
+                                            userInfo: [
+                                                "name": fullName,
+                                                "phone": data.phone_number,
+                                                "imageUrl": data.patient_image_url ?? ""
+                                            ]
+                                        )
+                                    }
+                                }
+                            }
+                        }
                         
                         // ✅ Send FCM token to server
                         FCMService.forceSendTokenToServer { success, message in

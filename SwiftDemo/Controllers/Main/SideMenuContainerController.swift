@@ -176,46 +176,50 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
 
         closeMenu()
 
-        // 🔥 BLE CLEANUP
-        YCProduct.disconnectDevice { _, _ in }
-        YCProduct.shared.isReconnectEnable = false
+        Loader.shared.show(on: view, message: "Logging Out...")
 
-        DeviceSessionManager.shared.clearDevice()
-        
-        // 🗄️ CLEAR ALL LOCAL DATABASE
-        print("🗑️ Clearing all local database data...")
-        
-        // Clear raw data
-        HeartRateRepository().deleteAll()
-        BloodPressureRepository().deleteAll()
-        HrvRepository().deleteAll()
-        BloodOxygenRepository().deleteAll()
-        BloodGlucoseRepository().deleteAll()
-        TemperatureRepository().deleteAll()
-        StepsRepository().deleteAll()
-        
-        // Clear daily stats
-        HeartRateDailyStatsRepository().deleteAll()
-        BloodPressureDailyStatsRepository().deleteAll()
-        HrvDailyStatsRepository().deleteAll()
-        BloodOxygenDailyStatsRepository().deleteAll()
-        BloodGlucoseDailyStatsRepository().deleteAll()
-        TemperatureDailyStatsRepository().deleteAll()
-        StepsDailyStatsRepository().deleteAll()
-        
-        print("✅ All local data cleared")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            // 🔥 BLE CLEANUP
+            YCProduct.disconnectDevice { _, _ in }
+            YCProduct.shared.isReconnectEnable = false
 
-        // Clear user session and profile data
-        UserDefaults.standard.removeObject(forKey: "isLoggedIn")
-        UserDefaultsManager.shared.clearProfileData()
+            DeviceSessionManager.shared.clearDevice()
 
-        let loginVC = LoginViewController()
-        let nav = UINavigationController(rootViewController: loginVC)
+            // 🗄️ CLEAR ALL LOCAL DATABASE
+            print("🗑️ Clearing all local database data...")
 
-        if let sceneDelegate = UIApplication.shared.connectedScenes
-            .first?.delegate as? SceneDelegate {
+            HeartRateRepository().deleteAll()
+            BloodPressureRepository().deleteAll()
+            HrvRepository().deleteAll()
+            BloodOxygenRepository().deleteAll()
+            BloodGlucoseRepository().deleteAll()
+            TemperatureRepository().deleteAll()
+            StepsRepository().deleteAll()
 
-            sceneDelegate.setRootViewController(nav)
+            HeartRateDailyStatsRepository().deleteAll()
+            BloodPressureDailyStatsRepository().deleteAll()
+            HrvDailyStatsRepository().deleteAll()
+            BloodOxygenDailyStatsRepository().deleteAll()
+            BloodGlucoseDailyStatsRepository().deleteAll()
+            TemperatureDailyStatsRepository().deleteAll()
+            StepsDailyStatsRepository().deleteAll()
+
+            print("✅ All local data cleared")
+
+            // Clear user session and profile data
+            UserDefaults.standard.removeObject(forKey: "isLoggedIn")
+            UserDefaultsManager.shared.clearProfileData()
+
+            Loader.shared.hide()
+
+            let loginVC = LoginViewController()
+            let nav = UINavigationController(rootViewController: loginVC)
+
+            if let sceneDelegate = UIApplication.shared.connectedScenes
+                .first?.delegate as? SceneDelegate {
+
+                sceneDelegate.setRootViewController(nav)
+            }
         }
     }
 

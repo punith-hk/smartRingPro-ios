@@ -212,7 +212,9 @@ class SideMenuViewController: UIViewController {
     }
 
     private func loadSavedProfileData() {
-        if let name = UserDefaultsManager.shared.profileName, !name.isEmpty {
+        // Name: prefer full profileName saved after profile load, fall back to username from login
+        let name = UserDefaultsManager.shared.profileName ?? UserDefaultsManager.shared.userName
+        if let name = name, !name.isEmpty {
             nameLabel?.text = name
         }
         if let phone = UserDefaultsManager.shared.mobileNumber, !phone.isEmpty {

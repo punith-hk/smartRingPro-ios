@@ -164,7 +164,7 @@ class LoginViewController: UIViewController, UITextFieldDelegate {
         }
 
         // 🔥 SHOW LOADER
-        Loader.shared.show(on: view)
+        Loader.shared.show(on: view, message: "Sending OTP...", timeout: 10)
 
         AuthService.shared.login(mobile: mobile) { [weak self] result in
             DispatchQueue.main.async {

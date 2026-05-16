@@ -16,6 +16,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Global "Done" button on all number-pad keyboards
+        GlobalKeyboardManager.shared.setup()
+
         // Initialize Core Data
         _ = CoreDataManager.shared.persistentContainer
         print("✅ AppDelegate - Core Data initialized")

@@ -129,7 +129,7 @@ class RegisterViewController: UIViewController, UITextFieldDelegate {
             return
         }
 
-        Loader.shared.show(on: view)
+        Loader.shared.show(on: view, message: "Sending OTP...", timeout: 10)
 
         AuthService.shared.register(mobile: mobile, name: name) { [weak self] result in
             DispatchQueue.main.async {

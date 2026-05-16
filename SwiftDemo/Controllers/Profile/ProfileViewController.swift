@@ -634,7 +634,7 @@ class ProfileViewController: AppBaseViewController {
         NotificationCenter.default.post(
             name: .profileDataLoaded,
             object: nil,
-            userInfo: ["name": fullName, "imageUrl": data.patient_image_url ?? ""]
+            userInfo: ["name": fullName, "phone": data.phone_number, "imageUrl": data.patient_image_url ?? ""]
         )
         
         // Save to UserDefaults for persistence
@@ -642,7 +642,8 @@ class ProfileViewController: AppBaseViewController {
             name: fullName,
             photoUrl: data.patient_image_url ?? "",
             age: 0,
-            gender: data.gender
+            gender: data.gender,
+            phone: data.phone_number
         )
 
         emailField.text = data.email ?? ""
@@ -989,11 +990,16 @@ class ProfileViewController: AppBaseViewController {
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty } ?? []
 
-        let picker = DiseasePickerViewController(current: current)
-        picker.onConfirm = { [weak self] diseases in
-            self?.diseasesField.text = diseases.joined(separator: ", ")
+        let popup = MultiSelectPopupViewController(
+            title: "Existing Diseases",
+            options: diseases,
+            preselected: current,
+            maxSelection: 5
+        )
+        popup.onConfirm = { [weak self] selected in
+            self?.diseasesField.text = selected.joined(separator: ", ")
         }
-        present(picker, animated: true)
+        present(popup, animated: true)
     }
     
     @objc private func openGenderSelector() {

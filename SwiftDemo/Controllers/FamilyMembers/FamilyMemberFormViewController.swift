@@ -459,11 +459,16 @@ final class FamilyMemberFormViewController: AppBaseViewController {
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty } ?? []
 
-        let picker = DiseasePickerViewController(current: current)
-        picker.onConfirm = { [weak self] diseases in
-            self?.diseasesField.text = diseases.joined(separator: ", ")
+        let popup = MultiSelectPopupViewController(
+            title: "Existing Diseases",
+            options: diseases,
+            preselected: current,
+            maxSelection: 5
+        )
+        popup.onConfirm = { [weak self] selected in
+            self?.diseasesField.text = selected.joined(separator: ", ")
         }
-        present(picker, animated: true)
+        present(popup, animated: true)
     }
 
     @objc private func openHeightSelector() {
