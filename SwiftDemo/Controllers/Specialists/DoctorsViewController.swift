@@ -30,7 +30,7 @@ final class DoctorsViewController: AppBaseViewController {
         super.viewDidLoad()
         
         setScreenTitle(departmentName)
-        view.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         
         setupTableView()
         setupLoadingIndicator()
@@ -43,7 +43,7 @@ final class DoctorsViewController: AppBaseViewController {
     
     // MARK: - Setup UI
     private func setupTableView() {
-        tableView.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        tableView.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         tableView.separatorStyle = .none
         tableView.delegate = self
         tableView.dataSource = self
@@ -62,7 +62,7 @@ final class DoctorsViewController: AppBaseViewController {
     }
     
     private func setupLoadingIndicator() {
-        loadingIndicator.color = .white
+        loadingIndicator.color = UIColor(red: 21/255, green: 85/255, blue: 141/255, alpha: 1)
         loadingIndicator.hidesWhenStopped = true
         loadingIndicator.translatesAutoresizingMaskIntoConstraints = false
         
@@ -77,7 +77,7 @@ final class DoctorsViewController: AppBaseViewController {
     private func setupEmptyLabel() {
         emptyLabel.text = "No doctors available"
         emptyLabel.textAlignment = .center
-        emptyLabel.textColor = .white
+        emptyLabel.textColor = UIColor(white: 0.3, alpha: 1)
         emptyLabel.font = .systemFont(ofSize: 16, weight: .medium)
         emptyLabel.numberOfLines = 0
         emptyLabel.isHidden = true

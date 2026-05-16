@@ -76,9 +76,11 @@ final class FamilyMembersViewController: AppBaseViewController {
 
     // MARK: - API
     private func fetchFamilyMembers() {
+        Loader.shared.show(on: view, message: "Fetching Family Members...", timeout: 5)
 
         ProfileService.shared.getDependents(userId: userId) { [weak self] result in
             DispatchQueue.main.async {
+                Loader.shared.hide()
                 switch result {
                 case .success(let response):
                     self?.familyMembers = response.data
@@ -132,12 +134,14 @@ final class FamilyMembersViewController: AppBaseViewController {
     }
 
     private func deleteMember(_ member: FamilyMember) {
+        Loader.shared.show(on: view, message: "Removing Member...", timeout: 5)
 
         ProfileService.shared.deleteFamilyMember(
             userId: userId,
             dependentId: member.id
         ) { [weak self] result in
             DispatchQueue.main.async {
+                Loader.shared.hide()
                 switch result {
                 case .success(let response):
                     Toast.show(message: response.message, in: self?.view ?? UIView())

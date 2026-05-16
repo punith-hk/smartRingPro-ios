@@ -64,7 +64,7 @@ final class SymptomsViewController: AppBaseViewController {
         super.viewDidLoad()
         
         setScreenTitle("Symptoms")
-        view.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         
         // Load saved gender preference
         loadGenderPreference()
@@ -236,7 +236,7 @@ final class SymptomsViewController: AppBaseViewController {
     private func setupQuestionLabel() {
         questionLabel.text = "Select 4 to 8 symptoms you are facing"
         questionLabel.font = .systemFont(ofSize: 16, weight: .medium)
-        questionLabel.textColor = .white
+        questionLabel.textColor = UIColor(white: 0.15, alpha: 1)
         questionLabel.textAlignment = .center
         questionLabel.numberOfLines = 0
         questionLabel.translatesAutoresizingMaskIntoConstraints = false

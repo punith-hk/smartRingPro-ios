@@ -33,15 +33,12 @@ final class AppointmentsViewController: AppBaseViewController {
     }
     
     // MARK: - UI Components
-    private let tabContainer = UIView()
-    private let appointmentsTabButton = UIButton(type: .system)
-    private let summaryTabButton = UIButton(type: .system)
+    private let segmentCard = UIView()
+    private let segmentedControl = UISegmentedControl(items: ["Appointments", "Summary"])
     
     private let tableView = UITableView()
     private let emptyStateView = UIView()
     private let emptyStateLabel = UILabel()
-    private let loadingView = UIActivityIndicatorView(style: .large)
-    private let loadingLabel = UILabel()
     
     private let TAG = "AppointmentsViewController"
     
@@ -50,13 +47,12 @@ final class AppointmentsViewController: AppBaseViewController {
         super.viewDidLoad()
         
         setScreenTitle("Appointments")
-        view.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         
         setupTabBar()
         setupTableView()
         setupEmptyStateView()
-        setupLoadingView()
-        
+
         // Set initial tab UI state
         updateTabUI()
         
@@ -65,46 +61,43 @@ final class AppointmentsViewController: AppBaseViewController {
     
     // MARK: - Setup UI
     private func setupTabBar() {
-        tabContainer.backgroundColor = .clear
-        tabContainer.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(tabContainer)
-        
-        // Appointments Tab
-        appointmentsTabButton.setTitle("Appointments", for: .normal)
-        appointmentsTabButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-        appointmentsTabButton.backgroundColor = UIColor(red: 0.56, green: 0.93, blue: 0.80, alpha: 1)
-        appointmentsTabButton.setTitleColor(.black, for: .normal)
-        appointmentsTabButton.layer.cornerRadius = 12
-        appointmentsTabButton.translatesAutoresizingMaskIntoConstraints = false
-        appointmentsTabButton.addTarget(self, action: #selector(appointmentsTabTapped), for: .touchUpInside)
-        tabContainer.addSubview(appointmentsTabButton)
-        
-        // Summary Tab
-        summaryTabButton.setTitle("Summary", for: .normal)
-        summaryTabButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
-        summaryTabButton.backgroundColor = .clear
-        summaryTabButton.setTitleColor(.black, for: .normal)
-        summaryTabButton.layer.cornerRadius = 12
-        summaryTabButton.translatesAutoresizingMaskIntoConstraints = false
-        summaryTabButton.addTarget(self, action: #selector(summaryTabTapped), for: .touchUpInside)
-        tabContainer.addSubview(summaryTabButton)
-        
+        // Card container (white pill behind the segmented control)
+        segmentCard.backgroundColor = .white
+        segmentCard.layer.cornerRadius = 12
+        segmentCard.clipsToBounds = true
+        segmentCard.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(segmentCard)
+
+        // Segmented control styled like Day/Week/Month tabs
+        segmentedControl.selectedSegmentIndex = currentTab == .appointments ? 0 : 1
+        segmentedControl.setBackgroundImage(solidColorImage(.white), for: .normal, barMetrics: .default)
+        segmentedControl.setBackgroundImage(solidColorImage(UIColor(red: 0.6, green: 0.95, blue: 0.8, alpha: 1)), for: .selected, barMetrics: .default)
+        segmentedControl.setDividerImage(solidColorImage(UIColor(white: 0.88, alpha: 1)), forLeftSegmentState: .normal, rightSegmentState: .normal, barMetrics: .default)
+        segmentedControl.setTitleTextAttributes([.foregroundColor: UIColor.darkGray], for: .normal)
+        segmentedControl.setTitleTextAttributes([.foregroundColor: UIColor.black, .font: UIFont.boldSystemFont(ofSize: 14)], for: .selected)
+        segmentedControl.translatesAutoresizingMaskIntoConstraints = false
+        segmentedControl.addTarget(self, action: #selector(tabChanged), for: .valueChanged)
+        segmentCard.addSubview(segmentedControl)
+
         NSLayoutConstraint.activate([
-            tabContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
-            tabContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            tabContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            tabContainer.heightAnchor.constraint(equalToConstant: 60),
-            
-            appointmentsTabButton.topAnchor.constraint(equalTo: tabContainer.topAnchor),
-            appointmentsTabButton.leadingAnchor.constraint(equalTo: tabContainer.leadingAnchor),
-            appointmentsTabButton.trailingAnchor.constraint(equalTo: tabContainer.centerXAnchor, constant: -4),
-            appointmentsTabButton.heightAnchor.constraint(equalToConstant: 50),
-            
-            summaryTabButton.topAnchor.constraint(equalTo: tabContainer.topAnchor),
-            summaryTabButton.leadingAnchor.constraint(equalTo: tabContainer.centerXAnchor, constant: 4),
-            summaryTabButton.trailingAnchor.constraint(equalTo: tabContainer.trailingAnchor),
-            summaryTabButton.heightAnchor.constraint(equalToConstant: 50)
+            segmentCard.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            segmentCard.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            segmentCard.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            segmentCard.heightAnchor.constraint(equalToConstant: 44),
+
+            segmentedControl.topAnchor.constraint(equalTo: segmentCard.topAnchor),
+            segmentedControl.bottomAnchor.constraint(equalTo: segmentCard.bottomAnchor),
+            segmentedControl.leadingAnchor.constraint(equalTo: segmentCard.leadingAnchor),
+            segmentedControl.trailingAnchor.constraint(equalTo: segmentCard.trailingAnchor)
         ])
+    }
+
+    private func solidColorImage(_ color: UIColor) -> UIImage {
+        let size = CGSize(width: 1, height: 1)
+        return UIGraphicsImageRenderer(size: size).image { ctx in
+            color.setFill()
+            ctx.fill(CGRect(origin: .zero, size: size))
+        }
     }
     
     private func setupTableView() {
@@ -118,7 +111,7 @@ final class AppointmentsViewController: AppBaseViewController {
         view.addSubview(tableView)
         
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: tabContainer.bottomAnchor, constant: 8),
+            tableView.topAnchor.constraint(equalTo: segmentCard.bottomAnchor, constant: 8),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
@@ -132,7 +125,7 @@ final class AppointmentsViewController: AppBaseViewController {
         view.addSubview(emptyStateView)
         
         emptyStateLabel.text = "No Completed Appointments\n\nCompleted appointments will appear here"
-        emptyStateLabel.textColor = .white
+        emptyStateLabel.textColor = UIColor(white: 0.3, alpha: 1)
         emptyStateLabel.font = .systemFont(ofSize: 16, weight: .medium)
         emptyStateLabel.textAlignment = .center
         emptyStateLabel.numberOfLines = 0
@@ -140,7 +133,7 @@ final class AppointmentsViewController: AppBaseViewController {
         emptyStateView.addSubview(emptyStateLabel)
         
         NSLayoutConstraint.activate([
-            emptyStateView.topAnchor.constraint(equalTo: tabContainer.bottomAnchor, constant: 8),
+            emptyStateView.topAnchor.constraint(equalTo: segmentCard.bottomAnchor, constant: 8),
             emptyStateView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             emptyStateView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             emptyStateView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -149,33 +142,6 @@ final class AppointmentsViewController: AppBaseViewController {
             emptyStateLabel.centerYAnchor.constraint(equalTo: emptyStateView.centerYAnchor),
             emptyStateLabel.leadingAnchor.constraint(equalTo: emptyStateView.leadingAnchor, constant: 40),
             emptyStateLabel.trailingAnchor.constraint(equalTo: emptyStateView.trailingAnchor, constant: -40)
-        ])
-    }
-    
-    private func setupLoadingView() {
-        loadingView.color = .white
-        loadingView.backgroundColor = UIColor.black.withAlphaComponent(0.8)
-        loadingView.layer.cornerRadius = 16
-        loadingView.hidesWhenStopped = true
-        loadingView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(loadingView)
-        
-        loadingLabel.text = "Loading Appointments..."
-        loadingLabel.textColor = .white
-        loadingLabel.font = .systemFont(ofSize: 16, weight: .medium)
-        loadingLabel.textAlignment = .center
-        loadingLabel.translatesAutoresizingMaskIntoConstraints = false
-        loadingView.addSubview(loadingLabel)
-        
-        NSLayoutConstraint.activate([
-            loadingView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            loadingView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            loadingView.widthAnchor.constraint(equalToConstant: 220),
-            loadingView.heightAnchor.constraint(equalToConstant: 120),
-            
-            loadingLabel.bottomAnchor.constraint(equalTo: loadingView.bottomAnchor, constant: -20),
-            loadingLabel.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor, constant: 12),
-            loadingLabel.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor, constant: -12)
         ])
     }
     
@@ -188,14 +154,14 @@ final class AppointmentsViewController: AppBaseViewController {
         }
         
         print("[\(TAG)] 🔄 Fetching appointments for patient: \(patientId)")
-        loadingView.startAnimating()
+        Loader.shared.show(on: view, message: "Fetching Appointments...", timeout: 5)
         
         AppointmentService.shared.getMyAppointments(patientId: patientId) { [weak self] result in
             guard let self = self else { return }
             
             DispatchQueue.main.async {
-                self.loadingView.stopAnimating()
-                
+                Loader.shared.hide()
+
                 switch result {
                 case .success(let response):
                     print("[\(self.TAG)] ✅ Loaded \(response.data.count) appointments")
@@ -224,51 +190,27 @@ final class AppointmentsViewController: AppBaseViewController {
     }
     
     // MARK: - Tab Actions
-    @objc private func appointmentsTabTapped() {
-        print("[\(TAG)] 📋 Appointments tab tapped")
-        currentTab = .appointments
-        updateTabUI()
+    @objc private func tabChanged() {
+        currentTab = segmentedControl.selectedSegmentIndex == 0 ? .appointments : .summary
         tableView.reloadData()
-        
-        // Always show table view for appointments tab
-        tableView.isHidden = false
-        emptyStateView.isHidden = true
-    }
-    
-    @objc private func summaryTabTapped() {
-        print("[\(TAG)] 📊 Summary tab tapped")
-        currentTab = .summary
-        updateTabUI()
-        tableView.reloadData()
-        
-        // Show table view if there are completed appointments, otherwise show empty state
-        let hasCompletedAppointments = !displayedAppointments.isEmpty
-        tableView.isHidden = !hasCompletedAppointments
-        emptyStateView.isHidden = hasCompletedAppointments
-        
-        if hasCompletedAppointments {
-            print("[\(TAG)] 📊 Showing \(displayedAppointments.count) completed appointments")
-        }
-    }
-    
-    private func updateTabUI() {
+
         if currentTab == .appointments {
-            appointmentsTabButton.backgroundColor = UIColor(red: 0.56, green: 0.93, blue: 0.80, alpha: 1)
-            appointmentsTabButton.setTitleColor(.black, for: .normal)
-            appointmentsTabButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-            
-            summaryTabButton.backgroundColor = .clear
-            summaryTabButton.setTitleColor(.black, for: .normal)
-            summaryTabButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
+            print("[\(TAG)] 📋 Appointments tab tapped")
+            tableView.isHidden = false
+            emptyStateView.isHidden = true
         } else {
-            appointmentsTabButton.backgroundColor = .clear
-            appointmentsTabButton.setTitleColor(.black, for: .normal)
-            appointmentsTabButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
-            
-            summaryTabButton.backgroundColor = UIColor(red: 0.56, green: 0.93, blue: 0.80, alpha: 1)
-            summaryTabButton.setTitleColor(.black, for: .normal)
-            summaryTabButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+            print("[\(TAG)] 📊 Summary tab tapped")
+            let hasCompleted = !displayedAppointments.isEmpty
+            tableView.isHidden = !hasCompleted
+            emptyStateView.isHidden = hasCompleted
+            if hasCompleted {
+                print("[\(TAG)] 📊 Showing \(displayedAppointments.count) completed appointments")
+            }
         }
+    }
+
+    private func updateTabUI() {
+        segmentedControl.selectedSegmentIndex = currentTab == .appointments ? 0 : 1
     }
 }
 
@@ -361,7 +303,7 @@ private class AppointmentCell: UITableViewCell {
         
         // Video Icon
         videoIconImageView.image = UIImage(systemName: "video.fill")
-        videoIconImageView.tintColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        videoIconImageView.tintColor = UIColor(red: 21/255, green: 85/255, blue: 141/255, alpha: 1)
         videoIconImageView.contentMode = .scaleAspectFit
         videoIconImageView.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(videoIconImageView)

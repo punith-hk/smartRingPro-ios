@@ -64,7 +64,7 @@ final class AppointmentViewController: AppBaseViewController {
         super.viewDidLoad()
         
         setScreenTitle("Book an Appointment")
-        view.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         
         // Generate time slot mapping
         timeSlotMapping = AppointmentHelper.getTimeSlotMapping()
@@ -202,7 +202,7 @@ final class AppointmentViewController: AppBaseViewController {
         
         // Edit Button (pencil icon)
         editButton.setImage(UIImage(systemName: "square.and.pencil"), for: .normal)
-        editButton.tintColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1) // Blue color
+        editButton.tintColor = UIColor(red: 21/255, green: 85/255, blue: 141/255, alpha: 1)
         editButton.translatesAutoresizingMaskIntoConstraints = false
         editButton.addTarget(self, action: #selector(editSymptomsTapped), for: .touchUpInside)
         symptomsCardView.addSubview(editButton)
@@ -238,7 +238,7 @@ final class AppointmentViewController: AppBaseViewController {
         // Header label
         dateTimeLabel.text = "Choose your preferred Date & Time"
         dateTimeLabel.font = .systemFont(ofSize: 16, weight: .semibold)
-        dateTimeLabel.textColor = .white
+        dateTimeLabel.textColor = UIColor(white: 0.15, alpha: 1)
         dateTimeLabel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(dateTimeLabel)
         
@@ -262,7 +262,7 @@ final class AppointmentViewController: AppBaseViewController {
         // Prev button
         prevButton.setTitle("Prev", for: .normal)
         prevButton.setTitleColor(.white, for: .normal)
-        prevButton.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        prevButton.backgroundColor = UIColor(red: 21/255, green: 85/255, blue: 141/255, alpha: 1)
         prevButton.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
         prevButton.layer.cornerRadius = 8
         prevButton.translatesAutoresizingMaskIntoConstraints = false
@@ -272,7 +272,7 @@ final class AppointmentViewController: AppBaseViewController {
         // Next button
         nextButton.setTitle("Next", for: .normal)
         nextButton.setTitleColor(.white, for: .normal)
-        nextButton.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        nextButton.backgroundColor = UIColor(red: 21/255, green: 85/255, blue: 141/255, alpha: 1)
         nextButton.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
         nextButton.layer.cornerRadius = 8
         nextButton.translatesAutoresizingMaskIntoConstraints = false

@@ -11,14 +11,14 @@ final class SpecialistsViewController: AppBaseViewController {
         super.viewDidLoad()
         
         setScreenTitle("Specialists")
-        view.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         
         setupTableView()
     }
     
     // MARK: - Setup UI
     private func setupTableView() {
-        tableView.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        tableView.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         tableView.separatorStyle = .none
         tableView.delegate = self
         tableView.dataSource = self

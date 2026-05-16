@@ -684,6 +684,7 @@ final class FamilyMemberFormViewController: AppBaseViewController {
 
         switch mode {
         case .add:
+            Loader.shared.show(on: view, message: "Adding Member...", timeout: 5)
             ProfileService.shared.saveFamilyMember(
                 userId: loggedInUserId,
                 params: params,
@@ -692,6 +693,7 @@ final class FamilyMemberFormViewController: AppBaseViewController {
             )
 
         case .edit(let member):
+            Loader.shared.show(on: view, message: "Updating Member...", timeout: 5)
             ProfileService.shared.updateFamilyMember(
                 userId: loggedInUserId,
                 dependentId: member.id,
@@ -704,6 +706,7 @@ final class FamilyMemberFormViewController: AppBaseViewController {
 
     private func handleResponse(_ result: Result<AddProfileDataResponse, NetworkError>) {
         DispatchQueue.main.async {
+            Loader.shared.hide()
 
             switch result {
             case .success:

@@ -596,7 +596,7 @@ class ProfileViewController: AppBaseViewController {
     
     private func fetchUserProfile() {
         
-        Loader.shared.show(on: view)
+        Loader.shared.show(on: view, message: "Fetching Profile...", timeout: 5)
 
         loggedInUserId = UserDefaults.standard.integer(forKey: "id") // USER ID
         guard loggedInUserId > 0 else { return }
@@ -849,7 +849,7 @@ class ProfileViewController: AppBaseViewController {
     
     @objc private func saveProfileTapped() {
         
-        Loader.shared.show(on: view)
+        Loader.shared.show(on: view, message: "Updating Profile...", timeout: 5)
 
         view.endEditing(true)
 
