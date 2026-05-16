@@ -6,9 +6,9 @@ final class UserDefaultsManager {
     private let defaults = UserDefaults.standard
     private init() {}
 
-    // MARK: - SAVE SESSION (Already correct)
+    // MARK: - SAVE SESSION
     func saveOtpResponse(_ response: OtpResponse) {
-        defaults.set(response.accessToken, forKey: "accessToken")
+        defaults.set(response.tokenData?.access_token, forKey: "accessToken")
         defaults.set(response.user, forKey: "user")
         defaults.set(response.email, forKey: "email")
         defaults.set(response.role_code, forKey: "roleCode")
@@ -16,6 +16,10 @@ final class UserDefaultsManager {
         defaults.set(response.id, forKey: "id")  // Regular ID for most APIs
         defaults.set(response.user_id, forKey: "user_id")  // Actual user_id for FCM
         defaults.set(true, forKey: "isLoggedIn")
+    }
+
+    func updateAccessToken(_ token: String) {
+        defaults.set(token, forKey: "accessToken")
     }
 
     // MARK: - SESSION CHECK

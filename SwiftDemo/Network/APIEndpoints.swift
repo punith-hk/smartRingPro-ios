@@ -3,12 +3,13 @@ import Foundation
 enum APIEndpoints {
 
     // MARK: - Base
-    static let baseURL = "https://webapi.mannaheal.com/api/"
+    static let baseURL = "https://hearto.in/api/"
 
     // MARK: - Auth
     static let login = "login"
     static let register = "register"
     static let verifyOtp = "verifyotp"
+    static let refreshToken = "refresh-token"
 
     // MARK: - Health
     static func lastHealthData(userId: Int) -> String {

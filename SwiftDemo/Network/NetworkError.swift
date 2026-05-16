@@ -6,4 +6,5 @@ enum NetworkError: Error {
     case noData
     case decoding
     case encoding
+    case unauthorized   // 401 — session expired, forced logout
 }
