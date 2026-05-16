@@ -34,15 +34,10 @@ class AppBaseViewController: UIViewController {
         navigationController?.navigationBar.tintColor = .white
     }
 
-    // MARK: - Fixed Logo Title View
+    // MARK: - Fixed Logo Title View (logo is now pinned to LogoNavigationController's nav bar)
     private func setupLogoTitleView() {
-        let logoImage = UIImage(named: "ic_logo_hearto")
-        let logoView = UIImageView(image: logoImage)
-        logoView.contentMode = .scaleAspectFit
-        logoView.translatesAutoresizingMaskIntoConstraints = false
-        logoView.widthAnchor.constraint(equalToConstant: 150).isActive = true
-        logoView.heightAnchor.constraint(equalToConstant: 40).isActive = true
-        navigationItem.titleView = logoView
+        // No-op: logo is rendered as a permanent subview of LogoNavigationController
+        // so it never animates during push/pop transitions.
     }
 
     // MARK: - Notification Bell (right bar button)

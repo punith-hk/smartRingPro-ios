@@ -49,7 +49,7 @@ final class CaloriesViewController: AppBaseViewController {
         super.viewDidLoad()
 
         setScreenTitle("Calories")
-        view.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
 
         setupUI()
         setupSyncHelpers()

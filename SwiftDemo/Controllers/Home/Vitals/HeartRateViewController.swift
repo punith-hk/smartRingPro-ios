@@ -51,7 +51,7 @@ final class HeartRateViewController: AppBaseViewController {
         super.viewDidLoad()
 
         setScreenTitle("Heart Rate")
-        view.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
 
         setupUI()
         updateActionUI()
@@ -180,7 +180,7 @@ final class HeartRateViewController: AppBaseViewController {
 
         // Heart rate label
         heartRateTestValue.font = .boldSystemFont(ofSize: 24)
-        heartRateTestValue.textColor = .white
+        heartRateTestValue.textColor = UIColor(white: 0.10, alpha: 1)
         heartRateTestValue.textAlignment = .center
         heartRateTestValue.text = "-- times/min"
         heartRateTestValue.translatesAutoresizingMaskIntoConstraints = false
@@ -188,7 +188,7 @@ final class HeartRateViewController: AppBaseViewController {
 
         // Countdown
         countdownLabel.font = .systemFont(ofSize: 13)
-        countdownLabel.textColor = UIColor.white.withAlphaComponent(0.85)
+        countdownLabel.textColor = UIColor(white: 0.35, alpha: 1)
         countdownLabel.textAlignment = .center
         countdownLabel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(countdownLabel)

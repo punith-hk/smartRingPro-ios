@@ -20,6 +20,7 @@ class VitalChartView: UIView {
     
     // MARK: - UI Components
     private let segmentedControl = UISegmentedControl(items: ["Day", "Week", "Month"])
+    private let segmentCard = UIView()   // white card behind the tab control
     private let chartCard = UIView()
     private let lineChart = LineChartView()
     private let barChart = BarChartView()
@@ -50,11 +51,23 @@ class VitalChartView: UIView {
     
     // MARK: - UI Setup
     private func setupUI() {
+        // Segmented card container (white background — UISegmentedControl ignores backgroundColor on iOS 13+)
+        segmentCard.backgroundColor = .white
+        segmentCard.layer.cornerRadius = 12
+        segmentCard.clipsToBounds = true
+        segmentCard.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(segmentCard)
+
         // Segmented control
         segmentedControl.selectedSegmentIndex = 0
-        segmentedControl.selectedSegmentTintColor = UIColor(red: 0.6, green: 0.95, blue: 0.8, alpha: 1)
+        // Use background images — UISegmentedControl ignores backgroundColor on iOS 13+
+        segmentedControl.setBackgroundImage(solidColorImage(.white), for: .normal, barMetrics: .default)
+        segmentedControl.setBackgroundImage(solidColorImage(UIColor(red: 0.6, green: 0.95, blue: 0.8, alpha: 1)), for: .selected, barMetrics: .default)
+        segmentedControl.setDividerImage(solidColorImage(UIColor(white: 0.88, alpha: 1)), forLeftSegmentState: .normal, rightSegmentState: .normal, barMetrics: .default)
+        segmentedControl.setTitleTextAttributes([.foregroundColor: UIColor.darkGray], for: .normal)
+        segmentedControl.setTitleTextAttributes([.foregroundColor: UIColor.black, .font: UIFont.boldSystemFont(ofSize: 13)], for: .selected)
         segmentedControl.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(segmentedControl)
+        segmentCard.addSubview(segmentedControl)
         segmentedControl.addTarget(self, action: #selector(rangeChanged), for: .valueChanged)
         
         // Chart card
@@ -123,12 +136,17 @@ class VitalChartView: UIView {
         
         // Layout
         NSLayoutConstraint.activate([
-            segmentedControl.topAnchor.constraint(equalTo: topAnchor),
-            segmentedControl.leadingAnchor.constraint(equalTo: leadingAnchor),
-            segmentedControl.trailingAnchor.constraint(equalTo: trailingAnchor),
-            segmentedControl.heightAnchor.constraint(equalToConstant: 32),
-            
-            chartCard.topAnchor.constraint(equalTo: segmentedControl.bottomAnchor, constant: 16),
+            segmentCard.topAnchor.constraint(equalTo: topAnchor),
+            segmentCard.leadingAnchor.constraint(equalTo: leadingAnchor),
+            segmentCard.trailingAnchor.constraint(equalTo: trailingAnchor),
+            segmentCard.heightAnchor.constraint(equalToConstant: 44),
+
+            segmentedControl.topAnchor.constraint(equalTo: segmentCard.topAnchor),
+            segmentedControl.leadingAnchor.constraint(equalTo: segmentCard.leadingAnchor),
+            segmentedControl.trailingAnchor.constraint(equalTo: segmentCard.trailingAnchor),
+            segmentedControl.bottomAnchor.constraint(equalTo: segmentCard.bottomAnchor),
+
+            chartCard.topAnchor.constraint(equalTo: segmentCard.bottomAnchor, constant: 16),
             chartCard.leadingAnchor.constraint(equalTo: leadingAnchor),
             chartCard.trailingAnchor.constraint(equalTo: trailingAnchor),
             chartCard.heightAnchor.constraint(equalToConstant: 230),
@@ -711,6 +729,15 @@ class VitalChartView: UIView {
         monthEndDate = end
     }
     
+    // MARK: - Helpers
+    private func solidColorImage(_ color: UIColor) -> UIImage {
+        let size = CGSize(width: 1, height: 1)
+        return UIGraphicsImageRenderer(size: size).image { ctx in
+            color.setFill()
+            ctx.fill(CGRect(origin: .zero, size: size))
+        }
+    }
+
     // MARK: - Actions
     @objc private func rangeChanged() {
         // Reset to current date when switching tabs

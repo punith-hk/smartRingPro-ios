@@ -105,7 +105,7 @@ final class HealthVitalsViewController: AppBaseViewController {
         super.viewDidLoad()
 
         setScreenTitle(vitalType.displayName)
-        view.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
 
         setupUI()
         updateActionUI()
@@ -357,7 +357,7 @@ final class HealthVitalsViewController: AppBaseViewController {
 
         // Measurement value label
         measurementValueLabel.font = .boldSystemFont(ofSize: 24)
-        measurementValueLabel.textColor = .white
+        measurementValueLabel.textColor = UIColor(white: 0.10, alpha: 1)
         measurementValueLabel.textAlignment = .center
         measurementValueLabel.text = "-- \(vitalType.unit)"
         measurementValueLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -365,7 +365,7 @@ final class HealthVitalsViewController: AppBaseViewController {
 
         // Countdown
         countdownLabel.font = .systemFont(ofSize: 13)
-        countdownLabel.textColor = UIColor.white.withAlphaComponent(0.85)
+        countdownLabel.textColor = UIColor(white: 0.35, alpha: 1)
         countdownLabel.textAlignment = .center
         countdownLabel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(countdownLabel)

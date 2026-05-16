@@ -34,13 +34,13 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         sectionColor: UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1))
     private let metabolicSection = DashboardSectionView(
         title: "Metabolic & Body",
-        sectionColor: UIColor(red: 250/255, green: 250/255, blue: 252/255, alpha: 1))
+        sectionColor: UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1))
     private let sleepSection    = DashboardSectionView(
         title: "Sleep & Stress",
         sectionColor: UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1))
     private let insightsSection = DashboardSectionView(
         title: "Insights & Alerts",
-        sectionColor: UIColor(red: 250/255, green: 250/255, blue: 252/255, alpha: 1))
+        sectionColor: UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1))
 
     // MARK: - Card References — Cardiovascular
     private var heartRateCard:   DashboardVitalCardV2!
@@ -234,7 +234,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             iconBg: UIColor(red: 0.95, green: 0.88, blue: 1, alpha: 1),
             title: "HRV", value: "--", unit: "ms")
         hrvCard.onTap = { [weak self] in
-            self?.push(HrvViewController())
+            self?.push(HealthVitalsViewController(vitalType: .hrv))
         }
 
         ecgCard = makeCard(
@@ -264,7 +264,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             title: "Blood Pressure", value: "--/--", unit: "mmHg")
         bloodPressCard.setUnitBelow()
         bloodPressCard.onTap = { [weak self] in
-            self?.push(BloodPressureViewController())
+            self?.push(HealthVitalsViewController(vitalType: .bloodPressure))
         }
 
         bloodOxyCard = makeCard(
@@ -273,7 +273,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             iconBg: UIColor(red: 1, green: 0.88, blue: 0.88, alpha: 1),
             title: "Blood Oxygen", value: "--", unit: "%")
         bloodOxyCard.onTap = { [weak self] in
-            self?.push(BloodOxygenViewController())
+            self?.push(HealthVitalsViewController(vitalType: .bloodOxygen))
         }
 
         cardioSection.translatesAutoresizingMaskIntoConstraints = false
@@ -319,7 +319,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             iconBg: UIColor(red: 1, green: 0.94, blue: 0.88, alpha: 1),
             title: "Blood Glucose", value: "--", unit: "mg/dL")
         glucoseCard.onTap = { [weak self] in
-            self?.push(BloodGlucoseViewController())
+            self?.push(HealthVitalsViewController(vitalType: .bloodGlucose))
         }
 
         bodyTempCard = makeCard(
@@ -328,7 +328,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             iconBg: UIColor(red: 1, green: 0.94, blue: 0.88, alpha: 1),
             title: "Body Temp", value: "--", unit: "°C")
         bodyTempCard.onTap = { [weak self] in
-            self?.push(TemperatureViewController())
+            self?.push(HealthVitalsViewController(vitalType: .temperature))
         }
 
         metabolicSection.translatesAutoresizingMaskIntoConstraints = false

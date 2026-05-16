@@ -18,6 +18,7 @@ final class SleepViewController: AppBaseViewController {
 
     // MARK: - Tab Selection
     private let segmentedControl = UISegmentedControl(items: ["Day", "Week", "Month"])
+    private let segmentCard = UIView()
 
     // MARK: - Chart Card
     private let chartCard = UIView()
@@ -61,7 +62,7 @@ final class SleepViewController: AppBaseViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setScreenTitle("Sleep")
-        view.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         setupUI()
     }
     
@@ -119,17 +120,32 @@ final class SleepViewController: AppBaseViewController {
     }
 
     private func setupSegmentedControl() {
+        segmentCard.backgroundColor = .white
+        segmentCard.layer.cornerRadius = 12
+        segmentCard.clipsToBounds = true
+        segmentCard.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(segmentCard)
+
         segmentedControl.selectedSegmentIndex = 0
-        segmentedControl.selectedSegmentTintColor = UIColor(red: 0.6, green: 0.95, blue: 0.8, alpha: 1)
+        segmentedControl.setBackgroundImage(solidColorImage(.white), for: .normal, barMetrics: .default)
+        segmentedControl.setBackgroundImage(solidColorImage(UIColor(red: 0.6, green: 0.95, blue: 0.8, alpha: 1)), for: .selected, barMetrics: .default)
+        segmentedControl.setDividerImage(solidColorImage(UIColor(white: 0.88, alpha: 1)), forLeftSegmentState: .normal, rightSegmentState: .normal, barMetrics: .default)
+        segmentedControl.setTitleTextAttributes([.foregroundColor: UIColor.darkGray], for: .normal)
+        segmentedControl.setTitleTextAttributes([.foregroundColor: UIColor.black, .font: UIFont.boldSystemFont(ofSize: 13)], for: .selected)
         segmentedControl.translatesAutoresizingMaskIntoConstraints = false
         segmentedControl.addTarget(self, action: #selector(rangeChanged), for: .valueChanged)
-        contentView.addSubview(segmentedControl)
+        segmentCard.addSubview(segmentedControl)
 
         NSLayoutConstraint.activate([
-            segmentedControl.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            segmentedControl.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            segmentedControl.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            segmentedControl.heightAnchor.constraint(equalToConstant: 32)
+            segmentCard.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            segmentCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            segmentCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            segmentCard.heightAnchor.constraint(equalToConstant: 44),
+
+            segmentedControl.topAnchor.constraint(equalTo: segmentCard.topAnchor),
+            segmentedControl.leadingAnchor.constraint(equalTo: segmentCard.leadingAnchor),
+            segmentedControl.trailingAnchor.constraint(equalTo: segmentCard.trailingAnchor),
+            segmentedControl.bottomAnchor.constraint(equalTo: segmentCard.bottomAnchor),
         ])
     }
 
@@ -199,7 +215,7 @@ final class SleepViewController: AppBaseViewController {
         chartCard.addSubview(chartPlaceholder)
 
         NSLayoutConstraint.activate([
-            chartCard.topAnchor.constraint(equalTo: segmentedControl.bottomAnchor, constant: 16),
+            chartCard.topAnchor.constraint(equalTo: segmentCard.bottomAnchor, constant: 16),
             chartCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             chartCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             chartCard.heightAnchor.constraint(equalToConstant: 280),
@@ -395,6 +411,14 @@ final class SleepViewController: AppBaseViewController {
     }
 
     // MARK: - Range Selection
+    private func solidColorImage(_ color: UIColor) -> UIImage {
+        let size = CGSize(width: 1, height: 1)
+        return UIGraphicsImageRenderer(size: size).image { ctx in
+            color.setFill()
+            ctx.fill(CGRect(origin: .zero, size: size))
+        }
+    }
+
     @objc private func rangeChanged() {
         // Reset to current date when switching tabs
         currentDate = Date()

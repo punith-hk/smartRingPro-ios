@@ -68,7 +68,7 @@ class MainTabBarController: UITabBarController {
         vc.setScreenTitle(title)
         vc.showHamburger()
 
-        let nav = UINavigationController(rootViewController: vc)
+        let nav = LogoNavigationController(rootViewController: vc)
         nav.tabBarItem = UITabBarItem(
             title: title,
             image: UIImage(systemName: icon),
