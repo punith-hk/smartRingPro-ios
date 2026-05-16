@@ -23,6 +23,13 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
 
         sideMenuVC.delegate = self
 
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(closeMenu),
+            name: .init("SideMenuCloseRequested"),
+            object: nil
+        )
+
         // MAIN CONTENT
         addChild(mainTabsVC)
         mainTabsVC.view.frame = view.bounds
@@ -134,6 +141,10 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
         case .referFriend:
             let vc = ReferFriendViewController()
                 mainTabsVC.pushScreen(vc, title: "Refer a Friend")
+
+        case .helpSupport:
+            let vc = HelpSupportViewController()
+            mainTabsVC.pushScreen(vc, title: "Help & Support")
 
         case .logout:
             showLogoutConfirmation()
