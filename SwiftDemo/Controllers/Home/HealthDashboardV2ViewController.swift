@@ -62,6 +62,26 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     private var sleepQualityCard:  DashboardVitalCardV2!
     private var stressCard:        DashboardVitalCardV2!
 
+    // MARK: - Cached Cardio Vitals (used when navigating to CardiovascularStatusViewController)
+    private var cachedHR: Int = 0
+    private var cachedHRStatus: String = "--"
+    private var cachedPrevHR: Int = 0
+    private var cachedHRV: Int = 0
+    private var cachedHRVStatus: String = "--"
+    private var cachedPrevHRV: Int = 0
+    private var cachedSBP: Int = 0
+    private var cachedDBP: Int = 0
+    private var cachedBPStatus: String = "--"
+    private var cachedPrevSBP: Int = 0
+    private var cachedPrevDBP: Int = 0
+    private var cachedSPO2: Int = 0
+    private var cachedSPO2Status: String = "--"
+    private var cachedPrevSPO2: Int = 0
+    private var cachedECGScore: Int = 0
+    private var cachedECGStatus: String = "--"
+    private var cachedPrevECGScore: Int = 0
+    private var cachedLastSyncMillis: Int64 = 0
+
     // MARK: - Alert Card
     private let alertCard = UIView()
     private let alertIconContainer = UIView()
@@ -225,7 +245,11 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             iconBg: UIColor(red: 1, green: 0.88, blue: 0.88, alpha: 1),
             title: "Heart Rate", value: "--", unit: "BPM")
         heartRateCard.onTap = { [weak self] in
-            self?.push(HeartRateViewController())
+            guard let self = self else { return }
+            let vc = CardiovascularStatusViewController()
+            vc.vitalType = .heartRate
+            self.populateCardioVC(vc)
+            self.push(vc)
         }
 
         hrvCard = makeCard(
@@ -234,7 +258,11 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             iconBg: UIColor(red: 0.95, green: 0.88, blue: 1, alpha: 1),
             title: "HRV", value: "--", unit: "ms")
         hrvCard.onTap = { [weak self] in
-            self?.push(HealthVitalsViewController(vitalType: .hrv))
+            guard let self = self else { return }
+            let vc = CardiovascularStatusViewController()
+            vc.vitalType = .hrv
+            self.populateCardioVC(vc)
+            self.push(vc)
         }
 
         ecgCard = makeCard(
@@ -243,7 +271,11 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             iconBg: UIColor(red: 0.88, green: 0.89, blue: 1, alpha: 1),
             title: "ECG", value: "--", unit: "score")
         ecgCard.onTap = { [weak self] in
-            self?.push(ECGViewController())
+            guard let self = self else { return }
+            let vc = CardiovascularStatusViewController()
+            vc.vitalType = .ecg
+            self.populateCardioVC(vc)
+            self.push(vc)
         }
 
         // Row 2
@@ -254,7 +286,11 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             title: "ECG Details", value: "--", unit: "")
         ecgDetailsCard.setValueFontSize(14)
         ecgDetailsCard.onTap = { [weak self] in
-            self?.push(ECGViewController())
+            guard let self = self else { return }
+            let vc = CardiovascularStatusViewController()
+            vc.vitalType = .ecg
+            self.populateCardioVC(vc)
+            self.push(vc)
         }
 
         bloodPressCard = makeCard(
@@ -264,7 +300,11 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             title: "Blood Pressure", value: "--/--", unit: "mmHg")
         bloodPressCard.setUnitBelow()
         bloodPressCard.onTap = { [weak self] in
-            self?.push(HealthVitalsViewController(vitalType: .bloodPressure))
+            guard let self = self else { return }
+            let vc = CardiovascularStatusViewController()
+            vc.vitalType = .bloodPressure
+            self.populateCardioVC(vc)
+            self.push(vc)
         }
 
         bloodOxyCard = makeCard(
@@ -273,7 +313,11 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             iconBg: UIColor(red: 1, green: 0.88, blue: 0.88, alpha: 1),
             title: "Blood Oxygen", value: "--", unit: "%")
         bloodOxyCard.onTap = { [weak self] in
-            self?.push(HealthVitalsViewController(vitalType: .bloodOxygen))
+            guard let self = self else { return }
+            let vc = CardiovascularStatusViewController()
+            vc.vitalType = .bloodOxygen
+            self.populateCardioVC(vc)
+            self.push(vc)
         }
 
         cardioSection.translatesAutoresizingMaskIntoConstraints = false
@@ -549,6 +593,20 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         let sbp       = Int(latestBP?.systolicValue                       ?? 0)
         let dbp       = Int(latestBP?.diastolicValue                      ?? 0)
         let spo2      = Int(bloodOxygenRepo.getLatestEntry()?.oxygenValue ?? 0)
+
+        // Previous values for trend arrows
+        let allHR   = heartRateRepo.getAll()
+        let allHRV  = hrvRepo.getAll()
+        let allBP   = bpRepo.getAll()
+        let allSPO2 = bloodOxygenRepo.getAll()
+        cachedPrevHR  = allHR.count  > 1 ? Int(allHR[1].bpm)           : 0
+        cachedPrevHRV = allHRV.count > 1 ? Int(allHRV[1].hrvValue)     : 0
+        cachedPrevSBP = allBP.count  > 1 ? Int(allBP[1].systolicValue)  : 0
+        cachedPrevDBP = allBP.count  > 1 ? Int(allBP[1].diastolicValue) : 0
+        cachedPrevSPO2 = allSPO2.count > 1 ? Int(allSPO2[1].oxygenValue) : 0
+
+        // Cache last sync millis
+        if let lastSync = allHR.first { cachedLastSyncMillis = Int64(lastSync.timestamp * 1000) }
         let latestStp = stepsRepo.getLatestEntry()
         let steps     = Int(latestStp?.steps                              ?? 0)
         let calories  = Int(latestStp?.calories                           ?? 0)
@@ -586,6 +644,10 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
                     diagnoseType: latest.diagnoseType,
                     heartRate: latest.heartRate,
                     hrv: latest.hrv)
+                // Cache previous ECG score (second record)
+                if records.count > 1 {
+                    self.cachedPrevECGScore = HealthScoreCalculator.ecgScore(from: records[1])
+                }
                 self.applyECGData(score: score, statusText: status)
                 self.applyHealthScore(hr: hr, hrv: hrv, sbp: sbp, dbp: dbp,
                                       spo2: spo2, calories: calories, ecgScore: score)
@@ -605,6 +667,8 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     }
 
     private func applyHeartRate(_ hr: Int) {
+        cachedHR = hr
+        cachedHRStatus = hrStatus(hr).0
         let text = hr > 0 ? "\(hr)" : "--"
         heartRateCard.updateValue(text, unit: "BPM")
         let (status, color) = hrStatus(hr)
@@ -612,6 +676,8 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     }
 
     private func applyHRV(_ hrv: Int) {
+        cachedHRV = hrv
+        cachedHRVStatus = hrvStatus(hrv).0
         let text = hrv > 0 ? "\(hrv)" : "--"
         hrvCard.updateValue(text, unit: "ms")
         let (status, color) = hrvStatus(hrv)
@@ -619,6 +685,9 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     }
 
     private func applyBloodPressure(sbp: Int, dbp: Int) {
+        cachedSBP = sbp
+        cachedDBP = dbp
+        cachedBPStatus = bpStatus(sbp: sbp, dbp: dbp).0
         let text = (sbp > 0 && dbp > 0) ? "\(sbp)/\(dbp)" : "--/--"
         bloodPressCard.updateValue(text, unit: "mmHg")
         let (status, color) = bpStatus(sbp: sbp, dbp: dbp)
@@ -626,6 +695,8 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     }
 
     private func applyBloodOxygen(_ spo2: Int) {
+        cachedSPO2 = spo2
+        cachedSPO2Status = spo2Status(spo2).0
         let text = spo2 > 0 ? "\(spo2)" : "--"
         bloodOxyCard.updateValue(text, unit: "%")
         let (status, color) = spo2Status(spo2)
@@ -633,6 +704,8 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     }
 
     private func applyECGData(score: Int, statusText: String) {
+        cachedECGScore = score
+        cachedECGStatus = statusText
         ecgCard.updateValue(score > 0 ? "\(score)" : "--", unit: "score")
         let (ecgCardStatus, ecgColor) = ecgCardStatus(score)
         ecgCard.updateStatus(text: ecgCardStatus, color: ecgColor)
@@ -958,6 +1031,27 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
 
     @objc private func alertCardTapped() {
         showPlaceholder(title: "Notifications")
+    }
+
+    private func populateCardioVC(_ vc: CardiovascularStatusViewController) {
+        vc.heartRate          = cachedHR
+        vc.heartRateStatus    = cachedHRStatus
+        vc.previousHeartRate  = cachedPrevHR
+        vc.hrv                = cachedHRV
+        vc.hrvStatus          = cachedHRVStatus
+        vc.previousHrv        = cachedPrevHRV
+        vc.bloodPressureSystolic  = cachedSBP
+        vc.bloodPressureDiastolic = cachedDBP
+        vc.bloodPressureStatus    = cachedBPStatus
+        vc.previousSystolic   = cachedPrevSBP
+        vc.previousDiastolic  = cachedPrevDBP
+        vc.spo2               = cachedSPO2
+        vc.spo2Status         = cachedSPO2Status
+        vc.previousSpo2       = cachedPrevSPO2
+        vc.ecgValue           = cachedECGScore
+        vc.ecgStatus          = cachedECGStatus
+        vc.previousEcg        = cachedPrevECGScore
+        vc.lastSyncMillis     = cachedLastSyncMillis
     }
 
     private func push(_ vc: UIViewController) {
