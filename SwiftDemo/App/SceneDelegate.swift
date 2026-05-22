@@ -45,7 +45,28 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             window.rootViewController = nav
         }
 
+        setupGlobalNavBarAppearance()
         window.makeKeyAndVisible()
+    }
+
+    // MARK: - Global Nav Bar Appearance (set ONCE; never changed per-VC)
+    private func setupGlobalNavBarAppearance() {
+        let navColor = UIColor(red: 21/255, green: 85/255, blue: 141/255, alpha: 1)
+
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = navColor
+        // Logo is a permanent subview of LogoNavigationController — hide text title
+        appearance.titleTextAttributes = [.foregroundColor: UIColor.clear]
+        // Hide back button text; keep the white chevron arrow
+        appearance.backButtonAppearance.normal.titleTextAttributes = [
+            .foregroundColor: UIColor.clear
+        ]
+
+        UINavigationBar.appearance().standardAppearance    = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance  = appearance
+        UINavigationBar.appearance().compactAppearance     = appearance
+        UINavigationBar.appearance().tintColor             = .white
     }
 
     // MARK: - BLE Initialization (ONE TIME)

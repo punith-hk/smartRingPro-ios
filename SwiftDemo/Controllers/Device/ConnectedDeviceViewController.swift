@@ -22,6 +22,14 @@ class ConnectedDeviceViewController: AppBaseViewController {
     // Firmware row
     private let firmwareValueLabel = UILabel()
 
+    // Loading overlay
+    private let loadingOverlay: UIView = {
+        let v = UIView()
+        v.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
+        v.translatesAutoresizingMaskIntoConstraints = false
+        return v
+    }()
+
     // MARK: - Connection UI State
     private var isBlinking = false
 
@@ -31,6 +39,14 @@ class ConnectedDeviceViewController: AppBaseViewController {
         setScreenTitle("Device")
         view.backgroundColor = bgColor
         buildUI()
+        // Only show loader when BLE is actually active (SDK will respond)
+        if DeviceSessionManager.shared.isDeviceActuallyConnected() {
+            setupLoadingOverlay()
+            // Safety net: dismiss loader after 5 s even if SDK never calls back
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+                self?.hideLoadingOverlay()
+            }
+        }
         populateCachedDeviceInfo()
         fetchAndUpdateDeviceBasicInfo()
 
@@ -52,6 +68,7 @@ class ConnectedDeviceViewController: AppBaseViewController {
     private func buildUI() {
         scrollView.backgroundColor = bgColor
         scrollView.alwaysBounceVertical = true
+        scrollView.delaysContentTouches = false
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         contentView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scrollView)
@@ -62,11 +79,11 @@ class ConnectedDeviceViewController: AppBaseViewController {
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            contentView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
-            contentView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
         ])
 
         let deviceCard   = buildDeviceCard()
@@ -384,6 +401,7 @@ class ConnectedDeviceViewController: AppBaseViewController {
         YCProduct.queryDeviceBasicInfo { [weak self] state, response in
             guard let self = self else { return }
             DispatchQueue.main.async {
+                self.hideLoadingOverlay()
                 guard state == .succeed, let info = response as? YCDeviceBasicInfo else {
                     self.firmwareValueLabel.text = "--"
                     self.updateBatteryUI(power: nil, status: nil)
@@ -395,6 +413,47 @@ class ConnectedDeviceViewController: AppBaseViewController {
                 self.updateFirmware(info.mcuFirmware)
             }
         }
+    }
+
+    // MARK: - Loading Overlay
+    private func setupLoadingOverlay() {
+        view.addSubview(loadingOverlay)
+        NSLayoutConstraint.activate([
+            loadingOverlay.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            loadingOverlay.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            loadingOverlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            loadingOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+
+        let spinner = UIActivityIndicatorView(style: .large)
+        spinner.color = UIColor(red: 13/255, green: 153/255, blue: 255/255, alpha: 1)
+        spinner.translatesAutoresizingMaskIntoConstraints = false
+        spinner.startAnimating()
+
+        let label = UILabel()
+        label.text = "Loading device info…"
+        label.font = .systemFont(ofSize: 14)
+        label.textColor = UIColor(red: 50/255, green: 80/255, blue: 120/255, alpha: 1)
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        let stack = UIStackView(arrangedSubviews: [spinner, label])
+        stack.axis = .vertical
+        stack.spacing = 12
+        stack.alignment = .center
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        loadingOverlay.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: loadingOverlay.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: loadingOverlay.centerYAnchor),
+        ])
+    }
+
+    private func hideLoadingOverlay() {
+        UIView.animate(withDuration: 0.3, animations: {
+            self.loadingOverlay.alpha = 0
+        }, completion: { _ in
+            self.loadingOverlay.isHidden = true
+        })
     }
 
     private func updateFirmware(_ version: YCDeviceVersionInfo?) {

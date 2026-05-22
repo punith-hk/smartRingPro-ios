@@ -23,6 +23,7 @@ class DeviceSettingsViewController: AppBaseViewController {
         let scroll = UIScrollView()
         scroll.backgroundColor = bgColor
         scroll.alwaysBounceVertical = true
+        scroll.delaysContentTouches = false
         scroll.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scroll)
 
@@ -36,11 +37,11 @@ class DeviceSettingsViewController: AppBaseViewController {
             scroll.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scroll.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scroll.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            content.topAnchor.constraint(equalTo: scroll.contentLayoutGuide.topAnchor),
-            content.bottomAnchor.constraint(equalTo: scroll.contentLayoutGuide.bottomAnchor),
-            content.leadingAnchor.constraint(equalTo: scroll.contentLayoutGuide.leadingAnchor),
-            content.trailingAnchor.constraint(equalTo: scroll.contentLayoutGuide.trailingAnchor),
-            content.widthAnchor.constraint(equalTo: scroll.frameLayoutGuide.widthAnchor),
+            content.topAnchor.constraint(equalTo: scroll.topAnchor),
+            content.leadingAnchor.constraint(equalTo: scroll.leadingAnchor),
+            content.trailingAnchor.constraint(equalTo: scroll.trailingAnchor),
+            content.bottomAnchor.constraint(equalTo: scroll.bottomAnchor),
+            content.widthAnchor.constraint(equalTo: scroll.widthAnchor),
         ])
 
         // Page title
@@ -49,7 +50,6 @@ class DeviceSettingsViewController: AppBaseViewController {
         pageTitleLbl.font = .systemFont(ofSize: 22, weight: .bold)
         pageTitleLbl.textColor = .black
         pageTitleLbl.translatesAutoresizingMaskIntoConstraints = false
-        content.addSubview(pageTitleLbl)
 
         // Firmware version
         let currentFirmware = DeviceInfoManager.shared.getFirmwareVersion()
@@ -78,31 +78,32 @@ class DeviceSettingsViewController: AppBaseViewController {
         let cardStack = UIStackView(arrangedSubviews: [resetCard, firmwareCard])
         cardStack.axis = .vertical
         cardStack.spacing = 14
-        cardStack.translatesAutoresizingMaskIntoConstraints = false
-        content.addSubview(cardStack)
 
         [resetCard, firmwareCard].forEach {
             $0.heightAnchor.constraint(equalToConstant: 72).isActive = true
         }
 
         // Info banner (shown when disconnected)
+        // Wrapped in UIStackView so hiding it also collapses its space
         let infoBanner = buildInfoBanner()
         let isConnected = DeviceSessionManager.shared.isDeviceActuallyConnected()
         infoBanner.isHidden = isConnected
-        content.addSubview(infoBanner)
+
+        let outerStack = UIStackView(arrangedSubviews: [cardStack, infoBanner])
+        outerStack.axis = .vertical
+        outerStack.spacing = 16
+        outerStack.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(pageTitleLbl)
+        content.addSubview(outerStack)
 
         NSLayoutConstraint.activate([
             pageTitleLbl.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
             pageTitleLbl.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
 
-            cardStack.topAnchor.constraint(equalTo: pageTitleLbl.bottomAnchor, constant: 16),
-            cardStack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 16),
-            cardStack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -16),
-
-            infoBanner.topAnchor.constraint(equalTo: cardStack.bottomAnchor, constant: 16),
-            infoBanner.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 16),
-            infoBanner.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -16),
-            infoBanner.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -24),
+            outerStack.topAnchor.constraint(equalTo: pageTitleLbl.bottomAnchor, constant: 16),
+            outerStack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 16),
+            outerStack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -16),
+            outerStack.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -24),
         ])
     }
 
@@ -219,10 +220,7 @@ class DeviceSettingsViewController: AppBaseViewController {
 
     // MARK: - Actions
     @objc private func resetRingTapped() {
-        guard DeviceSessionManager.shared.isDeviceActuallyConnected() else {
-            showNotConnectedAlert()
-            return
-        }
+        // Show confirmation first, check connection on confirm
         let alert = UIAlertController(
             title: "Reset Ring",
             message: "This will restore the device to factory settings. All data on the ring will be erased. Continue?",
@@ -230,16 +228,20 @@ class DeviceSettingsViewController: AppBaseViewController {
         )
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Yes, Reset", style: .destructive) { [weak self] _ in
-            self?.performReset()
+            guard let self = self else { return }
+            // Wait for confirmation alert dismiss animation before presenting next
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                guard DeviceSessionManager.shared.isDeviceActuallyConnected() else {
+                    self.showNotConnectedAlert()
+                    return
+                }
+                self.performReset()
+            }
         })
         present(alert, animated: true)
     }
 
     @objc private func updateFirmwareTapped() {
-        guard DeviceSessionManager.shared.isDeviceActuallyConnected() else {
-            showNotConnectedAlert()
-            return
-        }
         let currentFirmware = DeviceInfoManager.shared.getFirmwareVersion()
         let alert = UIAlertController(
             title: "Update Firmware",

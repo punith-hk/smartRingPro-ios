@@ -10,28 +10,10 @@ class AppBaseViewController: UIViewController {
     }
 
     // MARK: - Nav Bar Style
+    // Appearance is set ONCE globally in SceneDelegate via UINavigationBar.appearance().
+    // Never touch it per-VC — that's what was causing the animation glitch on push/pop.
     private func setupNavigationBar() {
         navigationController?.navigationBar.isHidden = false
-
-        // Dark blue #15558D
-        let navColor = UIColor(red: 21/255, green: 85/255, blue: 141/255, alpha: 1)
-
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = navColor
-        // Hide text title — logo replaces it
-        appearance.titleTextAttributes = [.foregroundColor: UIColor.clear]
-        // Hide back button text, keep white arrow
-        appearance.backButtonAppearance.normal.titleTextAttributes = [
-            .foregroundColor: UIColor.clear
-        ]
-
-        navigationItem.standardAppearance = appearance
-        navigationItem.scrollEdgeAppearance = appearance
-        navigationItem.compactAppearance = appearance
-
-        // Back arrow & bar buttons tint → white
-        navigationController?.navigationBar.tintColor = .white
     }
 
     // MARK: - Fixed Logo Title View (logo is now pinned to LogoNavigationController's nav bar)

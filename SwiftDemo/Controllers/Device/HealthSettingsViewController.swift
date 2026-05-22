@@ -38,6 +38,7 @@ class HealthSettingsViewController: AppBaseViewController {
         let scroll = UIScrollView()
         scroll.backgroundColor = bgColor
         scroll.alwaysBounceVertical = true
+        scroll.delaysContentTouches = false
         scroll.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scroll)
 
@@ -51,11 +52,11 @@ class HealthSettingsViewController: AppBaseViewController {
             scroll.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scroll.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scroll.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            content.topAnchor.constraint(equalTo: scroll.contentLayoutGuide.topAnchor),
-            content.bottomAnchor.constraint(equalTo: scroll.contentLayoutGuide.bottomAnchor),
-            content.leadingAnchor.constraint(equalTo: scroll.contentLayoutGuide.leadingAnchor),
-            content.trailingAnchor.constraint(equalTo: scroll.contentLayoutGuide.trailingAnchor),
-            content.widthAnchor.constraint(equalTo: scroll.frameLayoutGuide.widthAnchor),
+            content.topAnchor.constraint(equalTo: scroll.topAnchor),
+            content.leadingAnchor.constraint(equalTo: scroll.leadingAnchor),
+            content.trailingAnchor.constraint(equalTo: scroll.trailingAnchor),
+            content.bottomAnchor.constraint(equalTo: scroll.bottomAnchor),
+            content.widthAnchor.constraint(equalTo: scroll.widthAnchor),
         ])
 
         // Page title
@@ -224,6 +225,7 @@ class HealthSettingsViewController: AppBaseViewController {
                   let unit = AppSettingsManager.TemperatureUnit(rawValue: value) else { return }
             AppSettingsManager.shared.setTemperatureUnit(unit)
             self.tempSubLbl?.text = unit.rawValue
+            Toast.show(message: "Temperature unit set to \(unit.rawValue)", in: self.view)
             NotificationCenter.default.post(name: .temperatureUnitChanged, object: nil)
         }
         present(popup, animated: true)
@@ -269,7 +271,9 @@ class HealthSettingsViewController: AppBaseViewController {
             if let idx = options.firstIndex(of: value) {
                 let steps = self.stepsOptions[idx]
                 AppSettingsManager.shared.setStepsTarget(steps)
-                self.stepsSubLbl?.text = self.formatSteps(steps)
+                let formatted = self.formatSteps(steps)
+                self.stepsSubLbl?.text = formatted
+                Toast.show(message: "Daily steps target set to \(formatted)", in: self.view)
             }
         }
         present(popup, animated: true)
@@ -290,7 +294,9 @@ class HealthSettingsViewController: AppBaseViewController {
             if let idx = options.firstIndex(of: value) {
                 let minutes = self.sleepOptions[idx]
                 AppSettingsManager.shared.setSleepTargetMinutes(minutes)
-                self.sleepSubLbl?.text = self.formatSleep(minutes)
+                let formatted = self.formatSleep(minutes)
+                self.sleepSubLbl?.text = formatted
+                Toast.show(message: "Daily sleep target set to \(formatted)", in: self.view)
             }
         }
         present(popup, animated: true)

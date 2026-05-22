@@ -14,10 +14,21 @@ class DeviceViewController: AppBaseViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        // Only build the bind UI when not connected and this VC is the top VC.
+        // The connected-state redirect is handled in viewDidAppear (after the
+        // transition animation finishes) to avoid nav-bar corruption.
+        if !DeviceSessionManager.shared.isDeviceConnected() {
+            buildBindUI()
+        }
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // Redirect to ConnectedDeviceVC AFTER the current transition finishes.
+        // Calling setViewControllers inside viewWillAppear (during an active
+        // animation) was creating the nav-bar jump on every push/pop.
         if DeviceSessionManager.shared.isDeviceConnected() {
             showConnectedDevice()
-        } else {
-            buildBindUI()
         }
     }
 
@@ -34,6 +45,7 @@ class DeviceViewController: AppBaseViewController {
 
         let scroll = UIScrollView()
         scroll.backgroundColor = bgColor
+        scroll.delaysContentTouches = false
         scroll.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scroll)
 
@@ -46,11 +58,11 @@ class DeviceViewController: AppBaseViewController {
             scroll.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scroll.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scroll.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            content.topAnchor.constraint(equalTo: scroll.contentLayoutGuide.topAnchor),
-            content.bottomAnchor.constraint(equalTo: scroll.contentLayoutGuide.bottomAnchor),
-            content.leadingAnchor.constraint(equalTo: scroll.contentLayoutGuide.leadingAnchor),
-            content.trailingAnchor.constraint(equalTo: scroll.contentLayoutGuide.trailingAnchor),
-            content.widthAnchor.constraint(equalTo: scroll.frameLayoutGuide.widthAnchor),
+            content.topAnchor.constraint(equalTo: scroll.topAnchor),
+            content.leadingAnchor.constraint(equalTo: scroll.leadingAnchor),
+            content.trailingAnchor.constraint(equalTo: scroll.trailingAnchor),
+            content.bottomAnchor.constraint(equalTo: scroll.bottomAnchor),
+            content.widthAnchor.constraint(equalTo: scroll.widthAnchor),
         ])
 
         // Bind card
