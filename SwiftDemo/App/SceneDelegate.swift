@@ -28,7 +28,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         DeviceInfoManager.shared.initializeStaticInfo()
 
         // 🔁 Decide root WITHOUT initializing BLE
-        if UserDefaultsManager.shared.isLoggedIn() {
+        if !UserDefaultsManager.shared.isTermsAccepted() {
+            // First launch — show Terms & Conditions before login
+            let nav = UINavigationController(rootViewController: TermsConditionsViewController())
+            nav.setNavigationBarHidden(true, animated: false)
+            window.rootViewController = nav
+        } else if UserDefaultsManager.shared.isLoggedIn() {
             initializeBLEIfNeeded()   // ✅ BLE init only if logged in
             
             // 🚨 REQUEST LOCATION PERMISSION (for emergency health monitoring)
@@ -105,6 +110,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         default:
             break
         }
+    }
+
+    // MARK: - Navigate to Login (called from TermsConditionsViewController after acceptance)
+    func navigateToLogin() {
+        let nav = UINavigationController(rootViewController: LoginViewController())
+        setRootViewController(nav, animated: true)
     }
 
     // MARK: - Post Login Routing

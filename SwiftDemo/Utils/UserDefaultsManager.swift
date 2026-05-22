@@ -74,6 +74,15 @@ final class UserDefaultsManager {
     var userName: String? {
         defaults.string(forKey: "user")
     }
+
+    // MARK: - Terms & Conditions
+    func setTermsAccepted(_ accepted: Bool) {
+        defaults.set(accepted, forKey: "termsConditionsAccepted")
+    }
+
+    func isTermsAccepted() -> Bool {
+        return defaults.bool(forKey: "termsConditionsAccepted")
+    }
     
     // MARK: - Profile Data
     var profileName: String? {

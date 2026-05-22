@@ -269,7 +269,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             icon: UIImage(systemName: "waveform.path.ecg"),
             iconTint: UIColor(red: 0.33, green: 0.43, blue: 1, alpha: 1),
             iconBg: UIColor(red: 0.88, green: 0.89, blue: 1, alpha: 1),
-            title: "ECG", value: "--", unit: "score")
+            title: "ECG", value: "--", unit: "tores")
         ecgCard.onTap = { [weak self] in
             guard let self = self else { return }
             let vc = CardiovascularStatusViewController()
@@ -706,7 +706,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     private func applyECGData(score: Int, statusText: String) {
         cachedECGScore = score
         cachedECGStatus = statusText
-        ecgCard.updateValue(score > 0 ? "\(score)" : "--", unit: "score")
+        ecgCard.updateValue(score > 0 ? "\(score)" : "--", unit: "tores")
         let (ecgCardStatus, ecgColor) = ecgCardStatus(score)
         ecgCard.updateStatus(text: ecgCardStatus, color: ecgColor)
 
