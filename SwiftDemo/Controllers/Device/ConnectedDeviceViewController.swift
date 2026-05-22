@@ -4,85 +4,43 @@ import CoreBluetooth
 
 class ConnectedDeviceViewController: AppBaseViewController {
 
+    // MARK: - Colors
+    private let bgColor     = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
+    private let primaryBlue = UIColor(red: 13/255,  green: 153/255, blue: 255/255, alpha: 1)
+
     // MARK: - UI
+    private let scrollView   = UIScrollView()
+    private let contentView  = UIView()
 
-    private let scrollView = UIScrollView()
-    private let contentView = UIView()
+    // Device card subviews
+    private let deviceNameLabel   = UILabel()
+    private let connectionLabel   = UILabel()
+    private let macLabel          = UILabel()
+    private let batteryIconView   = UIImageView()
+    private let batteryLabel      = UILabel()
 
-    // Device card
-    private let deviceCard = UIView()
-    private let deviceImageView = UIImageView()
-    private let deviceNameLabel = UILabel()
-    private let connectionLabel = UILabel()
-    private let macLabel = UILabel()
-    private let batteryView = UIImageView()
-    private let batteryLabel = UILabel()
-    
+    // Firmware row
+    private let firmwareValueLabel = UILabel()
+
     // MARK: - Connection UI State
     private var isBlinking = false
 
-    // Option cards
-    private let temperatureCard = InfoCardView(
-        icon: "thermometer",
-        title: "Temperature unit",
-        subtitle: "Celsius degrees (°C)"
-    )
-    
-    private let temperatureOptions: [AppSettingsManager.TemperatureUnit] = [
-        .celsius,
-        .fahrenheit
-    ]
-
-    private let intervalCard = InfoCardView(
-        icon: "timer",
-        title: "Health Monitor Interval",
-        subtitle: "15 min"
-    )
-    
-    private let intervalOptions: [AppSettingsManager.HealthInterval] = [
-        .min15,
-        .min30,
-        .min45,
-        .min60
-    ]
-
-    // Firmware
-    private let firmwareIcon = UIImageView()
-    private let firmwareLabel = UILabel()
-    private let firmwareValueLabel = UILabel()
-
-    // Unpair
-    private let unpairButton = UIButton(type: .system)
-
+    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        setScreenTitle("Equipment")
-        view.backgroundColor = UIColor(
-            red: 0.30,
-            green: 0.60,
-            blue: 0.95,
-            alpha: 1
-        )
-
-        setupUI()
+        setScreenTitle("Device")
+        view.backgroundColor = bgColor
+        buildUI()
         populateCachedDeviceInfo()
         fetchAndUpdateDeviceBasicInfo()
-        applySavedSettings()
 
         NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(deviceStateChanged(_:)),
-            name: YCProduct.deviceStateNotification,
-            object: nil
+            self, selector: #selector(deviceStateChanged(_:)),
+            name: YCProduct.deviceStateNotification, object: nil
         )
-
-        // Listen for temperature unit changes (others may change this)
         NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(temperatureUnitChangedNotification(_:)),
-            name: .temperatureUnitChanged,
-            object: nil
+            self, selector: #selector(temperatureUnitChangedNotification(_:)),
+            name: .temperatureUnitChanged, object: nil
         )
     }
 
@@ -90,61 +48,12 @@ class ConnectedDeviceViewController: AppBaseViewController {
         NotificationCenter.default.removeObserver(self)
     }
 
-    @objc private func temperatureUnitChangedNotification(_ notification: Notification) {
-        // Show a friendly toast describing the newly selected temperature unit
-        let unit = AppSettingsManager.shared.getTemperatureUnit()
-        let name = unit == .fahrenheit ? "Fahrenheit (°F)" : "Celsius (°C)"
-        Toast.show(message: "Temperature unit set to \(name)", in: self.view)
-    }
-    
-    private func populateCachedDeviceInfo() {
-
-        // Always show cached info immediately
-        deviceNameLabel.text =
-            DeviceSessionManager.shared.connectedDeviceName() ?? "Device"
-
-        macLabel.text =
-            DeviceSessionManager.shared.connectedDeviceMac() ?? "--"
-
-        // Check if device is already connected via BLE
-        if DeviceSessionManager.shared.isDeviceActuallyConnected() {
-            // Device is already connected - show connected state
-            print("✅ Device already connected on viewDidLoad")
-            stopBlinkingConnected()
-            fetchAndUpdateDeviceBasicInfo()
-        } else {
-            // Device not connected yet - show connecting animation
-            print("⏳ Device not connected, showing connecting state")
-            startBlinking()
-            updateBatteryUI(power: nil, status: nil)
-            firmwareValueLabel.text = "--"
-        }
-    }
-    
-    private func populateConnectedDeviceInfo() {
-
-        let peripheral = YCProduct.shared.currentPeripheral
-
-        deviceNameLabel.text =
-            peripheral?.name ??
-            DeviceSessionManager.shared.connectedDeviceName() ??
-            "Device"
-
-        macLabel.text =
-            peripheral?.macAddress.uppercased() ??
-            DeviceSessionManager.shared.connectedDeviceMac() ??
-            "--"
-
-        stopBlinkingConnected()
-    }
-
-
-    // MARK: - UI Setup
-    private func setupUI() {
-
+    // MARK: - Build UI
+    private func buildUI() {
+        scrollView.backgroundColor = bgColor
+        scrollView.alwaysBounceVertical = true
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         contentView.translatesAutoresizingMaskIntoConstraints = false
-
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
 
@@ -153,461 +62,391 @@ class ConnectedDeviceViewController: AppBaseViewController {
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-
-            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            contentView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            contentView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
         ])
 
-        setupDeviceCard()
-        setupOptionCards()
-        setupFirmwareSection()
-        setupUnpairButton()
-    }
+        let deviceCard   = buildDeviceCard()
+        let healthCard   = makeNavCard(
+            badgeBG: UIColor(red: 232/255, green: 234/255, blue: 254/255, alpha: 1),
+            iconName: "gear",
+            iconTint: UIColor(red: 83/255, green: 109/255, blue: 254/255, alpha: 1),
+            title: "Health Settings",
+            subtitle: "Monitor interval, targets & units",
+            action: #selector(openHealthSettings)
+        )
+        let deviceSetCard = makeNavCard(
+            badgeBG: UIColor(red: 232/255, green: 245/255, blue: 233/255, alpha: 1),
+            iconName: "cpu",
+            iconTint: UIColor(red: 102/255, green: 187/255, blue: 106/255, alpha: 1),
+            title: "Device Settings",
+            subtitle: "Reset ring & firmware updates",
+            action: #selector(openDeviceSettings)
+        )
+        let firmwareRow  = buildFirmwareRow()
+        let unpairBtn    = buildUnpairButton()
+        let versionLbl   = buildVersionLabel()
 
-    // MARK: - Device Card
-    private func setupDeviceCard() {
-
-        deviceCard.backgroundColor = .white
-        deviceCard.layer.cornerRadius = 16
-        deviceCard.translatesAutoresizingMaskIntoConstraints = false
-
-        deviceImageView.image = UIImage(named: "smart_ring")
-        deviceImageView.contentMode = .scaleAspectFit
-        deviceImageView.clipsToBounds = true
-
-        deviceNameLabel.font = .boldSystemFont(ofSize: 16)
-        connectionLabel.font = .systemFont(ofSize: 14)
-        macLabel.font = .systemFont(ofSize: 13)
-        macLabel.textColor = .darkGray
-
-        batteryView.image = UIImage(systemName: "battery.100")
-        batteryView.tintColor = .systemGreen
-        batteryLabel.font = .systemFont(ofSize: 14)
-
-        [deviceImageView, deviceNameLabel, connectionLabel, macLabel,
-         batteryView, batteryLabel].forEach {
-            $0.translatesAutoresizingMaskIntoConstraints = false
-            deviceCard.addSubview($0)
-        }
-
-        contentView.addSubview(deviceCard)
+        [deviceCard, healthCard, deviceSetCard, firmwareRow, unpairBtn, versionLbl]
+            .forEach { $0.translatesAutoresizingMaskIntoConstraints = false; contentView.addSubview($0) }
 
         NSLayoutConstraint.activate([
             deviceCard.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
-            deviceCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            deviceCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            deviceCard.heightAnchor.constraint(equalToConstant: 110),
+            deviceCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            deviceCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
 
-            deviceImageView.leadingAnchor.constraint(equalTo: deviceCard.leadingAnchor, constant: 16),
-            deviceImageView.centerYAnchor.constraint(equalTo: deviceCard.centerYAnchor),
-            deviceImageView.widthAnchor.constraint(equalToConstant: 60),
-            deviceImageView.heightAnchor.constraint(equalToConstant: 60),
+            healthCard.topAnchor.constraint(equalTo: deviceCard.bottomAnchor, constant: 16),
+            healthCard.leadingAnchor.constraint(equalTo: deviceCard.leadingAnchor),
+            healthCard.trailingAnchor.constraint(equalTo: deviceCard.trailingAnchor),
+            healthCard.heightAnchor.constraint(equalToConstant: 70),
 
-            deviceNameLabel.topAnchor.constraint(equalTo: deviceCard.topAnchor, constant: 16),
-            deviceNameLabel.leadingAnchor.constraint(equalTo: deviceImageView.trailingAnchor, constant: 12),
+            deviceSetCard.topAnchor.constraint(equalTo: healthCard.bottomAnchor, constant: 12),
+            deviceSetCard.leadingAnchor.constraint(equalTo: deviceCard.leadingAnchor),
+            deviceSetCard.trailingAnchor.constraint(equalTo: deviceCard.trailingAnchor),
+            deviceSetCard.heightAnchor.constraint(equalToConstant: 70),
 
-            connectionLabel.topAnchor.constraint(equalTo: deviceNameLabel.bottomAnchor, constant: 4),
-            connectionLabel.leadingAnchor.constraint(equalTo: deviceNameLabel.leadingAnchor),
+            firmwareRow.topAnchor.constraint(equalTo: deviceSetCard.bottomAnchor, constant: 28),
+            firmwareRow.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
 
-            macLabel.topAnchor.constraint(equalTo: connectionLabel.bottomAnchor, constant: 4),
-            macLabel.leadingAnchor.constraint(equalTo: deviceNameLabel.leadingAnchor),
+            unpairBtn.topAnchor.constraint(equalTo: firmwareRow.bottomAnchor, constant: 24),
+            unpairBtn.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            unpairBtn.widthAnchor.constraint(equalToConstant: 160),
+            unpairBtn.heightAnchor.constraint(equalToConstant: 44),
 
-            batteryView.bottomAnchor.constraint(equalTo: deviceCard.bottomAnchor, constant: -6),
-            batteryView.leadingAnchor.constraint(equalTo: deviceNameLabel.leadingAnchor),
-            batteryView.widthAnchor.constraint(equalToConstant: 42),
-            batteryView.heightAnchor.constraint(equalToConstant: 26),
-
-            batteryLabel.centerYAnchor.constraint(equalTo: batteryView.centerYAnchor),
-            batteryLabel.leadingAnchor.constraint(equalTo: batteryView.trailingAnchor, constant: 6)
+            versionLbl.topAnchor.constraint(equalTo: unpairBtn.bottomAnchor, constant: 20),
+            versionLbl.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            versionLbl.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -32),
         ])
     }
 
-    // MARK: - Options
-    private func setupOptionCards() {
+    // MARK: - Device Card
+    private func buildDeviceCard() -> UIView {
+        let card = UIView()
+        card.backgroundColor = .white
+        card.layer.cornerRadius = 16
+        card.layer.shadowColor = UIColor.black.cgColor
+        card.layer.shadowOpacity = 0.12
+        card.layer.shadowOffset = CGSize(width: 0, height: 4)
+        card.layer.shadowRadius = 10
 
-        temperatureCard.translatesAutoresizingMaskIntoConstraints = false
-        intervalCard.translatesAutoresizingMaskIntoConstraints = false
+        let ringIV = UIImageView(image: UIImage(named: "smart_ring"))
+        ringIV.contentMode = .scaleAspectFit
+        ringIV.clipsToBounds = true
+        ringIV.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            ringIV.widthAnchor.constraint(equalToConstant: 100),
+            ringIV.heightAnchor.constraint(equalToConstant: 100),
+        ])
 
-        contentView.addSubview(temperatureCard)
-        contentView.addSubview(intervalCard)
+        // Name
+        deviceNameLabel.font = .systemFont(ofSize: 20, weight: .bold)
+        deviceNameLabel.textColor = .black
+        deviceNameLabel.text = "Device"
+
+        // Connection
+        connectionLabel.font = .systemFont(ofSize: 14)
+        connectionLabel.textColor = UIColor(red: 76/255, green: 175/255, blue: 80/255, alpha: 1)
+
+        // Bluetooth icon + connection row
+        let btIcon = UIImageView(image: UIImage(systemName: "bluetooth"))
+        btIcon.tintColor = UIColor(red: 76/255, green: 175/255, blue: 80/255, alpha: 1)
+        btIcon.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([btIcon.widthAnchor.constraint(equalToConstant: 16), btIcon.heightAnchor.constraint(equalToConstant: 18)])
+        let connRow = UIStackView(arrangedSubviews: [btIcon, connectionLabel])
+        connRow.axis = .horizontal
+        connRow.spacing = 4
+        connRow.alignment = .center
+
+        // MAC
+        macLabel.font = .systemFont(ofSize: 13)
+        macLabel.textColor = .darkGray
+        macLabel.text = "--"
+
+        // Battery
+        batteryIconView.image = UIImage(systemName: "battery.100")
+        batteryIconView.tintColor = UIColor(red: 117/255, green: 249/255, blue: 76/255, alpha: 1)
+        batteryIconView.contentMode = .scaleAspectFit
+        batteryIconView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([batteryIconView.widthAnchor.constraint(equalToConstant: 36), batteryIconView.heightAnchor.constraint(equalToConstant: 22)])
+
+        batteryLabel.font = .systemFont(ofSize: 16)
+        batteryLabel.textColor = .black
+        batteryLabel.text = "--"
+
+        let battRow = UIStackView(arrangedSubviews: [batteryIconView, batteryLabel])
+        battRow.axis = .horizontal
+        battRow.spacing = 4
+        battRow.alignment = .center
+
+        let infoStack = UIStackView(arrangedSubviews: [deviceNameLabel, connRow, macLabel, battRow])
+        infoStack.axis = .vertical
+        infoStack.spacing = 6
+
+        let hStack = UIStackView(arrangedSubviews: [ringIV, infoStack])
+        hStack.axis = .horizontal
+        hStack.spacing = 16
+        hStack.alignment = .center
+        hStack.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(hStack)
 
         NSLayoutConstraint.activate([
-            temperatureCard.topAnchor.constraint(equalTo: deviceCard.bottomAnchor, constant: 16),
-            temperatureCard.leadingAnchor.constraint(equalTo: deviceCard.leadingAnchor),
-            temperatureCard.trailingAnchor.constraint(equalTo: deviceCard.trailingAnchor),
-            temperatureCard.heightAnchor.constraint(equalToConstant: 64),
+            hStack.topAnchor.constraint(equalTo: card.topAnchor, constant: 16),
+            hStack.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -16),
+            hStack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
+            hStack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -16),
+        ])
+        return card
+    }
 
-            intervalCard.topAnchor.constraint(equalTo: temperatureCard.bottomAnchor, constant: 12),
-            intervalCard.leadingAnchor.constraint(equalTo: deviceCard.leadingAnchor),
-            intervalCard.trailingAnchor.constraint(equalTo: deviceCard.trailingAnchor),
-            intervalCard.heightAnchor.constraint(equalToConstant: 64)
+    // MARK: - Nav Card
+    private func makeNavCard(badgeBG: UIColor, iconName: String, iconTint: UIColor,
+                              title: String, subtitle: String, action: Selector) -> UIView {
+        let card = UIView()
+        card.backgroundColor = .white
+        card.layer.cornerRadius = 16
+        card.layer.shadowColor = UIColor.black.cgColor
+        card.layer.shadowOpacity = 0.08
+        card.layer.shadowOffset = CGSize(width: 0, height: 2)
+        card.layer.shadowRadius = 6
+        card.isUserInteractionEnabled = true
+
+        let badge = UIView()
+        badge.backgroundColor = badgeBG
+        badge.layer.cornerRadius = 22
+        badge.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([badge.widthAnchor.constraint(equalToConstant: 44), badge.heightAnchor.constraint(equalToConstant: 44)])
+
+        let iconIV = UIImageView(image: UIImage(systemName: iconName))
+        iconIV.tintColor = iconTint
+        iconIV.contentMode = .scaleAspectFit
+        iconIV.translatesAutoresizingMaskIntoConstraints = false
+        badge.addSubview(iconIV)
+        NSLayoutConstraint.activate([
+            iconIV.centerXAnchor.constraint(equalTo: badge.centerXAnchor),
+            iconIV.centerYAnchor.constraint(equalTo: badge.centerYAnchor),
+            iconIV.widthAnchor.constraint(equalToConstant: 22),
+            iconIV.heightAnchor.constraint(equalToConstant: 22),
         ])
 
-        // ✅ Attach actions
-        temperatureCard.onTap = { [weak self] in
-            self?.openTemperatureSelector()
-        }
+        let titleLbl = UILabel()
+        titleLbl.text = title
+        titleLbl.font = .systemFont(ofSize: 16, weight: .bold)
+        titleLbl.textColor = .black
 
-        intervalCard.onTap = { [weak self] in
-            self?.openIntervalSelector()
-        }
-    }
-    
-    @objc private func openTemperatureSelector() {
+        let subLbl = UILabel()
+        subLbl.text = subtitle
+        subLbl.font = .systemFont(ofSize: 12)
+        subLbl.textColor = UIColor(red: 119/255, green: 119/255, blue: 119/255, alpha: 1)
 
-        let current = AppSettingsManager.shared.getTemperatureUnit()
+        let textStack = UIStackView(arrangedSubviews: [titleLbl, subLbl])
+        textStack.axis = .vertical
+        textStack.spacing = 3
 
-        let popup = MultiSelectPopupViewController(
-            title: "Temperature Unit",
-            options: temperatureOptions.map { $0.rawValue },
-            preselected: [current.rawValue],
-            maxSelection: 1
-        )
+        let chevron = UIImageView(image: UIImage(systemName: "chevron.right"))
+        chevron.tintColor = UIColor(red: 187/255, green: 187/255, blue: 187/255, alpha: 1)
+        chevron.contentMode = .scaleAspectFit
+        chevron.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([chevron.widthAnchor.constraint(equalToConstant: 10), chevron.heightAnchor.constraint(equalToConstant: 16)])
 
-        popup.onConfirm = { [weak self] selected in
-            guard
-                let value = selected.first,
-                let unit = AppSettingsManager.TemperatureUnit(rawValue: value)
-            else { return }
+        let hStack = UIStackView(arrangedSubviews: [badge, textStack, chevron])
+        hStack.axis = .horizontal
+        hStack.spacing = 14
+        hStack.alignment = .center
+        hStack.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(hStack)
 
-            AppSettingsManager.shared.setTemperatureUnit(unit)
-            self?.temperatureCard.updateSubtitle(unit.rawValue)
-            
-            NotificationCenter.default.post(
-                name: .temperatureUnitChanged,
-                object: nil
-            )
-        }
+        NSLayoutConstraint.activate([
+            hStack.topAnchor.constraint(equalTo: card.topAnchor, constant: 13),
+            hStack.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -13),
+            hStack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
+            hStack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -16),
+        ])
 
-        present(popup, animated: true)
-    }
-    
-    
-    @objc private func openIntervalSelector() {
-
-        let current = AppSettingsManager.shared.getHealthInterval()
-
-        let popup = MultiSelectPopupViewController(
-            title: "Health Monitor Interval",
-            options: intervalOptions.map { $0.rawValue },
-            preselected: [current.rawValue],
-            maxSelection: 1
-        )
-
-        popup.onConfirm = { [weak self] selected in
-            guard
-                let self = self,
-                let value = selected.first,
-                let interval = AppSettingsManager.HealthInterval(rawValue: value)
-            else { return }
-
-            // 1️⃣ Save locally
-            AppSettingsManager.shared.setHealthInterval(interval)
-            self.intervalCard.updateSubtitle(interval.rawValue)
-
-            // 2️⃣ Push to ring
-            self.updateRingHealthMonitoring(interval)
-
-            // Show a user-friendly toast informing user of new interval
-            Toast.show(message: "Health monitor interval set to \(interval.rawValue)", in: self.view)
-        }
-
-        present(popup, animated: true)
-    }
-    
-    private func updateRingHealthMonitoring(
-        _ interval: AppSettingsManager.HealthInterval
-    ) {
-
-        guard YCProduct.shared.currentPeripheral != nil else {
-            print("⚠️ No connected device, skip monitoring update")
-            return
-        }
-
-        let minutes = intervalToMinutes(interval)
-
-        YCProduct.setDeviceHealthMonitoringMode(
-            isEnable: true,
-            interval: minutes
-        ) { state, _ in
-
-            DispatchQueue.main.async {
-                if state == .succeed {
-                    print("✅ Ring monitoring updated to \(minutes) min")
-                } else {
-                    print("❌ Failed to update ring monitoring: \(state)")
-                }
-            }
-        }
+        let tap = UITapGestureRecognizer(target: self, action: action)
+        card.addGestureRecognizer(tap)
+        return card
     }
 
-    private func intervalToMinutes(
-        _ interval: AppSettingsManager.HealthInterval
-    ) -> UInt8 {
+    // MARK: - Firmware Row
+    private func buildFirmwareRow() -> UIView {
+        let chipIV = UIImageView(image: UIImage(systemName: "cpu"))
+        chipIV.tintColor = .black
+        chipIV.contentMode = .scaleAspectFit
+        chipIV.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([chipIV.widthAnchor.constraint(equalToConstant: 28), chipIV.heightAnchor.constraint(equalToConstant: 28)])
 
-        switch interval {
-        case .min15: return 15
-        case .min30: return 30
-        case .min45: return 45
-        case .min60: return 60
-        }
-    }
-    
-    private func applySavedSettings() {
-
-        let temp = AppSettingsManager.shared.getTemperatureUnit()
-        temperatureCard.updateSubtitle(temp.rawValue)
-
-        let interval = AppSettingsManager.shared.getHealthInterval()
-        intervalCard.updateSubtitle(interval.rawValue)
-    }
-
-
-    // MARK: - Firmware
-    private func setupFirmwareSection() {
-
-        firmwareIcon.image = UIImage(systemName: "cpu")
-        firmwareIcon.tintColor = .black
-
-        firmwareLabel.text = "FirmWareManagement"
-        firmwareLabel.font = .systemFont(ofSize: 14)
+        let fwLabel = UILabel()
+        fwLabel.text = "FirmWareManagement"
+        fwLabel.font = .systemFont(ofSize: 14, weight: .bold)
 
         firmwareValueLabel.text = "--"
-        firmwareValueLabel.font = .boldSystemFont(ofSize: 14)
+        firmwareValueLabel.font = .systemFont(ofSize: 14, weight: .bold)
 
-        [firmwareIcon, firmwareLabel, firmwareValueLabel].forEach {
-            $0.translatesAutoresizingMaskIntoConstraints = false
-            contentView.addSubview($0)
+        let row = UIStackView(arrangedSubviews: [chipIV, fwLabel, firmwareValueLabel])
+        row.axis = .horizontal
+        row.spacing = 8
+        row.alignment = .center
+        return row
+    }
+
+    // MARK: - Unpair Button
+    private func buildUnpairButton() -> UIButton {
+        let btn = UIButton(type: .system)
+        btn.setTitle("UnPair", for: .normal)
+        btn.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        btn.backgroundColor = primaryBlue
+        btn.setTitleColor(.white, for: .normal)
+        btn.layer.cornerRadius = 22
+        btn.addTarget(self, action: #selector(unpairTapped), for: .touchUpInside)
+        return btn
+    }
+
+    // MARK: - App Version
+    private func buildVersionLabel() -> UILabel {
+        let lbl = UILabel()
+        lbl.text = "App Version: \(appVersion())"
+        lbl.font = .systemFont(ofSize: 13, weight: .semibold)
+        lbl.textColor = UIColor(red: 50/255, green: 80/255, blue: 120/255, alpha: 1)
+        lbl.textAlignment = .center
+        return lbl
+    }
+
+    private func appVersion() -> String {
+        return Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+
+    // MARK: - Populate
+    private func populateCachedDeviceInfo() {
+        deviceNameLabel.text = DeviceSessionManager.shared.connectedDeviceName() ?? "Device"
+        macLabel.text = DeviceSessionManager.shared.connectedDeviceMac() ?? "--"
+
+        if DeviceSessionManager.shared.isDeviceActuallyConnected() {
+            stopBlinkingConnected()
+            fetchAndUpdateDeviceBasicInfo()
+        } else {
+            startBlinking()
+            updateBatteryUI(power: nil, status: nil)
+            firmwareValueLabel.text = "--"
         }
-
-        NSLayoutConstraint.activate([
-            firmwareIcon.topAnchor.constraint(equalTo: intervalCard.bottomAnchor, constant: 28),
-            firmwareIcon.centerXAnchor.constraint(equalTo: contentView.centerXAnchor, constant: -80),
-
-            firmwareLabel.centerYAnchor.constraint(equalTo: firmwareIcon.centerYAnchor),
-            firmwareLabel.leadingAnchor.constraint(equalTo: firmwareIcon.trailingAnchor, constant: 8),
-
-            firmwareValueLabel.centerYAnchor.constraint(equalTo: firmwareIcon.centerYAnchor),
-            firmwareValueLabel.leadingAnchor.constraint(equalTo: firmwareLabel.trailingAnchor, constant: 8)
-        ])
     }
 
-    // MARK: - Unpair
-    private func setupUnpairButton() {
-
-        unpairButton.setTitle("UnPair", for: .normal)
-        unpairButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
-        unpairButton.backgroundColor = UIColor(red: 0.6, green: 0.95, blue: 0.8, alpha: 1)
-        unpairButton.setTitleColor(.black, for: .normal)
-        unpairButton.layer.cornerRadius = 12
-        unpairButton.translatesAutoresizingMaskIntoConstraints = false
-        unpairButton.addTarget(self, action: #selector(unpairTapped), for: .touchUpInside)
-
-        contentView.addSubview(unpairButton)
-
-        NSLayoutConstraint.activate([
-            unpairButton.topAnchor.constraint(equalTo: firmwareIcon.bottomAnchor, constant: 24),
-            unpairButton.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            unpairButton.widthAnchor.constraint(equalToConstant: 160),
-            unpairButton.heightAnchor.constraint(equalToConstant: 44),
-            unpairButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40)
-        ])
+    private func populateConnectedDeviceInfo() {
+        let peripheral = YCProduct.shared.currentPeripheral
+        deviceNameLabel.text = peripheral?.name
+            ?? DeviceSessionManager.shared.connectedDeviceName()
+            ?? "Device"
+        macLabel.text = peripheral?.macAddress.uppercased()
+            ?? DeviceSessionManager.shared.connectedDeviceMac()
+            ?? "--"
+        stopBlinkingConnected()
     }
 
-    // MARK: - Actions
-    @objc private func unpairTapped() {
-        showUnpairConfirmation()
-    }
-    
-    private func showUnpairConfirmation() {
-
-        let alert = UIAlertController(
-            title: "Unpair Device",
-            message: "Are you sure you want to unpair this device?",
-            preferredStyle: .alert
-        )
-
-        let cancel = UIAlertAction(title: "Cancel", style: .cancel)
-
-        let unpair = UIAlertAction(title: "UnPair", style: .destructive) { [weak self] _ in
-            self?.performUnpair()
-        }
-
-        alert.addAction(cancel)
-        alert.addAction(unpair)
-
-        present(alert, animated: true)
-    }
-    
-    private func performUnpair() {
-
-        // Disconnect BLE (no UI dependency)
-        YCProduct.disconnectDevice { _, _ in }
-
-        // Clear saved device
-        DeviceSessionManager.shared.clearDevice()
-
-        // Go back to Device root (Bind screen)
-        navigationController?.popToRootViewController(animated: true)
-    }
-
-    // MARK: - BLE State
+    // MARK: - BLE Notifications
     @objc private func deviceStateChanged(_ notification: Notification) {
-
         guard
             let info = notification.userInfo as? [String: Any],
             let state = info[YCProduct.connecteStateKey] as? YCProductState
         else { return }
 
         switch state {
-
         case .connected:
-//            populateDeviceInfo()
             populateConnectedDeviceInfo()
             fetchAndUpdateDeviceBasicInfo()
-            
-            // Note: BLEStateManager handles saving status & API call centrally
-
         case .disconnected:
-            // Sometimes the SDK emits transient 'disconnected' while the peripheral object
-            // is still available. If the current peripheral matches the saved device,
-            // treat this as a transient event and keep the connected UI (update battery).
             if let peripheral = YCProduct.shared.currentPeripheral {
-                let currentMac = peripheral.macAddress.uppercased()
-                let savedMac = DeviceSessionManager.shared.connectedDeviceMac()?.uppercased()
-                if let saved = savedMac, saved == currentMac {
-                    print("⚠️ Received disconnected for same peripheral (\(currentMac)). Preserving connected UI and refreshing info.")
+                let current = peripheral.macAddress.uppercased()
+                let saved   = DeviceSessionManager.shared.connectedDeviceMac()?.uppercased()
+                if let saved = saved, saved == current {
                     populateConnectedDeviceInfo()
                     fetchAndUpdateDeviceBasicInfo()
                 } else {
-                    print("❌ Device disconnected (different peripheral) - start blinking")
                     startBlinking()
-                    // Note: BLEStateManager handles saving status & API call centrally
                 }
             } else {
-                print("❌ Device disconnected (no currentPeripheral) - start blinking")
                 startBlinking()
-                // Note: BLEStateManager handles saving status & API call centrally
             }
-
         default:
             break
         }
     }
-    
+
+    @objc private func temperatureUnitChangedNotification(_ notification: Notification) {
+        let unit = AppSettingsManager.shared.getTemperatureUnit()
+        let name = unit == .fahrenheit ? "Fahrenheit (°F)" : "Celsius (°C)"
+        Toast.show(message: "Temperature unit set to \(name)", in: self.view)
+    }
+
     // MARK: - Battery from SDK
     private func fetchAndUpdateDeviceBasicInfo() {
-
         YCProduct.queryDeviceBasicInfo { [weak self] state, response in
             guard let self = self else { return }
-
             DispatchQueue.main.async {
-
-                guard
-                    state == .succeed,
-                    let info = response as? YCDeviceBasicInfo
-                else {
-                    // fallback
+                guard state == .succeed, let info = response as? YCDeviceBasicInfo else {
                     self.firmwareValueLabel.text = "--"
                     self.updateBatteryUI(power: nil, status: nil)
                     return
                 }
-
-                // ✅ Battery
                 let batteryLevel = Int(info.batteryPower)
-                self.updateBatteryUI(
-                    power: batteryLevel,
-                    status: info.batterystatus
-                )
-                
-                // 💾 Save battery to UserDefaults
+                self.updateBatteryUI(power: batteryLevel, status: info.batterystatus)
                 DeviceInfoManager.shared.saveBattery(batteryLevel)
-
-                // ✅ Firmware
                 self.updateFirmware(info.mcuFirmware)
             }
         }
     }
-    
+
     private func updateFirmware(_ version: YCDeviceVersionInfo?) {
-
-        guard let version = version else {
-            firmwareValueLabel.text = "--"
-            return
-        }
-
-//        let text = String(describing: version)
-        
-        // replace later with actual
-        let firmwareVersion = "1.13"
+        let firmwareVersion = "1.13"    // replace with actual SDK value when available
         firmwareValueLabel.text = firmwareVersion
-        
-        // 💾 Save firmware version to UserDefaults
         DeviceInfoManager.shared.saveFirmwareVersion(firmwareVersion)
     }
-    
-    // MARK: - Battery UI
-    private func updateBatteryUI(
-        power: Int?,
-        status: YCDeviceBatterystate?
-    ) {
 
+    // MARK: - Battery UI
+    private func updateBatteryUI(power: Int?, status: YCDeviceBatterystate?) {
         guard let power = power else {
             batteryLabel.text = "--"
-            batteryView.image = UIImage(systemName: "battery.0")
-            batteryView.tintColor = .lightGray
+            batteryIconView.image = UIImage(systemName: "battery.0")
+            batteryIconView.tintColor = .lightGray
             return
         }
-
         batteryLabel.text = "\(power)%"
 
-        // Charging has priority
         if status == .charging {
-            batteryView.image = UIImage(systemName: "battery.100.bolt")
-            batteryView.tintColor = .systemBlue
+            batteryIconView.image = UIImage(systemName: "battery.100.bolt")
+            batteryIconView.tintColor = .systemBlue
             return
         }
-
         if status == .full {
-            batteryView.image = UIImage(systemName: "battery.100")
-            batteryView.tintColor = .systemGreen
+            batteryIconView.image = UIImage(systemName: "battery.100")
+            batteryIconView.tintColor = UIColor(red: 117/255, green: 249/255, blue: 76/255, alpha: 1)
             return
         }
-
         switch power {
         case 61...100:
-            batteryView.image = UIImage(systemName: "battery.100")
-            batteryView.tintColor = .systemGreen
-
+            batteryIconView.image = UIImage(systemName: "battery.100")
+            batteryIconView.tintColor = UIColor(red: 117/255, green: 249/255, blue: 76/255, alpha: 1)
         case 21...60:
-            batteryView.image = UIImage(systemName: "battery.50")
-            batteryView.tintColor = .systemOrange
-
+            batteryIconView.image = UIImage(systemName: "battery.50")
+            batteryIconView.tintColor = UIColor(red: 255/255, green: 165/255, blue: 0/255, alpha: 1)
         default:
-            batteryView.image = UIImage(systemName: "battery.25")
-            batteryView.tintColor = .systemRed
+            batteryIconView.image = UIImage(systemName: "battery.25")
+            batteryIconView.tintColor = .systemRed
         }
     }
-    
-    // MARK: - Connection Label Animation
+
+    // MARK: - Connection Animation
     private func startBlinking() {
         guard !isBlinking else { return }
         isBlinking = true
-
         connectionLabel.text = "Connecting…"
+        connectionLabel.textColor = UIColor(red: 255/255, green: 167/255, blue: 38/255, alpha: 1)
         connectionLabel.alpha = 1.0
-
-        UIView.animate(
-            withDuration: 0.8,
-            delay: 0,
-            options: [.autoreverse, .repeat, .allowUserInteraction],
-            animations: {
-                self.connectionLabel.alpha = 0.2
-            }
-        )
+        UIView.animate(withDuration: 0.8, delay: 0,
+                       options: [.autoreverse, .repeat, .allowUserInteraction]) {
+            self.connectionLabel.alpha = 0.2
+        }
     }
 
     private func stopBlinkingConnected() {
@@ -615,12 +454,41 @@ class ConnectedDeviceViewController: AppBaseViewController {
         connectionLabel.layer.removeAllAnimations()
         connectionLabel.alpha = 1.0
         connectionLabel.text = "Connected"
+        connectionLabel.textColor = UIColor(red: 76/255, green: 175/255, blue: 80/255, alpha: 1)
     }
 
+    // MARK: - Navigation Actions
+    @objc private func openHealthSettings() {
+        navigationController?.pushViewController(HealthSettingsViewController(), animated: true)
+    }
+
+    @objc private func openDeviceSettings() {
+        navigationController?.pushViewController(DeviceSettingsViewController(), animated: true)
+    }
+
+    // MARK: - Unpair
+    @objc private func unpairTapped() {
+        let alert = UIAlertController(
+            title: "Unpair Device",
+            message: "Are you sure you want to unpair this device?",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Unpair", style: .destructive) { [weak self] _ in
+            self?.performUnpair()
+        })
+        present(alert, animated: true)
+    }
+
+    private func performUnpair() {
+        YCProduct.disconnectDevice { _, _ in }
+        DeviceSessionManager.shared.clearDevice()
+        navigationController?.popToRootViewController(animated: true)
+    }
 }
 
 extension Notification.Name {
     static let temperatureUnitChanged = Notification.Name("temperatureUnitChanged")
-    static let healthIntervalChanged = Notification.Name("healthIntervalChanged")
+    static let healthIntervalChanged  = Notification.Name("healthIntervalChanged")
 }
 

@@ -2,104 +2,129 @@ import UIKit
 
 class DeviceViewController: AppBaseViewController {
 
-    // MARK: - UI
-    private let cardView = UIView()
-    private let titleLabel = UILabel()
-    private let subtitleLabel = UILabel()
-    private let textStack = UIStackView()
+    // MARK: - Colors
+    private let bgColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
         setScreenTitle("Device")
         showHamburger()
-
-        view.backgroundColor = UIColor(
-            red: 0.30,
-            green: 0.60,
-            blue: 0.95,
-            alpha: 1
-        )
+        view.backgroundColor = bgColor
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-
         if DeviceSessionManager.shared.isDeviceConnected() {
             showConnectedDevice()
         } else {
-            showBindDevice()
+            buildBindUI()
         }
     }
 
-    private func showBindDevice() {
-        setupUI()
-    }
-
+    // MARK: - Connected State
     private func showConnectedDevice() {
         let connectedVC = ConnectedDeviceViewController()
         navigationController?.setViewControllers([self, connectedVC], animated: false)
     }
 
-    private func setupUI() {
+    // MARK: - Not-Connected (Bind) UI
+    private func buildBindUI() {
+        // Remove any old bind UI
+        view.subviews.forEach { $0.removeFromSuperview() }
 
-        // Avoid duplicate UI on reappear
-        view.subviews.forEach {
-            if $0 == cardView { $0.removeFromSuperview() }
-        }
+        let scroll = UIScrollView()
+        scroll.backgroundColor = bgColor
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(scroll)
 
-        // Card
-        cardView.backgroundColor = UIColor(
-            red: 0.40,
-            green: 0.80,
-            blue: 0.85,
-            alpha: 1
-        )
-        cardView.layer.cornerRadius = 18
-        cardView.layer.shadowColor = UIColor.black.cgColor
-        cardView.layer.shadowOpacity = 0.18
-        cardView.layer.shadowOffset = CGSize(width: 0, height: 4)
-        cardView.layer.shadowRadius = 6
-        cardView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(cardView)
+        let content = UIView()
+        content.translatesAutoresizingMaskIntoConstraints = false
+        scroll.addSubview(content)
 
-        // Title
-        titleLabel.text = "Bind the device"
-        titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
-        titleLabel.textColor = .black
-        titleLabel.textAlignment = .left
+        NSLayoutConstraint.activate([
+            scroll.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            scroll.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scroll.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scroll.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            content.topAnchor.constraint(equalTo: scroll.contentLayoutGuide.topAnchor),
+            content.bottomAnchor.constraint(equalTo: scroll.contentLayoutGuide.bottomAnchor),
+            content.leadingAnchor.constraint(equalTo: scroll.contentLayoutGuide.leadingAnchor),
+            content.trailingAnchor.constraint(equalTo: scroll.contentLayoutGuide.trailingAnchor),
+            content.widthAnchor.constraint(equalTo: scroll.frameLayoutGuide.widthAnchor),
+        ])
 
-        // Subtitle
-        subtitleLabel.text = "You have not bound any device yet"
-        subtitleLabel.font = .systemFont(ofSize: 14, weight: .regular)
-        subtitleLabel.textColor = UIColor.black.withAlphaComponent(0.7)
-        subtitleLabel.textAlignment = .left
-        subtitleLabel.numberOfLines = 2
+        // Bind card
+        let card = UIView()
+        card.backgroundColor = UIColor(red: 1/255, green: 174/255, blue: 214/255, alpha: 1)
+        card.layer.cornerRadius = 24
+        card.layer.shadowColor = UIColor.black.cgColor
+        card.layer.shadowOpacity = 0.18
+        card.layer.shadowOffset = CGSize(width: 0, height: 6)
+        card.layer.shadowRadius = 10
+        card.isUserInteractionEnabled = true
+        card.translatesAutoresizingMaskIntoConstraints = false
 
-        // Stack
+        let tap = UITapGestureRecognizer(target: self, action: #selector(bindDeviceTapped))
+        card.addGestureRecognizer(tap)
+
+        let ringIV = UIImageView(image: UIImage(named: "smart_ring") ?? UIImage(systemName: "dot.radiowaves.left.and.right"))
+        ringIV.contentMode = .scaleAspectFit
+        ringIV.tintColor = .white
+        ringIV.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            ringIV.widthAnchor.constraint(equalToConstant: 64),
+            ringIV.heightAnchor.constraint(equalToConstant: 64),
+        ])
+
+        let titleLbl = UILabel()
+        titleLbl.text = "Bind the Device"
+        titleLbl.font = .systemFont(ofSize: 20, weight: .bold)
+        titleLbl.textColor = .white
+
+        let subLbl = UILabel()
+        subLbl.text = "Connect your ring to start monitoring"
+        subLbl.font = .systemFont(ofSize: 14, weight: .regular)
+        subLbl.textColor = UIColor.white.withAlphaComponent(0.85)
+        subLbl.numberOfLines = 2
+
+        let textStack = UIStackView(arrangedSubviews: [titleLbl, subLbl])
         textStack.axis = .vertical
-        textStack.alignment = .leading
         textStack.spacing = 6
         textStack.translatesAutoresizingMaskIntoConstraints = false
-        textStack.addArrangedSubview(titleLabel)
-        textStack.addArrangedSubview(subtitleLabel)
-        cardView.addSubview(textStack)
 
-        // Tap gesture
-        let tap = UITapGestureRecognizer(target: self, action: #selector(bindDeviceTapped))
-        cardView.addGestureRecognizer(tap)
-        cardView.isUserInteractionEnabled = true
+        let hStack = UIStackView(arrangedSubviews: [ringIV, textStack])
+        hStack.axis = .horizontal
+        hStack.spacing = 16
+        hStack.alignment = .center
+        hStack.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(hStack)
 
-        // Constraints
         NSLayoutConstraint.activate([
-            cardView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
-            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            cardView.heightAnchor.constraint(equalToConstant: 130),
+            hStack.topAnchor.constraint(equalTo: card.topAnchor, constant: 24),
+            hStack.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -24),
+            hStack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
+            hStack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
+        ])
 
-            textStack.centerYAnchor.constraint(equalTo: cardView.centerYAnchor),
-            textStack.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 20),
-            textStack.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -20)
+        // App version
+        let versionLbl = UILabel()
+        versionLbl.text = "App Version: \(appVersion())"
+        versionLbl.font = .systemFont(ofSize: 13, weight: .semibold)
+        versionLbl.textColor = UIColor(red: 50/255, green: 80/255, blue: 120/255, alpha: 1)
+        versionLbl.textAlignment = .center
+        versionLbl.translatesAutoresizingMaskIntoConstraints = false
+
+        content.addSubview(card)
+        content.addSubview(versionLbl)
+
+        NSLayoutConstraint.activate([
+            card.topAnchor.constraint(equalTo: content.topAnchor, constant: 30),
+            card.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 30),
+            card.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -30),
+
+            versionLbl.topAnchor.constraint(equalTo: card.bottomAnchor, constant: 32),
+            versionLbl.centerXAnchor.constraint(equalTo: content.centerXAnchor),
+            versionLbl.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -32),
         ])
     }
 
@@ -107,4 +132,10 @@ class DeviceViewController: AppBaseViewController {
         let searchVC = SearchDeviceViewController()
         navigationController?.pushViewController(searchVC, animated: true)
     }
+
+    // MARK: - Helpers
+    private func appVersion() -> String {
+        return Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
 }
+

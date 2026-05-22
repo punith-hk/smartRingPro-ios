@@ -39,6 +39,30 @@ final class AppSettingsManager {
         let value = UserDefaults.standard.string(forKey: intervalKey)
         return HealthInterval(rawValue: value ?? "") ?? .min15
     }
+
+    // MARK: - Steps Target
+    private let stepsKey = "stepsTarget"
+
+    func setStepsTarget(_ steps: Int) {
+        UserDefaults.standard.set(steps, forKey: stepsKey)
+    }
+
+    func getStepsTarget() -> Int {
+        let value = UserDefaults.standard.integer(forKey: stepsKey)
+        return value == 0 ? 10_000 : value
+    }
+
+    // MARK: - Sleep Target
+    private let sleepKey = "sleepTargetMinutes"
+
+    func setSleepTargetMinutes(_ minutes: Int) {
+        UserDefaults.standard.set(minutes, forKey: sleepKey)
+    }
+
+    func getSleepTargetMinutes() -> Int {
+        let value = UserDefaults.standard.integer(forKey: sleepKey)
+        return value == 0 ? 480 : value
+    }
 }
 
 enum TemperatureUnit {
