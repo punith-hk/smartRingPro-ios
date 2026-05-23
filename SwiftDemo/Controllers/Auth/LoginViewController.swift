@@ -14,39 +14,46 @@ class LoginViewController: UIViewController, UITextFieldDelegate {
         setupTextField()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: animated)
+    }
+
     // MARK: - UI
     private func setupUI() {
 
-        view.backgroundColor = .systemBlue
+        view.backgroundColor = UIColor(red: 0.85, green: 0.93, blue: 1.0, alpha: 1)
         navigationItem.title = ""
-        navigationController?.setNavigationBarHidden(true, animated: false)
 
 
         // Card
         cardView.backgroundColor = .white
-        cardView.layer.cornerRadius = 16
+        cardView.layer.cornerRadius = 20
+        cardView.layer.shadowColor = UIColor.black.cgColor
+        cardView.layer.shadowOpacity = 0.08
+        cardView.layer.shadowRadius = 10
+        cardView.layer.shadowOffset = CGSize(width: 0, height: 4)
         cardView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(cardView)
 
         NSLayoutConstraint.activate([
-            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-            cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            cardView.heightAnchor.constraint(equalToConstant: 300)
+            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
+            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
+            cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
 
         // Title
         let titleLabel = UILabel()
         titleLabel.text = "Login"
-        titleLabel.font = .systemFont(ofSize: 22, weight: .semibold)
+        titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         cardView.addSubview(titleLabel)
 
         // Subtitle
         let subtitleLabel = UILabel()
         subtitleLabel.text = "We'll send a confirmation code to your phone"
-        subtitleLabel.font = .systemFont(ofSize: 14)
-        subtitleLabel.textColor = .gray
+        subtitleLabel.font = .systemFont(ofSize: 16)
+        subtitleLabel.textColor = .black
         subtitleLabel.numberOfLines = 2
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
         cardView.addSubview(subtitleLabel)
@@ -73,6 +80,10 @@ class LoginViewController: UIViewController, UITextFieldDelegate {
         signInButton.addTarget(self, action: #selector(signInTapped), for: .touchUpInside)
         cardView.addSubview(signInButton)
 
+        // "or" divider
+        let dividerStack = makeDivider()
+        cardView.addSubview(dividerStack)
+
         // Sign Up Label (Attributed)
         signUpLabel.attributedText = makeSignUpText()
         signUpLabel.textAlignment = .center
@@ -85,17 +96,17 @@ class LoginViewController: UIViewController, UITextFieldDelegate {
 
         // Constraints
         NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 24),
-            titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 20),
+            titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 40),
+            titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 32),
 
-            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
-            subtitleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 20),
-            subtitleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -20),
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 16),
+            subtitleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 32),
+            subtitleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -32),
 
-            mobileField.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 24),
-            mobileField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 20),
-            mobileField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -20),
-            mobileField.heightAnchor.constraint(equalToConstant: 40),
+            mobileField.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 12),
+            mobileField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 32),
+            mobileField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -32),
+            mobileField.heightAnchor.constraint(equalToConstant: 48),
 
             underline.topAnchor.constraint(equalTo: mobileField.bottomAnchor, constant: 2),
             underline.leadingAnchor.constraint(equalTo: mobileField.leadingAnchor),
@@ -103,13 +114,17 @@ class LoginViewController: UIViewController, UITextFieldDelegate {
             underline.heightAnchor.constraint(equalToConstant: 1),
 
             signInButton.topAnchor.constraint(equalTo: underline.bottomAnchor, constant: 24),
-            signInButton.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 20),
-            signInButton.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -20),
+            signInButton.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 32),
+            signInButton.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -32),
             signInButton.heightAnchor.constraint(equalToConstant: 48),
 
-            signUpLabel.topAnchor.constraint(equalTo: signInButton.bottomAnchor, constant: 16),
+            dividerStack.topAnchor.constraint(equalTo: signInButton.bottomAnchor, constant: 16),
+            dividerStack.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 32),
+            dividerStack.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -32),
+
+            signUpLabel.topAnchor.constraint(equalTo: dividerStack.bottomAnchor, constant: 16),
             signUpLabel.centerXAnchor.constraint(equalTo: cardView.centerXAnchor),
-            signUpLabel.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -16)
+            signUpLabel.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -40)
         ])
     }
 
@@ -120,19 +135,58 @@ class LoginViewController: UIViewController, UITextFieldDelegate {
 
         let fullText = NSMutableAttributedString(
             string: normalText,
-            attributes: [.foregroundColor: UIColor.darkGray]
+            attributes: [
+                .foregroundColor: UIColor.gray,
+                .font: UIFont.systemFont(ofSize: 18)
+            ]
         )
 
         let signUpAttr = NSAttributedString(
             string: signUpText,
             attributes: [
                 .foregroundColor: UIColor.systemBlue,
-                .underlineStyle: NSUnderlineStyle.single.rawValue
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .font: UIFont.boldSystemFont(ofSize: 18)
             ]
         )
 
         fullText.append(signUpAttr)
         return fullText
+    }
+
+    // MARK: - Or Divider
+    private func makeDivider() -> UIView {
+        let container = UIStackView()
+        container.axis = .horizontal
+        container.alignment = .center
+        container.spacing = 8
+        container.translatesAutoresizingMaskIntoConstraints = false
+
+        let leftLine = UIView()
+        leftLine.backgroundColor = UIColor(white: 0.75, alpha: 1)
+        leftLine.heightAnchor.constraint(equalToConstant: 1).isActive = true
+        leftLine.setContentHuggingPriority(.defaultLow, for: .horizontal)
+
+        let orLabel = UILabel()
+        orLabel.text = "or"
+        orLabel.font = .boldSystemFont(ofSize: 18)
+        orLabel.textColor = .black
+        orLabel.setContentHuggingPriority(.required, for: .horizontal)
+
+        let rightLine = UIView()
+        rightLine.backgroundColor = UIColor(white: 0.75, alpha: 1)
+        rightLine.heightAnchor.constraint(equalToConstant: 1).isActive = true
+        rightLine.setContentHuggingPriority(.defaultLow, for: .horizontal)
+
+        container.addArrangedSubview(leftLine)
+        container.addArrangedSubview(orLabel)
+        container.addArrangedSubview(rightLine)
+
+        NSLayoutConstraint.activate([
+            leftLine.widthAnchor.constraint(equalTo: rightLine.widthAnchor)
+        ])
+
+        return container
     }
 
     // MARK: - TextField

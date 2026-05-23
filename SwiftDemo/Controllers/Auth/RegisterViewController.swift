@@ -8,6 +8,12 @@ class RegisterViewController: UIViewController, UITextFieldDelegate {
     private let sendOtpButton = UIButton(type: .system)
     private let loginLabel = UILabel()
 
+    // MARK: - Referral
+    private var referralCode: String?
+    private let referralLinkLabel = UILabel()
+    private let referralTagView = UIView()
+    private let referralCodeLabel = UILabel()
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
@@ -15,42 +21,63 @@ class RegisterViewController: UIViewController, UITextFieldDelegate {
         setupTextFields()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: animated)
+    }
+
     private func setupUI() {
-        view.backgroundColor = .systemBlue
+        view.backgroundColor = UIColor(red: 0.85, green: 0.93, blue: 1.0, alpha: 1)
         navigationItem.title = ""
 
         // Card
         cardView.backgroundColor = .white
-        cardView.layer.cornerRadius = 16
+        cardView.layer.cornerRadius = 20
+        cardView.layer.shadowColor = UIColor.black.cgColor
+        cardView.layer.shadowOpacity = 0.08
+        cardView.layer.shadowRadius = 10
+        cardView.layer.shadowOffset = CGSize(width: 0, height: 4)
         cardView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(cardView)
 
         NSLayoutConstraint.activate([
-            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-            cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            cardView.heightAnchor.constraint(equalToConstant: 360)
+            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
+            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
+            cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
 
         // Title
         let titleLabel = UILabel()
-        titleLabel.text = "Patient registration"
-        titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
+        titleLabel.text = "Register"
+        titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         cardView.addSubview(titleLabel)
 
+        // Subtitle
+        let subtitleLabel = UILabel()
+        subtitleLabel.text = "Create your account to get started with HEARTO"
+        subtitleLabel.font = .systemFont(ofSize: 16)
+        subtitleLabel.textColor = .black
+        subtitleLabel.numberOfLines = 2
+        subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        cardView.addSubview(subtitleLabel)
+
         // Name Field
-        nameField.placeholder = "Name"
+        nameField.placeholder = "Full Name"
         nameField.borderStyle = .roundedRect
         nameField.translatesAutoresizingMaskIntoConstraints = false
         cardView.addSubview(nameField)
 
         // Mobile Field
-        mobileField.placeholder = "Mobile number"
+        mobileField.placeholder = "Mobile Number"
         mobileField.keyboardType = .numberPad
         mobileField.borderStyle = .roundedRect
         mobileField.translatesAutoresizingMaskIntoConstraints = false
         cardView.addSubview(mobileField)
+
+        // "or" divider
+        let dividerStack = makeDivider()
+        cardView.addSubview(dividerStack)
 
         // Already have an account label
         loginLabel.attributedText = makeLoginText()
@@ -62,8 +89,8 @@ class RegisterViewController: UIViewController, UITextFieldDelegate {
         let loginTap = UITapGestureRecognizer(target: self, action: #selector(loginTapped))
         loginLabel.addGestureRecognizer(loginTap)
 
-        // Send OTP Button
-        sendOtpButton.setTitle("Send OTP", for: .normal)
+        // Register Button
+        sendOtpButton.setTitle("Register", for: .normal)
         sendOtpButton.setTitleColor(.white, for: .normal)
         sendOtpButton.backgroundColor = .systemGreen
         sendOtpButton.layer.cornerRadius = 10
@@ -71,30 +98,89 @@ class RegisterViewController: UIViewController, UITextFieldDelegate {
         sendOtpButton.addTarget(self, action: #selector(sendOtpTapped), for: .touchUpInside)
         cardView.addSubview(sendOtpButton)
 
-        // ✅ FIXED CONSTRAINTS
-        NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 24),
-            titleLabel.centerXAnchor.constraint(equalTo: cardView.centerXAnchor),
+        // Referral link label
+        referralLinkLabel.attributedText = NSAttributedString(
+            string: "Have a referral code?",
+            attributes: [
+                .foregroundColor: UIColor.systemBlue,
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .font: UIFont.systemFont(ofSize: 14)
+            ]
+        )
+        referralLinkLabel.isUserInteractionEnabled = true
+        referralLinkLabel.translatesAutoresizingMaskIntoConstraints = false
+        referralLinkLabel.addGestureRecognizer(
+            UITapGestureRecognizer(target: self, action: #selector(showReferralDialog))
+        )
+        cardView.addSubview(referralLinkLabel)
 
-            nameField.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 24),
-            nameField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 20),
-            nameField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -20),
-            nameField.heightAnchor.constraint(equalToConstant: 44),
+        // Referral code chip (shown after code applied)
+        referralTagView.backgroundColor = UIColor(red: 0.85, green: 0.93, blue: 1.0, alpha: 1)
+        referralTagView.layer.cornerRadius = 14
+        referralTagView.isHidden = true
+        referralTagView.translatesAutoresizingMaskIntoConstraints = false
+        cardView.addSubview(referralTagView)
+
+        referralCodeLabel.font = .systemFont(ofSize: 14, weight: .semibold)
+        referralCodeLabel.textColor = .systemBlue
+        referralCodeLabel.translatesAutoresizingMaskIntoConstraints = false
+        referralTagView.addSubview(referralCodeLabel)
+
+        let removeBtn = UIButton(type: .system)
+        removeBtn.setImage(UIImage(systemName: "xmark"), for: .normal)
+        removeBtn.tintColor = .systemBlue
+        removeBtn.translatesAutoresizingMaskIntoConstraints = false
+        removeBtn.addTarget(self, action: #selector(removeReferralCode), for: .touchUpInside)
+        referralTagView.addSubview(removeBtn)
+
+        NSLayoutConstraint.activate([
+            referralCodeLabel.leadingAnchor.constraint(equalTo: referralTagView.leadingAnchor, constant: 12),
+            referralCodeLabel.centerYAnchor.constraint(equalTo: referralTagView.centerYAnchor),
+            removeBtn.leadingAnchor.constraint(equalTo: referralCodeLabel.trailingAnchor, constant: 8),
+            removeBtn.trailingAnchor.constraint(equalTo: referralTagView.trailingAnchor, constant: -10),
+            removeBtn.centerYAnchor.constraint(equalTo: referralTagView.centerYAnchor),
+            removeBtn.widthAnchor.constraint(equalToConstant: 20),
+            removeBtn.heightAnchor.constraint(equalToConstant: 20)
+        ])
+
+        NSLayoutConstraint.activate([
+            titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 40),
+            titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 32),
+
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 16),
+            subtitleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 32),
+            subtitleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -32),
+
+            nameField.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 24),
+            nameField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 32),
+            nameField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -32),
+            nameField.heightAnchor.constraint(equalToConstant: 48),
 
             mobileField.topAnchor.constraint(equalTo: nameField.bottomAnchor, constant: 16),
             mobileField.leadingAnchor.constraint(equalTo: nameField.leadingAnchor),
             mobileField.trailingAnchor.constraint(equalTo: nameField.trailingAnchor),
-            mobileField.heightAnchor.constraint(equalToConstant: 44),
+            mobileField.heightAnchor.constraint(equalToConstant: 48),
 
-            // Label BELOW mobile
-            loginLabel.topAnchor.constraint(equalTo: mobileField.bottomAnchor, constant: 12),
-            loginLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -20),
-
-            // Button BELOW label (more spacing)
-            sendOtpButton.topAnchor.constraint(equalTo: loginLabel.bottomAnchor, constant: 24),
+            sendOtpButton.topAnchor.constraint(equalTo: mobileField.bottomAnchor, constant: 24),
             sendOtpButton.leadingAnchor.constraint(equalTo: nameField.leadingAnchor),
             sendOtpButton.trailingAnchor.constraint(equalTo: nameField.trailingAnchor),
-            sendOtpButton.heightAnchor.constraint(equalToConstant: 48)
+            sendOtpButton.heightAnchor.constraint(equalToConstant: 48),
+
+            referralLinkLabel.topAnchor.constraint(equalTo: sendOtpButton.bottomAnchor, constant: 14),
+            referralLinkLabel.leadingAnchor.constraint(equalTo: nameField.leadingAnchor),
+            referralLinkLabel.heightAnchor.constraint(equalToConstant: 28),
+
+            referralTagView.topAnchor.constraint(equalTo: sendOtpButton.bottomAnchor, constant: 14),
+            referralTagView.leadingAnchor.constraint(equalTo: nameField.leadingAnchor),
+            referralTagView.heightAnchor.constraint(equalToConstant: 28),
+
+            dividerStack.topAnchor.constraint(equalTo: referralLinkLabel.bottomAnchor, constant: 14),
+            dividerStack.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 32),
+            dividerStack.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -32),
+
+            loginLabel.topAnchor.constraint(equalTo: dividerStack.bottomAnchor, constant: 16),
+            loginLabel.centerXAnchor.constraint(equalTo: cardView.centerXAnchor),
+            loginLabel.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -40)
         ])
     }
 
@@ -181,16 +267,96 @@ class RegisterViewController: UIViewController, UITextFieldDelegate {
     }
 
     private func makeLoginText() -> NSAttributedString {
-        NSAttributedString(
-            string: "Already have an account?",
+        let normalText = "Already have an account? "
+        let signInText = "Sign In"
+
+        let fullText = NSMutableAttributedString(
+            string: normalText,
             attributes: [
-                .foregroundColor: UIColor.systemBlue,
-                .underlineStyle: NSUnderlineStyle.single.rawValue
+                .foregroundColor: UIColor.gray,
+                .font: UIFont.systemFont(ofSize: 18)
             ]
         )
+        fullText.append(NSAttributedString(
+            string: signInText,
+            attributes: [
+                .foregroundColor: UIColor.systemBlue,
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .font: UIFont.boldSystemFont(ofSize: 18)
+            ]
+        ))
+        return fullText
+    }
+
+    // MARK: - Or Divider
+    private func makeDivider() -> UIView {
+        let container = UIStackView()
+        container.axis = .horizontal
+        container.alignment = .center
+        container.spacing = 8
+        container.translatesAutoresizingMaskIntoConstraints = false
+
+        let leftLine = UIView()
+        leftLine.backgroundColor = UIColor(white: 0.75, alpha: 1)
+        leftLine.heightAnchor.constraint(equalToConstant: 1).isActive = true
+        leftLine.setContentHuggingPriority(.defaultLow, for: .horizontal)
+
+        let orLabel = UILabel()
+        orLabel.text = "or"
+        orLabel.font = .boldSystemFont(ofSize: 18)
+        orLabel.textColor = .black
+        orLabel.setContentHuggingPriority(.required, for: .horizontal)
+
+        let rightLine = UIView()
+        rightLine.backgroundColor = UIColor(white: 0.75, alpha: 1)
+        rightLine.heightAnchor.constraint(equalToConstant: 1).isActive = true
+        rightLine.setContentHuggingPriority(.defaultLow, for: .horizontal)
+
+        container.addArrangedSubview(leftLine)
+        container.addArrangedSubview(orLabel)
+        container.addArrangedSubview(rightLine)
+
+        NSLayoutConstraint.activate([
+            leftLine.widthAnchor.constraint(equalTo: rightLine.widthAnchor)
+        ])
+
+        return container
     }
 
     @objc private func loginTapped() {
         navigationController?.popViewController(animated: true)
+    }
+
+    // MARK: - Referral Code
+    @objc private func showReferralDialog() {
+        let alert = UIAlertController(
+            title: "Have a referral code?",
+            message: "Have a referral code from a friend? Enter it below to get 20% off on your first treatment.",
+            preferredStyle: .alert
+        )
+        alert.addTextField { tf in
+            tf.placeholder = "Enter referral code"
+            tf.autocapitalizationType = .allCharacters
+            tf.returnKeyType = .done
+        }
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Apply", style: .default) { [weak self, weak alert] _ in
+            guard
+                let self = self,
+                let code = alert?.textFields?.first?.text?.trimmingCharacters(in: .whitespaces),
+                !code.isEmpty
+            else { return }
+            self.referralCode = code
+            self.referralCodeLabel.text = code
+            self.referralLinkLabel.isHidden = true
+            self.referralTagView.isHidden = false
+        })
+        present(alert, animated: true)
+    }
+
+    @objc private func removeReferralCode() {
+        referralCode = nil
+        referralTagView.isHidden = true
+        referralLinkLabel.isHidden = false
     }
 }
