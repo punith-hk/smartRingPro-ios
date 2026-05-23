@@ -31,9 +31,11 @@ final class HeartRateViewController: AppBaseViewController {
     private let maxCard = VitalStatView(title: "Maximum", value: "--", color: .systemGreen)
     private let avgCard = VitalStatView(title: "Average", value: "--", color: .systemYellow)
 
-    private let actionButton = UIButton(type: .system)
-    private let heartRateTestValue = UILabel()
-    private let countdownLabel = UILabel()
+    private let actionButton     = UIButton(type: .system)
+    private let actionContainer   = UIView()
+    private let progressFill      = UIView()
+    private let countdownLabel    = UILabel()
+    private var progressFillWidth: NSLayoutConstraint?
 
     // MARK: - Data
     private var heartRateDayData: [GetRingDataByDayResponse.DayData] = []
@@ -169,29 +171,60 @@ final class HeartRateViewController: AppBaseViewController {
         [minCard, maxCard, avgCard].forEach { statsStack.addArrangedSubview($0) }
         contentView.addSubview(statsStack)
 
-        // Action button
-        actionButton.setTitleColor(.white, for: .normal)
-        actionButton.titleLabel?.font = .boldSystemFont(ofSize: 18)
-        actionButton.backgroundColor = .systemRed
-        actionButton.layer.cornerRadius = 46
-        actionButton.translatesAutoresizingMaskIntoConstraints = false
-        actionButton.addTarget(self, action: #selector(actionTapped), for: .touchUpInside)
-        contentView.addSubview(actionButton)
-
-        // Heart rate label
+        // Heart rate value label
+        let heartRateTestValue = UILabel()
         heartRateTestValue.font = .boldSystemFont(ofSize: 24)
         heartRateTestValue.textColor = UIColor(white: 0.10, alpha: 1)
         heartRateTestValue.textAlignment = .center
         heartRateTestValue.text = "-- times/min"
+        heartRateTestValue.tag = 1002
         heartRateTestValue.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(heartRateTestValue)
 
-        // Countdown
-        countdownLabel.font = .systemFont(ofSize: 13)
-        countdownLabel.textColor = UIColor(white: 0.35, alpha: 1)
-        countdownLabel.textAlignment = .center
+        // Shadow container
+        actionContainer.backgroundColor = .white
+        actionContainer.layer.cornerRadius = 12
+        actionContainer.layer.shadowColor = UIColor.black.cgColor
+        actionContainer.layer.shadowOpacity = 0.1
+        actionContainer.layer.shadowOffset = CGSize(width: 0, height: 2)
+        actionContainer.layer.shadowRadius = 4
+        actionContainer.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(actionContainer)
+
+        // Pill container
+        actionButton.backgroundColor = .systemRed
+        actionButton.layer.cornerRadius = 12
+        actionButton.layer.masksToBounds = true
+        actionButton.translatesAutoresizingMaskIntoConstraints = false
+        actionButton.addTarget(self, action: #selector(actionTapped), for: .touchUpInside)
+        actionContainer.addSubview(actionButton)
+
+        // Progress fill
+        progressFill.backgroundColor = UIColor(white: 0, alpha: 0.18)
+        progressFill.isUserInteractionEnabled = false
+        progressFill.translatesAutoresizingMaskIntoConstraints = false
+        actionButton.insertSubview(progressFill, at: 0)
+
+        // "Start" / "Stop" title label
+        let titleLabel = UILabel()
+        titleLabel.text = "Start Live Test"
+        titleLabel.font = .boldSystemFont(ofSize: 18)
+        titleLabel.textColor = .white
+        titleLabel.textAlignment = .center
+        titleLabel.tag = 1001
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        actionButton.addSubview(titleLabel)
+
+        // Countdown label — right side
+        countdownLabel.font = .boldSystemFont(ofSize: 16)
+        countdownLabel.textColor = .white
+        countdownLabel.textAlignment = .right
+        countdownLabel.isHidden = true
         countdownLabel.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(countdownLabel)
+        actionButton.addSubview(countdownLabel)
+
+        progressFillWidth = progressFill.widthAnchor.constraint(equalToConstant: 0)
+        progressFillWidth?.isActive = true
 
         NSLayoutConstraint.activate([
             chartView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
@@ -203,17 +236,29 @@ final class HeartRateViewController: AppBaseViewController {
             statsStack.trailingAnchor.constraint(equalTo: chartView.trailingAnchor),
             statsStack.heightAnchor.constraint(equalToConstant: 90),
 
-            actionButton.topAnchor.constraint(equalTo: statsStack.bottomAnchor, constant: 60),
-            actionButton.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            actionButton.widthAnchor.constraint(equalToConstant: 100),
-            actionButton.heightAnchor.constraint(equalToConstant: 100),
+            actionContainer.topAnchor.constraint(equalTo: statsStack.bottomAnchor, constant: 32),
+            actionContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            actionContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            actionContainer.heightAnchor.constraint(equalToConstant: 50),
 
-            heartRateTestValue.topAnchor.constraint(equalTo: actionButton.bottomAnchor, constant: 16),
+            actionButton.topAnchor.constraint(equalTo: actionContainer.topAnchor),
+            actionButton.leadingAnchor.constraint(equalTo: actionContainer.leadingAnchor),
+            actionButton.trailingAnchor.constraint(equalTo: actionContainer.trailingAnchor),
+            actionButton.bottomAnchor.constraint(equalTo: actionContainer.bottomAnchor),
+
+            progressFill.topAnchor.constraint(equalTo: actionButton.topAnchor),
+            progressFill.leadingAnchor.constraint(equalTo: actionButton.leadingAnchor),
+            progressFill.bottomAnchor.constraint(equalTo: actionButton.bottomAnchor),
+
+            titleLabel.centerXAnchor.constraint(equalTo: actionButton.centerXAnchor),
+            titleLabel.centerYAnchor.constraint(equalTo: actionButton.centerYAnchor),
+
+            countdownLabel.centerYAnchor.constraint(equalTo: actionButton.centerYAnchor),
+            countdownLabel.trailingAnchor.constraint(equalTo: actionButton.trailingAnchor, constant: -16),
+
+            heartRateTestValue.topAnchor.constraint(equalTo: actionContainer.bottomAnchor, constant: 20),
             heartRateTestValue.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-
-            countdownLabel.topAnchor.constraint(equalTo: heartRateTestValue.bottomAnchor, constant: 6),
-            countdownLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            countdownLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40)
+            heartRateTestValue.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40)
         ])
     }
 
@@ -273,16 +318,34 @@ final class HeartRateViewController: AppBaseViewController {
 
     private func tick() {
         remainingSeconds -= 1
-        countdownLabel.text = "Remaining \(remainingSeconds) s"
+        let elapsed = 60 - remainingSeconds
+        let progress = Double(elapsed) / 60.0
+        countdownLabel.text = "\(remainingSeconds)s"
+        let totalWidth = actionButton.bounds.width
+        if totalWidth > 0 {
+            progressFillWidth?.constant = totalWidth * CGFloat(progress)
+            UIView.animate(withDuration: 0.9, delay: 0, options: .curveLinear) {
+                self.actionButton.layoutIfNeeded()
+            }
+        }
         if remainingSeconds <= 0 {
-            // timer finished naturally -> treat as completion
             stopMeasurement()
         }
     }
 
     private func updateActionUI() {
-        actionButton.setTitle(isMeasuring ? "Stop" : "Start", for: .normal)
-        countdownLabel.text = isMeasuring ? "Remaining \(remainingSeconds) s" : "Remaining 0 s"
+        let titleLabel = actionButton.viewWithTag(1001) as? UILabel
+        if isMeasuring {
+            titleLabel?.text = "Stop Live Test"
+            countdownLabel.text = "\(remainingSeconds)s"
+            countdownLabel.isHidden = false
+            progressFillWidth?.constant = 0
+        } else {
+            titleLabel?.text = "Start Live Test"
+            countdownLabel.isHidden = true
+            progressFillWidth?.constant = 0
+            actionButton.layoutIfNeeded()
+        }
     }
 
     private func presentStopConfirmation() {

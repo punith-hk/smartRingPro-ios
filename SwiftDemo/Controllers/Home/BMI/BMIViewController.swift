@@ -77,6 +77,11 @@ final class BMIViewController: AppBaseViewController {
     private func buildUI() {
         let card = makeCard()
 
+        // Page title
+        let pageTitle = makeLabel("Body Mass Index", font: .boldSystemFont(ofSize: 17), color: UIColor(white: 0.15, alpha: 1))
+        pageTitle.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(pageTitle)
+
         // "BMI Meter" card title
         let cardTitle = makeLabel("BMI Meter", font: .systemFont(ofSize: 16, weight: .semibold), color: .black)
 
@@ -127,7 +132,10 @@ final class BMIViewController: AppBaseViewController {
 
         let pad: CGFloat = 16
         NSLayoutConstraint.activate([
-            card.topAnchor.constraint(equalTo: contentView.topAnchor, constant: pad),
+            pageTitle.topAnchor.constraint(equalTo: contentView.topAnchor, constant: pad),
+            pageTitle.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+
+            card.topAnchor.constraint(equalTo: pageTitle.bottomAnchor, constant: 10),
             card.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: pad),
             card.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -pad),
 

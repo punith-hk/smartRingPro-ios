@@ -19,6 +19,7 @@ class VitalChartView: UIView {
     private var currentDataPoints: [VitalDataPoint] = []
     
     // MARK: - UI Components
+    private let titleLabel = UILabel()
     private let segmentedControl = UISegmentedControl(items: ["Day", "Week", "Month"])
     private let segmentCard = UIView()   // white card behind the tab control
     private let chartCard = UIView()
@@ -51,6 +52,13 @@ class VitalChartView: UIView {
     
     // MARK: - UI Setup
     private func setupUI() {
+        // Title label
+        titleLabel.text = vitalType.displayName
+        titleLabel.font = .boldSystemFont(ofSize: 17)
+        titleLabel.textColor = UIColor(white: 0.15, alpha: 1)
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(titleLabel)
+
         // Segmented card container (white background — UISegmentedControl ignores backgroundColor on iOS 13+)
         segmentCard.backgroundColor = .white
         segmentCard.layer.cornerRadius = 12
@@ -136,7 +144,10 @@ class VitalChartView: UIView {
         
         // Layout
         NSLayoutConstraint.activate([
-            segmentCard.topAnchor.constraint(equalTo: topAnchor),
+            titleLabel.topAnchor.constraint(equalTo: topAnchor),
+            titleLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
+
+            segmentCard.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 10),
             segmentCard.leadingAnchor.constraint(equalTo: leadingAnchor),
             segmentCard.trailingAnchor.constraint(equalTo: trailingAnchor),
             segmentCard.heightAnchor.constraint(equalToConstant: 44),

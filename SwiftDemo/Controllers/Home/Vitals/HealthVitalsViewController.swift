@@ -58,9 +58,12 @@ final class HealthVitalsViewController: AppBaseViewController {
     private lazy var systolicCard = VitalStatView(title: "Mean Systolic BP", value: "--", color: .systemIndigo, icon: UIImage(systemName: "waveform.path.ecg"), titleFont: .boldSystemFont(ofSize: 14))
     private lazy var diastolicCard = VitalStatView(title: "Mean Diastolic BP", value: "--", color: .systemRed, icon: UIImage(systemName: "waveform.path.ecg"), titleFont: .boldSystemFont(ofSize: 14))
 
-    private let actionButton = UIButton(type: .system)
+    private let actionButton     = UIButton(type: .system)
+    private let actionContainer   = UIView()   // shadow wrapper (masksToBounds=false)
+    private let progressFill      = UIView()   // sweeps left→right during measurement
+    private let countdownLabel    = UILabel()  // "60s" on right side
+    private var progressFillWidth: NSLayoutConstraint?
     private lazy var measurementValueLabel = UILabel()
-    private let countdownLabel = UILabel()
 
     // MARK: - Sync Helpers
     private var heartRateSyncHelper: HeartRateSyncHelper?
@@ -346,14 +349,46 @@ final class HealthVitalsViewController: AppBaseViewController {
     }
     
     private func setupMeasurementControls() {
-        // Action button
-        actionButton.setTitleColor(.white, for: .normal)
-        actionButton.titleLabel?.font = .boldSystemFont(ofSize: 18)
+        // Shadow container (matches chart/stat card style)
+        actionContainer.backgroundColor = .white
+        actionContainer.layer.cornerRadius = 12
+        actionContainer.layer.shadowColor = UIColor.black.cgColor
+        actionContainer.layer.shadowOpacity = 0.1
+        actionContainer.layer.shadowOffset = CGSize(width: 0, height: 2)
+        actionContainer.layer.shadowRadius = 4
+        actionContainer.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(actionContainer)
+
+        // ── Pill container (background track) ──
         actionButton.backgroundColor = vitalType.color
-        actionButton.layer.cornerRadius = 46
+        actionButton.layer.cornerRadius = 12
+        actionButton.layer.masksToBounds = true
         actionButton.translatesAutoresizingMaskIntoConstraints = false
         actionButton.addTarget(self, action: #selector(actionTapped), for: .touchUpInside)
-        contentView.addSubview(actionButton)
+        actionContainer.addSubview(actionButton)
+
+        // Progress fill — sweeps left→right (slightly darker tint of vitalType.color)
+        progressFill.backgroundColor = UIColor(white: 0, alpha: 0.18)
+        progressFill.isUserInteractionEnabled = false
+        progressFill.translatesAutoresizingMaskIntoConstraints = false
+        actionButton.insertSubview(progressFill, at: 0)
+
+        // "Start" / "Stop" label centered
+        let titleLabel = UILabel()
+        titleLabel.text = "Start Live Test"
+        titleLabel.font = .boldSystemFont(ofSize: 18)
+        titleLabel.textColor = .white
+        titleLabel.textAlignment = .center
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        actionButton.addSubview(titleLabel)
+
+        // Countdown label — right side, hidden until measuring
+        countdownLabel.font = .boldSystemFont(ofSize: 16)
+        countdownLabel.textColor = .white
+        countdownLabel.textAlignment = .right
+        countdownLabel.isHidden = true
+        countdownLabel.translatesAutoresizingMaskIntoConstraints = false
+        actionButton.addSubview(countdownLabel)
 
         // Measurement value label
         measurementValueLabel.font = .boldSystemFont(ofSize: 24)
@@ -363,12 +398,9 @@ final class HealthVitalsViewController: AppBaseViewController {
         measurementValueLabel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(measurementValueLabel)
 
-        // Countdown
-        countdownLabel.font = .systemFont(ofSize: 13)
-        countdownLabel.textColor = UIColor(white: 0.35, alpha: 1)
-        countdownLabel.textAlignment = .center
-        countdownLabel.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(countdownLabel)
+        // Progress fill width — starts at 0
+        progressFillWidth = progressFill.widthAnchor.constraint(equalToConstant: 0)
+        progressFillWidth?.isActive = true
 
         NSLayoutConstraint.activate([
             chartView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
@@ -380,18 +412,34 @@ final class HealthVitalsViewController: AppBaseViewController {
             statsStack.trailingAnchor.constraint(equalTo: chartView.trailingAnchor),
             statsStack.heightAnchor.constraint(equalToConstant: 90),
 
-            actionButton.topAnchor.constraint(equalTo: statsStack.bottomAnchor, constant: 60),
-            actionButton.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            actionButton.widthAnchor.constraint(equalToConstant: 100),
-            actionButton.heightAnchor.constraint(equalToConstant: 100),
+            actionContainer.topAnchor.constraint(equalTo: statsStack.bottomAnchor, constant: 32),
+            actionContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            actionContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            actionContainer.heightAnchor.constraint(equalToConstant: 50),
 
-            measurementValueLabel.topAnchor.constraint(equalTo: actionButton.bottomAnchor, constant: 16),
+            actionButton.topAnchor.constraint(equalTo: actionContainer.topAnchor),
+            actionButton.leadingAnchor.constraint(equalTo: actionContainer.leadingAnchor),
+            actionButton.trailingAnchor.constraint(equalTo: actionContainer.trailingAnchor),
+            actionButton.bottomAnchor.constraint(equalTo: actionContainer.bottomAnchor),
+
+            progressFill.topAnchor.constraint(equalTo: actionButton.topAnchor),
+            progressFill.leadingAnchor.constraint(equalTo: actionButton.leadingAnchor),
+            progressFill.bottomAnchor.constraint(equalTo: actionButton.bottomAnchor),
+
+            titleLabel.centerXAnchor.constraint(equalTo: actionButton.centerXAnchor),
+            titleLabel.centerYAnchor.constraint(equalTo: actionButton.centerYAnchor),
+
+            countdownLabel.centerYAnchor.constraint(equalTo: actionButton.centerYAnchor),
+            countdownLabel.trailingAnchor.constraint(equalTo: actionButton.trailingAnchor, constant: -16),
+
+            measurementValueLabel.topAnchor.constraint(equalTo: actionContainer.bottomAnchor, constant: 20),
             measurementValueLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-
-            countdownLabel.topAnchor.constraint(equalTo: measurementValueLabel.bottomAnchor, constant: 6),
-            countdownLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            countdownLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40)
+            measurementValueLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40)
         ])
+
+        // Keep a reference to the title label for toggling Start/Stop
+        actionButton.tag = 0  // tag 0 = idle; we'll find titleLabel by tag
+        titleLabel.tag = 1001
     }
     
     private func shouldShowMeasurementControls() -> Bool {
@@ -455,15 +503,35 @@ final class HealthVitalsViewController: AppBaseViewController {
 
     private func tick() {
         remainingSeconds -= 1
-        countdownLabel.text = "Remaining \(remainingSeconds) s"
+        let elapsed = 60 - remainingSeconds
+        let progress = Double(elapsed) / 60.0
+        countdownLabel.text = "\(remainingSeconds)s"
+        // Animate progress fill width
+        let totalWidth = actionButton.bounds.width
+        if totalWidth > 0 {
+            progressFillWidth?.constant = totalWidth * CGFloat(progress)
+            UIView.animate(withDuration: 0.9, delay: 0, options: .curveLinear) {
+                self.actionButton.layoutIfNeeded()
+            }
+        }
         if remainingSeconds <= 0 {
             stopMeasurement()
         }
     }
 
     private func updateActionUI() {
-        actionButton.setTitle(isMeasuring ? "Stop" : "Start", for: .normal)
-        countdownLabel.text = isMeasuring ? "Remaining \(remainingSeconds) s" : "Remaining 0 s"
+        let titleLabel = actionButton.viewWithTag(1001) as? UILabel
+        if isMeasuring {
+            titleLabel?.text = "Stop Live Test"
+            countdownLabel.text = "\(remainingSeconds)s"
+            countdownLabel.isHidden = false
+            progressFillWidth?.constant = 0
+        } else {
+            titleLabel?.text = "Start Live Test"
+            countdownLabel.isHidden = true
+            progressFillWidth?.constant = 0
+            actionButton.layoutIfNeeded()
+        }
     }
 
     private func presentStopConfirmation() {
