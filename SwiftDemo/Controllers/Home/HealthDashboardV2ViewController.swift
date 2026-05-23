@@ -412,7 +412,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             icon: UIImage(systemName: "thermometer"),
             iconTint: UIColor(red: 1, green: 0.60, blue: 0, alpha: 1),
             iconBg: UIColor(red: 1, green: 0.94, blue: 0.88, alpha: 1),
-            title: "Body Temp", value: "--", unit: "°C")
+            title: "Body Temp", value: "--", unit: AppSettingsManager.shared.getTemperatureUnit() == .fahrenheit ? "°F" : "°C")
         bodyTempCard.onTap = { [weak self] in
             self?.push(HealthVitalsViewController(vitalType: .temperature))
         }
@@ -654,6 +654,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         let calories  = todaySteps.calories
         let glucose   = bloodGlucoseRepo.getLatestEntry()?.glucoseValue   ?? 0
         let temp      = temperatureRepo.getLatestEntry()?.temperatureValue ?? 0
+        // Both keys written by SleepSyncHelper.updateDashboardSleepStats after every BLE sync
         let sleepMin  = UserDefaults.standard.integer(forKey: "last_day_sleep_minutes")
         let sleepQual = computeSleepQuality()
         let bmiVal    = computeBMI()
@@ -786,9 +787,12 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     }
 
     private func applyTemperature(_ temp: Double) {
-        let text = temp > 0 ? String(format: "%.1f", temp) : "--"
-        bodyTempCard.updateValue(text, unit: "°C")
-        let (status, color) = tempStatus(temp)
+        let unitSetting = AppSettingsManager.shared.getTemperatureUnit()
+        let displayTemp = (unitSetting == .fahrenheit && temp > 0) ? TemperatureConverter.celsiusToFahrenheit(temp) : temp
+        let unitStr = unitSetting == .fahrenheit ? "°F" : "°C"
+        let text = displayTemp > 0 ? String(format: "%.1f", displayTemp) : "--"
+        bodyTempCard.updateValue(text, unit: unitStr)
+        let (status, color) = tempStatus(temp)   // tempStatus thresholds are in Celsius
         bodyTempCard.updateStatus(text: status, color: color)
     }
 
@@ -977,27 +981,22 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     // MARK: - Helpers — Computation
 
     private func computeSleepQuality() -> Int {
+        // Primary: read value written by SleepSyncHelper.updateDashboardSleepStats
+        // after every BLE sync (correct formula: seconds / 28800 * 100)
+        let stored = UserDefaults.standard.integer(forKey: "last_day_sleep_quality")
+        if stored > 0 { return stored }
+
+        // Fallback: compute directly from CoreData using correct seconds denominator
         let sessions = sleepRepo.getAllSessions()
         guard !sessions.isEmpty else { return 0 }
-
-        // Use sessions from the last 36h (covers previous night's sleep)
         let cutoff = Int64(Date().timeIntervalSince1970) - 36 * 3600
         let recent = sessions.filter { $0.endTime >= cutoff }
-        guard !recent.isEmpty else {
-            // fallback to most recent session
-            if let last = sessions.first {
-                let total = last.deepSleepTimes + last.lightSleepTimes + last.remSleepTimes
-                let raw   = min(100, max(12, Int(Double(total) / 480.0 * 100)))
-                return raw
-            }
-            return 0
+        let source = recent.isEmpty ? Array(sessions.prefix(1)) : recent
+        let totalSec = source.reduce(0) {
+            $0 + Int($1.deepSleepTimes) + Int($1.lightSleepTimes) + Int($1.remSleepTimes)
         }
-
-        let scores = recent.map { session -> Int in
-            let total = session.deepSleepTimes + session.lightSleepTimes + session.remSleepTimes
-            return min(100, max(12, Int(Double(total) / 480.0 * 100)))
-        }
-        return scores.reduce(0, +) / scores.count
+        // 28800 = 8 hours in seconds (correct denominator — values are stored as seconds)
+        return min(100, max(12, Int(Double(totalSec) / 28800.0 * 100)))
     }
 
     private func computeBMI() -> Double {

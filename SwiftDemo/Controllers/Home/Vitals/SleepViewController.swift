@@ -659,6 +659,19 @@ extension SleepViewController: SleepSyncListener {
         var totalRemMinutes = 0
         var totalAwakeMinutes = 0
         
+        // ── AGGREGATION LOG ───────────────────────────────────────────────────
+        print("\n📊 ======= [SleepVC] onDayDataLoaded AGGREGATION (\(sessions.count) session(s)) =======")
+        for (i, s) in sessions.enumerated() {
+            let dSec = Int(s.deepSleepTimes); let lSec = Int(s.lightSleepTimes)
+            let rSec = Int(s.remSleepTimes);  let wSec = Int(s.wakeupTimes)
+            print("  [Session \(i+1)]")
+            print("    deep  raw=\(dSec)s  Int÷60=\(dSec/60)m  (lost \(dSec%60)s)")
+            print("    light raw=\(lSec)s  Int÷60=\(lSec/60)m  (lost \(lSec%60)s)")
+            print("    rem   raw=\(rSec)s  Int÷60=\(rSec/60)m  (lost \(rSec%60)s)")
+            print("    awake raw=\(wSec)s  Int÷60=\(wSec/60)m  (lost \(wSec%60)s)")
+        }
+        // ─────────────────────────────────────────────────────────────────────
+        
         for session in sessions {
             totalDeepMinutes += Int(session.deepSleepTimes) / 60
             totalLightMinutes += Int(session.lightSleepTimes) / 60
@@ -675,19 +688,39 @@ extension SleepViewController: SleepSyncListener {
                 let currentSession = sortedSessions[i]
                 let nextSession = sortedSessions[i + 1]
                 
-                let gapSeconds = nextSession.startTime - currentSession.endTime
+                // Use last DETAIL segment's endTime (more accurate than session.endTime,
+                // which can extend beyond the final recorded sleep segment)
+                let currentDetails = currentSession.details?.allObjects as? [SleepDetailEntity] ?? []
+                let lastDetailEndTime = currentDetails.max(by: { $0.endTime < $1.endTime })?.endTime
+                    ?? currentSession.endTime
+                
+                let gapSeconds = nextSession.startTime - lastDetailEndTime
                 let gapMinutes = Int(gapSeconds) / 60
                 
                 // Only add gaps of 1 minute or more
                 if gapMinutes >= 1 {
                     totalAwakeMinutes += gapMinutes
-                    print("📊 [SleepVC] Gap between sessions: \(gapMinutes) min")
+                    print("📊 [SleepVC] Gap between sessions (last detail→next start): \(gapMinutes) min")
                 }
             }
         }
         
         // Calculate total sleep duration (Deep + Light + REM only, NOT awake)
         let totalMinutes = totalDeepMinutes + totalLightMinutes + totalRemMinutes
+        
+        // ── FINAL DISPLAY SUMMARY LOG ─────────────────────────────────────────
+        print("  --- Aggregated display values ---")
+        print("    deep  total: \(totalDeepMinutes) min")
+        print("    light total: \(totalLightMinutes) min")
+        print("    rem   total: \(totalRemMinutes) min")
+        print("    awake total: \(totalAwakeMinutes) min")
+        print("    sleep dur (deep+light+rem): \(totalMinutes) min → \(totalMinutes/60)h \(totalMinutes%60)m")
+        let scorePreview = min(100, max(12, Int(Double(totalMinutes) / 480.0 * 100)))
+        print("    quality score (÷480): \(scorePreview)/100  ← formula: \(totalMinutes)/480×100")
+        let effPreview = (totalMinutes + totalAwakeMinutes) > 0 ? Int(Double(totalMinutes) / Double(totalMinutes + totalAwakeMinutes) * 100) : 0
+        print("    efficiency (\(totalMinutes)/(\(totalMinutes)+\(totalAwakeMinutes))): \(effPreview)%  [awake uses last-detail-end gap]")
+        print("📊 =============================================================\n")
+        // ─────────────────────────────────────────────────────────────────────
         
         print("📊 [SleepVC] Displaying \(sessions.count) session(s) - Total: \(totalMinutes) min")
         

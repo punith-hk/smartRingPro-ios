@@ -718,15 +718,20 @@ final class CardiovascularStatusViewController: AppBaseViewController {
 
     // MARK: - Data helpers
     private func syncText() -> String {
-        guard lastSyncMillis > 0 else { return "Last synced: No data yet" }
-        let diff = Int64(Date().timeIntervalSince1970 * 1000) - lastSyncMillis
+        guard lastSyncMillis > 0 else { return "Last recorded: No data yet" }
+        let recordedDate = Date(timeIntervalSince1970: TimeInterval(lastSyncMillis) / 1000)
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "h:mm a"
+        let timeStr = timeFormatter.string(from: recordedDate)
+
+        let diff  = Int64(Date().timeIntervalSince1970 * 1000) - lastSyncMillis
         let mins  = diff / 60_000
         let hours = diff / 3_600_000
         let days  = diff / 86_400_000
-        if diff < 60_000    { return "Last data synced: just now" }
-        if mins  < 60       { return "Last data synced: \(mins) min ago" }
-        if hours < 24       { return "Last data synced: \(hours) hr\(hours == 1 ? "" : "s") ago" }
-        return "Last data synced: \(days) day\(days == 1 ? "" : "s") ago"
+        if diff  < 60_000  { return "Last recorded: \(timeStr)" }
+        if mins  < 60      { return "Last recorded: \(timeStr) (\(mins)m ago)" }
+        if hours < 24      { return "Last recorded: \(timeStr) (\(hours)h ago)" }
+        return "Last recorded: \(days)d ago (\(timeStr))"
     }
 
     private func syncDotColor() -> UIColor {

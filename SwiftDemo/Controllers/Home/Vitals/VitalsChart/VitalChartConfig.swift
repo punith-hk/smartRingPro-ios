@@ -31,7 +31,7 @@ enum VitalType {
         case .heartRate: return "times/min"
         case .bloodPressure: return "mmHg"
         case .bloodGlucose: return "mg/dL"
-        case .temperature: return "°C"
+        case .temperature: return AppSettingsManager.shared.getTemperatureUnit() == .fahrenheit ? "°F" : "°C"
         case .bloodOxygen: return "%"
         case .hrv: return "ms"
         case .calories: return "kcal"

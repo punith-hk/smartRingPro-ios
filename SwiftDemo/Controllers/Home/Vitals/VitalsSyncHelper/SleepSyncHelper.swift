@@ -48,6 +48,37 @@ class SleepSyncHelper {
         // Step 1: Get ALL local sessions for this day
         let localSessions = repository.getByDateRange(startDate: startOfDay, endDate: endOfDay)
         
+        // ── LOCAL DB LOAD LOG ─────────────────────────────────────────────────
+        let fmtTS: (Int64) -> String = { t in
+            let d = Date(timeIntervalSince1970: TimeInterval(t))
+            let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd HH:mm:ss"; return f.string(from: d)
+        }
+        print("\n📂 ======= [SleepSyncHelper] LOCAL DB for \(selectedDate) (\(localSessions.count) session(s)) =======")
+        for (i, s) in localSessions.enumerated() {
+            let deepMin  = Int(s.deepSleepTimes)  / 60
+            let lightMin = Int(s.lightSleepTimes) / 60
+            let remMin   = Int(s.remSleepTimes)   / 60
+            let wakeMin  = Int(s.wakeupTimes)     / 60
+            let totMin   = (Int(s.deepSleepTimes) + Int(s.lightSleepTimes) + Int(s.remSleepTimes)) / 60
+            print("  [Session \(i+1)] statisticTime=\(s.statisticTime)")
+            print("    start : \(fmtTS(s.startTime))  end : \(fmtTS(s.endTime))")
+            print("    deep  : \(s.deepSleepTimes)s ÷60= \(deepMin)m  (truncated from \(Int(s.deepSleepTimes))s)")
+            print("    light : \(s.lightSleepTimes)s ÷60= \(lightMin)m  (truncated from \(Int(s.lightSleepTimes))s)")
+            print("    REM   : \(s.remSleepTimes)s ÷60= \(remMin)m  (truncated from \(Int(s.remSleepTimes))s)")
+            print("    awake : \(s.wakeupTimes)s ÷60= \(wakeMin)m  (truncated from \(Int(s.wakeupTimes))s)")
+            print("    sleep duration (deep+light+rem): \(totMin)m  [awake excluded]")
+            let details = s.details?.allObjects as? [SleepDetailEntity] ?? []
+            print("    detail segments: \(details.count)")
+            let typeNames2 = ["?","Deep","Light","REM","Awake"]
+            for d in details.sorted(by: { $0.startTime < $1.startTime }) {
+                let idx2 = Int(d.sleepType)
+                let tn = (idx2 >= 0 && idx2 < typeNames2.count) ? typeNames2[idx2] : "\(d.sleepType)"
+                print("      \(tn) | \(fmtTS(d.startTime)) → \(fmtTS(d.endTime)) | \(d.duration)s (\(d.duration/60)m \(d.duration%60)s)")
+            }
+        }
+        print("📂 ============================================================\n")
+        // ─────────────────────────────────────────────────────────────────────
+        
         print("📊 [SleepSyncHelper] Found \(localSessions.count) local session(s) for \(selectedDate)")
         
         // Step 2: Return all local sessions to VC for display (no upload here)
@@ -265,11 +296,44 @@ class SleepSyncHelper {
             ))
         }
         
+        // ── BLE → DB CONVERSION LOG ──────────────────────────────────────────
+        let ts: (Int64) -> String = { t in
+            let d = Date(timeIntervalSince1970: TimeInterval(t))
+            let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd HH:mm:ss"; return f.string(from: d)
+        }
+        print("\n🛏️ ======= [SleepSyncHelper] BLE→DB CONVERSION (\(repositorySessions.count) session(s)) =======")
+        for (i, s) in repositorySessions.enumerated() {
+            let deepMin  = Int(s.deepSleepTimes)  / 60; let deepSec  = Int(s.deepSleepTimes)  % 60
+            let lightMin = Int(s.lightSleepTimes) / 60; let lightSec = Int(s.lightSleepTimes) % 60
+            let remMin   = Int(s.remSleepTimes)   / 60; let remSec   = Int(s.remSleepTimes)   % 60
+            let wakeMin  = Int(s.wakeupTimes)     / 60; let wakeSec  = Int(s.wakeupTimes)     % 60
+            let totMin   = Int(s.totalTimes)      / 60; let totSec   = Int(s.totalTimes)      % 60
+            print("  [Session \(i+1)] statisticTime=\(s.statisticTime)")
+            print("    start : \(ts(s.startTime))  end : \(ts(s.endTime))")
+            print("    deep  : \(s.deepSleepTimes)s → \(deepMin)m \(deepSec)s")
+            print("    light : \(s.lightSleepTimes)s → \(lightMin)m \(lightSec)s")
+            print("    REM   : \(s.remSleepTimes)s → \(remMin)m \(remSec)s")
+            print("    awake : \(s.wakeupTimes)s → \(wakeMin)m \(wakeSec)s")
+            print("    total : \(s.totalTimes)s → \(totMin)m \(totSec)s  (deep+light+rem+awake)")
+            print("    details count: \(s.details.count)")
+            for (j, d) in s.details.enumerated() {
+                let typeNames = ["?","Deep","Light","REM","Awake"]
+                let idx = Int(d.sleepType)
+                let typeStr = (idx >= 0 && idx < typeNames.count) ? typeNames[idx] : "\(d.sleepType)"
+                print("      [\(j+1)] \(typeStr) | start:\(ts(d.startTime)) | dur:\(d.duration)s (\(d.duration/60)m \(d.duration%60)s)")
+            }
+        }
+        print("🛏️ ========================================================\n")
+        // ─────────────────────────────────────────────────────────────────────
+
         // Save to repository
         repository.saveNewBatch(sessions: repositorySessions) { [weak self] success, savedCount in
             if success {
                 print("✅ [SleepSyncHelper] Successfully saved \(savedCount) new sessions to local DB")
                 self?.listener?.onLocalDataSaved(count: savedCount)
+                
+                // Always recompute dashboard stats from the latest DB state after sync
+                self?.updateDashboardSleepStats()
                 
                 // Upload to API (matching Android pattern)
                 if savedCount > 0 {
@@ -279,6 +343,38 @@ class SleepSyncHelper {
                 print("❌ [SleepSyncHelper] Failed to save sessions to local DB")
             }
         }
+    }
+    
+    // MARK: - Update Dashboard Sleep Stats (UserDefaults)
+    /// Called after every BLE sync. Reads all sessions from last 36h, computes
+    /// total sleep duration (in minutes) and quality score (0-100), then writes
+    /// both to UserDefaults so the dashboard can display them immediately.
+    private func updateDashboardSleepStats() {
+        let allSessions = repository.getAllSessions()
+        guard !allSessions.isEmpty else {
+            print("ℹ️ [SleepSyncHelper] No sessions found — skipping dashboard stat update")
+            return
+        }
+        
+        // Last 36h covers the previous night + today's naps
+        let cutoff = Int64(Date().timeIntervalSince1970) - 36 * 3600
+        let recent = allSessions.filter { $0.endTime >= cutoff }
+        let source  = recent.isEmpty ? Array(allSessions.prefix(1)) : recent
+        
+        // Accumulate raw seconds (avoid per-field truncation)
+        let totalDeepSec  = source.reduce(0) { $0 + Int($1.deepSleepTimes) }
+        let totalLightSec = source.reduce(0) { $0 + Int($1.lightSleepTimes) }
+        let totalRemSec   = source.reduce(0) { $0 + Int($1.remSleepTimes) }
+        let totalSleepSec = totalDeepSec + totalLightSec + totalRemSec
+        let totalSleepMin = totalSleepSec / 60
+        
+        // Quality score: proportion of 8-hour (28800s) target, clamped 12-100
+        let qualityScore = min(100, max(12, Int(Double(totalSleepSec) / 28800.0 * 100)))
+        
+        UserDefaults.standard.set(totalSleepMin, forKey: "last_day_sleep_minutes")
+        UserDefaults.standard.set(qualityScore,  forKey: "last_day_sleep_quality")
+        
+        print("📊 [SleepSyncHelper] Dashboard stats → sleep: \(totalSleepMin) min (\(totalSleepMin/60)h \(totalSleepMin%60)m), quality: \(qualityScore)/100  [sessions used: \(source.count)]")
     }
     
     // MARK: - Upload to API (matching Android saveSleepData)

@@ -121,6 +121,11 @@ final class HealthVitalsViewController: AppBaseViewController {
         // This will be implemented when we add specific sync helpers
         setupSyncHelpers()
         
+        // Refresh temperature unit label in case user changed the setting
+        if vitalType == .temperature {
+            measurementValueLabel.text = "-- \(vitalType.unit)"
+        }
+        
         // Load initial data from local DB
         if vitalType == .bloodPressure {
             // BP fetches data and updates stats manually
