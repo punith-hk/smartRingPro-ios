@@ -7,6 +7,7 @@ class AppBaseViewController: UIViewController {
         setupNavigationBar()
         setupLogoTitleView()
         setupNotificationButton()
+        observeBadgeChanges()
     }
 
     // MARK: - Nav Bar Style
@@ -61,7 +62,23 @@ class AppBaseViewController: UIViewController {
     }
 
     @objc private func notificationTapped() {
-        // Navigation will be wired up later
+        let vc = NotificationsViewController()
+        navigationController?.pushViewController(vc, animated: true)
+    }
+
+    // MARK: - Badge Auto-Refresh
+    private func observeBadgeChanges() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleBadgeChange(_:)),
+            name: NotificationCache.badgeChangedNotification,
+            object: nil
+        )
+    }
+
+    @objc private func handleBadgeChange(_ note: Notification) {
+        let count = note.userInfo?["count"] as? Int ?? 0
+        updateNotificationBadge(count: count)
     }
 
     // MARK: - Title (kept for back-button label — not displayed in nav bar)

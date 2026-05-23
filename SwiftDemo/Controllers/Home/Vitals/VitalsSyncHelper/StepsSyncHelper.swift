@@ -7,13 +7,15 @@ class StepsSyncHelper {
         func onStepsDataFetched(_ data: [YCHealthDataStep])
         func onSyncFailed(error: String)
         func onLocalDataFetched(_ data: [(timestamp: Int64, steps: Int, distance: Int, calories: Int)])
+        /// Called when data is still within the measurement interval — BLE skipped.
+        func onUpToDate()
     }
     
     private weak var listener: StepsSyncListener?
     private let TAG = "StepsSyncHelper"
     private let repository: StepsRepository
     
-    // Track last uploaded date to prevent duplicate uploads
+    // Track last uploaded date to prevent duplicate uploads within one VC session
     private var lastUploadedDateString: String?
     
     init(listener: StepsSyncListener) {
@@ -26,7 +28,11 @@ class StepsSyncHelper {
             listener?.onSyncFailed(error: "No device connected")
             return
         }
-        
+        if SyncFreshnessChecker.isUpToDate(lastSyncKey: SyncFreshnessChecker.SyncTimeKey.steps) {
+            print("[\(TAG)] ✅ Data is up to date — skipping BLE query")
+            listener?.onUpToDate()
+            return
+        }
         print("[\(TAG)] 🔄 Starting BLE sync for steps...")
         fetchStepsFromRing()
     }
@@ -144,6 +150,15 @@ class StepsSyncHelper {
             return
         }
         
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+        let utcStart = utcCalendar.startOfDay(for: date)
+        guard let utcEnd = utcCalendar.date(byAdding: .day, value: 1, to: utcStart) else { return }
+        let dataForComparison = localData.filter {
+            let ts = Date(timeIntervalSince1970: TimeInterval($0.timestamp))
+            return ts >= utcStart && ts < utcEnd
+        }
+        
         HealthService.shared.getRingDataByType(
             userId: userId,
             type: "steps",
@@ -153,22 +168,15 @@ class StepsSyncHelper {
             
             switch result {
             case .success(let response):
-                let apiData = response.data
-                let countMatches = localData.count == apiData.count
-                
-                // Compare latest entry (API returns descending, local is ascending)
-                var latestMatches = true
-                if let localLatest = localData.last, let apiLatest = apiData.first {
-                    let apiTimestamp = Int64(apiLatest.timestamp)
-                    let apiSteps = Int(apiLatest.value) ?? 0
-                    latestMatches = (localLatest.timestamp == apiTimestamp && localLatest.steps == apiSteps)
-                }
-                
-                if !countMatches || !latestMatches {
-                    print("[\(self.TAG)] ⚠️ API mismatch - Local: \(localData.count), API: \(apiData.count)")
-                    self.uploadStepsDataToAPI(userId: userId, date: date, data: localData)
-                } else {
+                let apiTimestamps = Set(response.data.map { Int64($0.timestamp) })
+                let missingEntries = dataForComparison.filter { !apiTimestamps.contains($0.timestamp) }
+
+                if missingEntries.isEmpty {
                     print("[\(self.TAG)] ✅ API synced")
+                    self.lastUploadedDateString = dateString
+                } else {
+                    print("[\(self.TAG)] ⚠️ API missing \(missingEntries.count) entries — uploading")
+                    self.uploadStepsDataToAPI(userId: userId, date: date, data: missingEntries)
                 }
                 
             case .failure(let error):
@@ -210,4 +218,5 @@ class StepsSyncHelper {
             }
         }
     }
+    
 }

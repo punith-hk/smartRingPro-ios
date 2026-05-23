@@ -110,8 +110,29 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         loadLocalData()
-        if let date = lastSyncDate() {
+        // Banner shows "Last data recorded X min ago" based on the oldest primary vital
+        if let date = SyncFreshnessChecker.lastPrimaryDataDate() {
             syncBanner.markSynced(date: date)
+        }
+        refreshNotificationBadge()
+    }
+
+    // MARK: - Notification Badge
+    private func refreshNotificationBadge() {
+        let uid = UserDefaultsManager.shared.userId
+        guard uid > 0 else { return }
+        // Use cache if valid, otherwise fetch
+        if NotificationCache.shared.isValid {
+            updateNotificationBadge(count: NotificationCache.shared.unreadCount)
+            return
+        }
+        NotificationService.shared.getNotifications(userId: uid) { [weak self] result in
+            DispatchQueue.main.async {
+                if case .success(let resp) = result {
+                    NotificationCache.shared.update(resp.data)
+                    self?.updateNotificationBadge(count: NotificationCache.shared.unreadCount)
+                }
+            }
         }
     }
 
@@ -188,12 +209,34 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         syncBanner.translatesAutoresizingMaskIntoConstraints = false
         headerView.addSubview(syncBanner)
         syncBanner.onSyncTapped = { [weak self] in
-            self?.syncBanner.setSyncing(true)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-                self?.syncBanner.setSyncing(false)
-                self?.syncBanner.markSynced(date: Date())
-                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "last_sync_timestamp")
+            guard let self = self else { return }
+            guard BLEStateManager.shared.hasConnectedDevice() else {
+                Toast.show(message: "No device connected. Please connect your ring first.", in: self.view)
+                return
             }
+            // Pre-flight: all vitals already within measurement interval?
+            if SyncFreshnessChecker.allVitalsUpToDate() {
+                let next = SyncFreshnessChecker.nextSyncMessage()
+                let msg = next.isEmpty ? "All data is up to date" : "All data is up to date. \(next)"
+                Toast.show(message: msg, in: self.view)
+                return
+            }
+            self.syncBanner.setSyncing(true)
+            Loader.shared.show(on: self.view, message: "Syncing data…")
+            BackgroundSyncManager.shared.startFullSync { [weak self] (_: Bool) in
+                Loader.shared.hide()   // always hide — Loader is a singleton
+                guard let self = self else { return }
+                self.syncBanner.setSyncing(false)
+                // Banner uses oldest primary vital timestamp (min of HR/BP/combined)
+                let lastDataDate = SyncFreshnessChecker.lastPrimaryDataDate() ?? Date()
+                self.syncBanner.markSynced(date: lastDataDate)
+                UserDefaults.standard.set(lastDataDate.timeIntervalSince1970, forKey: "last_sync_timestamp")
+                self.loadLocalData()
+            }
+        }
+
+        syncBanner.onDetailTapped = { [weak self] in
+            self?.showLastSyncDetailPopup()
         }
 
         gaugeView.translatesAutoresizingMaskIntoConstraints = false
@@ -606,9 +649,9 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
 
         // Cache last sync millis
         if let lastSync = allHR.first { cachedLastSyncMillis = Int64(lastSync.timestamp * 1000) }
-        let latestStp = stepsRepo.getLatestEntry()
-        let steps     = Int(latestStp?.steps                              ?? 0)
-        let calories  = Int(latestStp?.calories                           ?? 0)
+        let todaySteps = stepsRepo.getTodayTotals()
+        let steps     = todaySteps.steps
+        let calories  = todaySteps.calories
         let glucose   = bloodGlucoseRepo.getLatestEntry()?.glucoseValue   ?? 0
         let temp      = temperatureRepo.getLatestEntry()?.temperatureValue ?? 0
         let sleepMin  = UserDefaults.standard.integer(forKey: "last_day_sleep_minutes")
@@ -966,9 +1009,51 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     }
 
     private func lastSyncDate() -> Date? {
-        let ts = UserDefaults.standard.double(forKey: "last_sync_timestamp")
-        guard ts > 0 else { return nil }
-        return Date(timeIntervalSince1970: ts)
+        // Always derive from live UserDefaults keys so it's accurate even after app restart.
+        return SyncFreshnessChecker.lastPrimaryDataDate()
+    }
+
+    // MARK: - Last Sync Detail Popup
+    private func showLastSyncDetailPopup() {
+        let mgr = BackgroundSyncManager.shared
+        let fmt = DateFormatter()
+        fmt.dateFormat = "dd MMM yyyy, hh:mm a"
+
+        // Query local DB for actual last data timestamps
+        let hrTs    = HeartRateRepository().getLatestEntry()?.timestamp
+        let bpTs    = BloodPressureRepository().getLatestEntry()?.timestamp
+        let hrvTs   = HrvRepository().getLatestEntry()?.timestamp
+        let o2Ts    = BloodOxygenRepository().getLatestEntry()?.timestamp
+        let bgTs    = BloodGlucoseRepository().getLatestEntry()?.timestamp
+        let tempTs  = TemperatureRepository().getLatestEntry()?.timestamp
+
+        func format(_ ts: Int64?) -> String {
+            guard let ts = ts, ts > 0 else { return "No data yet" }
+            return fmt.string(from: Date(timeIntervalSince1970: TimeInterval(ts)))
+        }
+
+        // Status: -1 = never synced, 0 = synced but device had no new data, >0 = new data received
+        func status(_ bleCount: Int, hasSyncRan: Bool) -> String {
+            guard hasSyncRan else { return "" }
+            return bleCount > 0 ? "  🔄 Updated" : "  ✅ Up to date"
+        }
+
+        func row(_ emoji: String, _ name: String, _ ts: Int64?, syncRan: Bool, bleCount: Int) -> String {
+            "\(emoji) \(name)\n    \(format(ts))\(status(bleCount, hasSyncRan: syncRan))"
+        }
+
+        let body = [
+            row("❤️", "Heart Rate",     hrTs,   syncRan: mgr.lastHeartRateSync != nil,     bleCount: mgr.lastHeartRateBleCount),
+            row("🫀", "HRV",            hrvTs,  syncRan: mgr.lastHRVSync != nil,            bleCount: mgr.lastHRVBleCount),
+            row("🩸", "Blood Oxygen",   o2Ts,   syncRan: mgr.lastBloodOxygenSync != nil,   bleCount: mgr.lastBloodOxygenBleCount),
+            row("💉", "Blood Glucose",  bgTs,   syncRan: mgr.lastBloodGlucoseSync != nil,  bleCount: mgr.lastBloodGlucoseBleCount),
+            row("🫁", "Blood Pressure", bpTs,   syncRan: mgr.lastBloodPressureSync != nil, bleCount: mgr.lastBloodPressureBleCount),
+            row("🌡️", "Temperature",    tempTs, syncRan: mgr.lastTemperatureSync != nil,   bleCount: mgr.lastTemperatureBleCount),
+        ].joined(separator: "\n\n")
+
+        let alert = UIAlertController(title: "Last Data per Vital", message: body, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
 
     private func formattedNumber(_ n: Int) -> String {

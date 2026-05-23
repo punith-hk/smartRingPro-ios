@@ -7,13 +7,15 @@ class HeartRateSyncHelper {
         func onHeartRateDataFetched(_ data: [YCHealthDataHeartRate])
         func onSyncFailed(error: String)
         func onLocalDataFetched(_ data: [(timestamp: Int64, bpm: Int)])
+        /// Called when data is still within the measurement interval — BLE skipped.
+        func onUpToDate()
     }
     
     private weak var listener: HeartRateSyncListener?
     private let TAG = "HeartRateSyncHelper"
     private let repository: HeartRateRepository
     
-    // Track last uploaded date to prevent duplicate uploads
+    // Track last uploaded date to prevent duplicate uploads within one VC session
     private var lastUploadedDateString: String?
     
     init(listener: HeartRateSyncListener) {
@@ -21,12 +23,16 @@ class HeartRateSyncHelper {
         self.repository = HeartRateRepository()
     }
     
-    func startSync() {
+    func startSync(force: Bool = false) {
         guard BLEStateManager.shared.hasConnectedDevice() else {
             listener?.onSyncFailed(error: "No device connected")
             return
         }
-        
+        if !force && SyncFreshnessChecker.isUpToDate(lastSyncKey: SyncFreshnessChecker.SyncTimeKey.heartRate) {
+            print("[\(TAG)] ✅ Data is up to date — skipping BLE query")
+            listener?.onUpToDate()
+            return
+        }
         print("[\(TAG)] 🔄 Starting BLE sync...")
         fetchHeartRateFromRing()
     }
@@ -124,6 +130,31 @@ class HeartRateSyncHelper {
             return
         }
         
+        // The server filters entries by UTC date from the timestamp.
+        // Only compare entries whose timestamp falls on this UTC day,
+        // so local data and API data use the same date boundary.
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+        let utcStart = utcCalendar.startOfDay(for: date)
+        guard let utcEnd = utcCalendar.date(byAdding: .day, value: 1, to: utcStart) else { return }
+        let dataForComparison = localData.filter {
+            let ts = Date(timeIntervalSince1970: TimeInterval($0.timestamp))
+            return ts >= utcStart && ts < utcEnd
+        }
+        
+        // --- DIAGNOSTIC LOGS ---
+        print("[\(TAG)] ========== HEART RATE SYNC ANALYSIS ==========")
+        print("[\(TAG)] 📅 Date queried : \(dateString)")
+        print("[\(TAG)] 🌍 UTC window   : \(utcStart) → \(utcEnd)")
+        print("[\(TAG)] 📱 LOCAL total  : \(localData.count) entries (IST day)")
+        print("[\(TAG)] 📱 LOCAL utc    : \(dataForComparison.count) entries (UTC-filtered, used for API compare)")
+        localData.forEach { entry in
+            let ts = Date(timeIntervalSince1970: TimeInterval(entry.timestamp))
+            let inUtcWindow = ts >= utcStart && ts < utcEnd
+            print("[\(TAG)]   local ts=\(entry.timestamp) bpm=\(entry.bpm) utcTime=\(ts) inUTCWindow=\(inUtcWindow)")
+        }
+        // -----------------------
+        
         HealthService.shared.getRingDataByType(
             userId: userId,
             type: "heart_rate",
@@ -133,22 +164,28 @@ class HeartRateSyncHelper {
             
             switch result {
             case .success(let response):
-                let apiData = response.data
-                let countMatches = localData.count == apiData.count
+                let apiTimestamps = Set(response.data.map { Int64($0.timestamp) })
+                let missingEntries = dataForComparison.filter { !apiTimestamps.contains($0.timestamp) }
                 
-                // Compare latest entry (API returns descending, local is ascending)
-                var latestMatches = true
-                if let localLatest = localData.last, let apiLatest = apiData.first {
-                    let apiTimestamp = Int64(apiLatest.timestamp)
-                    let apiBpm = Int(apiLatest.value) ?? 0
-                    latestMatches = (localLatest.timestamp == apiTimestamp && localLatest.bpm == apiBpm)
+                // --- DIAGNOSTIC LOGS ---
+                print("[\(self.TAG)] 🌐 API returned : \(response.data.count) entries for \(dateString)")
+                response.data.forEach { entry in
+                    let ts = Date(timeIntervalSince1970: TimeInterval(entry.timestamp))
+                    print("[\(self.TAG)]   api ts=\(entry.timestamp) utcTime=\(ts)")
                 }
+                print("[\(self.TAG)] 🔍 MISSING      : \(missingEntries.count) entries (in UTC window but not in API)")
+                missingEntries.forEach { entry in
+                    print("[\(self.TAG)]   missing ts=\(entry.timestamp) bpm=\(entry.bpm)")
+                }
+                print("[\(self.TAG)] ===============================================")
+                // -----------------------
                 
-                if !countMatches || !latestMatches {
-                    print("[\(self.TAG)] ⚠️ API mismatch - Local: \(localData.count), API: \(apiData.count)")
-                    self.uploadHeartRateDataToAPI(userId: userId, date: date, data: localData)
-                } else {
+                if missingEntries.isEmpty {
                     print("[\(self.TAG)] ✅ API synced")
+                    self.lastUploadedDateString = dateString
+                } else {
+                    print("[\(self.TAG)] ⚠️ API missing \(missingEntries.count) entr\(missingEntries.count == 1 ? "y" : "ies") — uploading")
+                    self.uploadHeartRateDataToAPI(userId: userId, date: date, data: missingEntries)
                 }
                 
             case .failure(let error):
@@ -195,4 +232,5 @@ class HeartRateSyncHelper {
             }
         }
     }
+    
 }

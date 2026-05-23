@@ -148,6 +148,7 @@ final class StepsViewController: AppBaseViewController {
         rangeCard.layer.shadowOpacity = 0.08
         rangeCard.layer.shadowOffset = CGSize(width: 0, height: 2)
         rangeCard.layer.shadowRadius = 6
+        rangeCard.clipsToBounds = true
         rangeCard.isHidden = true
         rangeCard.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(rangeCard)
@@ -242,8 +243,11 @@ final class StepsViewController: AppBaseViewController {
 
             rangeDistValueLabel.topAnchor.constraint(equalTo: rangeDistLabel.bottomAnchor, constant: 4),
             rangeDistValueLabel.leadingAnchor.constraint(equalTo: rangeCard.leadingAnchor, constant: 24),
-            rangeDistValueLabel.bottomAnchor.constraint(equalTo: rangeCard.bottomAnchor, constant: -16),
-
+        ])
+        let rangeBottom = rangeDistValueLabel.bottomAnchor.constraint(equalTo: rangeCard.bottomAnchor, constant: -16)
+        rangeBottom.priority = .defaultHigh
+        rangeBottom.isActive = true
+        NSLayoutConstraint.activate([
             rangeDistUnitLabel.firstBaselineAnchor.constraint(equalTo: rangeDistValueLabel.firstBaselineAnchor),
             rangeDistUnitLabel.leadingAnchor.constraint(equalTo: rangeDistValueLabel.trailingAnchor, constant: 4),
         ])
@@ -544,6 +548,13 @@ extension StepsViewController: StepsSyncHelper.StepsSyncListener {
 
     func onSyncFailed(error: String) {
         print("❌ [Steps] Sync failed: \(error)")
+    }
+
+    func onUpToDate() {
+        print("[StepsVC] ✅ Steps data is up to date")
+        let next = SyncFreshnessChecker.nextSyncMessage(for: SyncFreshnessChecker.SyncTimeKey.steps)
+        let msg = next.isEmpty ? "Steps data is up to date" : "Steps data is up to date. \(next)"
+        Toast.show(message: msg, in: view)
     }
 }
 

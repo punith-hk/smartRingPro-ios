@@ -152,6 +152,29 @@ class StepsRepository {
         }
     }
     
+    /// Get the sum of steps and calories for today across all interval entries
+    func getTodayTotals() -> (steps: Int, calories: Int) {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: Date())
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+
+        let startTimestamp = Int64(startOfDay.timeIntervalSince1970)
+        let endTimestamp = Int64(endOfDay.timeIntervalSince1970)
+
+        let request = StepsEntity.fetchByDateRange(start: startTimestamp, end: endTimestamp)
+
+        do {
+            let results = try context.fetch(request)
+            let totalSteps    = results.reduce(0) { $0 + Int($1.steps) }
+            let totalCalories = results.reduce(0) { $0 + Int($1.calories) }
+            print("[\(TAG)] 📊 Today's totals — steps: \(totalSteps), calories: \(totalCalories) (\(results.count) intervals)")
+            return (totalSteps, totalCalories)
+        } catch {
+            print("[\(TAG)] ❌ Failed to fetch today's totals: \(error)")
+            return (0, 0)
+        }
+    }
+
     /// Get steps for specific date range
     func getByDateRange(start: Date, end: Date) -> [StepsEntity] {
         let startTimestamp = Int64(start.timeIntervalSince1970)

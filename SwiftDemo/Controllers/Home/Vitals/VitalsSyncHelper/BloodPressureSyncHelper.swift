@@ -9,6 +9,8 @@ class BloodPressureSyncHelper {
         func onBloodPressureDataFetched(_ data: [YCHealthDataBloodPressure])
         func onSyncFailed(error: String)
         func onLocalDataFetched(data: [(timestamp: Int64, systolicValue: Int, diastolicValue: Int)])
+        /// Called when data is still within the measurement interval — BLE skipped.
+        func onUpToDate()
     }
     
     private weak var listener: BloodPressureSyncListener?
@@ -16,7 +18,7 @@ class BloodPressureSyncHelper {
     
     private let bloodPressureRepository: BloodPressureRepository
     
-    // Track last uploaded date to prevent duplicate uploads
+    // Track last uploaded date to prevent duplicate uploads within one VC session
     private var lastUploadedDateString: String?
     
     init(listener: BloodPressureSyncListener) {
@@ -25,13 +27,17 @@ class BloodPressureSyncHelper {
     }
     
     // MARK: - BLE Sync
-    
+
     func startSync() {
         guard BLEStateManager.shared.hasConnectedDevice() else {
             listener?.onSyncFailed(error: "No device connected")
             return
         }
-        
+        if SyncFreshnessChecker.isUpToDate(lastSyncKey: SyncFreshnessChecker.SyncTimeKey.bloodPressure) {
+            print("[\(TAG)] ✅ Data is up to date — skipping BLE query")
+            listener?.onUpToDate()
+            return
+        }
         print("[\(TAG)] 🔄 Starting BLE blood pressure sync...")
         fetchBloodPressureFromRing()
     }
@@ -49,8 +55,12 @@ class BloodPressureSyncHelper {
                     print("[\(self.TAG)] ⚠️ No blood pressure data available")
                     self.listener?.onBloodPressureDataFetched([])
                 }
-                
-            case .failed:
+
+            case .noRecord:
+                print("[\(self.TAG)] ℹ️ No data on device")
+                self.listener?.onBloodPressureDataFetched([])
+
+            case .unavailable, .failed:
                 print("[\(self.TAG)] ❌ BLE query failed")
                 self.listener?.onSyncFailed(error: "BLE query failed")
                 
@@ -154,6 +164,15 @@ class BloodPressureSyncHelper {
             return
         }
         
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+        let utcStart = utcCalendar.startOfDay(for: date)
+        guard let utcEnd = utcCalendar.date(byAdding: .day, value: 1, to: utcStart) else { return }
+        let dataForComparison = localData.filter {
+            let ts = Date(timeIntervalSince1970: TimeInterval($0.timestamp))
+            return ts >= utcStart && ts < utcEnd
+        }
+        
         HealthService.shared.getRingDataByType(
             userId: userId,
             type: "blood_pressure",
@@ -163,28 +182,15 @@ class BloodPressureSyncHelper {
             
             switch result {
             case .success(let response):
-                let apiData = response.data
-                let countMatches = localData.count == apiData.count
-                
-                var latestMatches = true
-                if let localLatest = localData.last, let apiLatest = apiData.first {
-                    let apiTimestamp = Int64(apiLatest.timestamp)
-                    // BP value format from API is "120/80", parse it
-                    let bpComponents = apiLatest.value.split(separator: "/").compactMap { Int($0) }
-                    if bpComponents.count == 2 {
-                        let apiSystolic = bpComponents[0]
-                        let apiDiastolic = bpComponents[1]
-                        latestMatches = (localLatest.timestamp == apiTimestamp && 
-                                       localLatest.systolicValue == apiSystolic && 
-                                       localLatest.diastolicValue == apiDiastolic)
-                    }
-                }
-                
-                if !countMatches || !latestMatches {
-                    print("[\(self.TAG)] 🔄 Mismatch detected - uploading to API")
-                    self.uploadToAPI(userId: userId, data: localData, dateString: dateString)
-                } else {
+                let apiTimestamps = Set(response.data.map { Int64($0.timestamp) })
+                let missingEntries = dataForComparison.filter { !apiTimestamps.contains($0.timestamp) }
+
+                if missingEntries.isEmpty {
                     print("[\(self.TAG)] ✅ API data matches local DB - no upload needed")
+                    self.lastUploadedDateString = dateString
+                } else {
+                    print("[\(self.TAG)] ⚠️ API missing \(missingEntries.count) entries — uploading")
+                    self.uploadToAPI(userId: userId, data: missingEntries, dateString: dateString)
                 }
                 
             case .failure(let error):
@@ -218,4 +224,5 @@ class BloodPressureSyncHelper {
             }
         }
     }
+    
 }

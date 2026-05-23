@@ -187,4 +187,13 @@ enum APIEndpoints {
 
     // MARK: - Firebase
     static let fcmToken = "user/fcm-token"
+
+    // MARK: - Notifications
+    /// GET /api/notifications/{userId}
+    static func getNotifications(userId: Int) -> String {
+        return "notifications/\(userId)"
+    }
+
+    /// POST /api/notifications/mark-as-read
+    static let markNotificationRead = "notifications/mark-as-read"
 }

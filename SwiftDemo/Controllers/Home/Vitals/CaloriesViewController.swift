@@ -439,6 +439,13 @@ extension CaloriesViewController: CaloriesSyncHelper.CaloriesSyncListener {
     func onCaloriesSyncFailed(error: String) {
         print("❌ [Calories] Sync failed: \(error)")
     }
+
+    func onCaloriesUpToDate() {
+        print("[CaloriesVC] ✅ Calories data is up to date")
+        let next = SyncFreshnessChecker.nextSyncMessage(for: SyncFreshnessChecker.SyncTimeKey.calories)
+        let msg = next.isEmpty ? "Calories data is up to date" : "Calories data is up to date. \(next)"
+        Toast.show(message: msg, in: view)
+    }
 }
 
 

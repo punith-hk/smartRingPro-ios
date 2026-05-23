@@ -38,9 +38,9 @@ class SleepSyncHelper {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         
-        // Format date for API (MM/dd/yyyy)
+        // Format date for API (M/d/yyyy)
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "MM/dd/yyyy"
+        dateFormatter.dateFormat = "M/d/yyyy"
         let selectedDate = dateFormatter.string(from: date)
         
         print("📅 [SleepSyncHelper] Syncing data for: \(selectedDate)")
@@ -50,41 +50,8 @@ class SleepSyncHelper {
         
         print("📊 [SleepSyncHelper] Found \(localSessions.count) local session(s) for \(selectedDate)")
         
-        // Step 2: Return all local sessions to VC immediately
+        // Step 2: Return all local sessions to VC for display (no upload here)
         listener?.onDayDataLoaded(sessions: localSessions)
-        
-        // Step 3: Check API for data before uploading
-        HealthService.shared.getSleepData(userId: userId, selectedDate: selectedDate) { [weak self] result in
-            guard let self = self else { return }
-            
-            switch result {
-            case .success(let response):
-                if let apiData = response.data, !apiData.isEmpty {
-                    // API has data - don't upload
-                    print("✅ [SleepSyncHelper] API already has \(apiData.count) session(s) for \(selectedDate) - skipping upload")
-                } else {
-                    // API has no data - upload local sessions if available
-                    if !localSessions.isEmpty {
-                        print("📤 [SleepSyncHelper] No API data - uploading \(localSessions.count) local session(s) for \(selectedDate)")
-                        for session in localSessions {
-                            self.uploadSessionToAPI(session, userId: userId)
-                        }
-                    } else {
-                        print("ℹ️ [SleepSyncHelper] No API data and no local data for \(selectedDate)")
-                    }
-                }
-                
-            case .failure(let error):
-                print("❌ [SleepSyncHelper] API check failed: \(error.localizedDescription)")
-                // API check failed - upload local sessions if available (to be safe)
-                if !localSessions.isEmpty {
-                    print("📤 [SleepSyncHelper] Uploading \(localSessions.count) local session(s) anyway (API check failed)")
-                    for session in localSessions {
-                        self.uploadSessionToAPI(session, userId: userId)
-                    }
-                }
-            }
-        }
     }
     
     // MARK: - Upload Single Session to API

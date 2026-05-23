@@ -124,6 +124,15 @@ class StressSyncHelper {
             return
         }
         
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+        let utcStart = utcCalendar.startOfDay(for: date)
+        guard let utcEnd = utcCalendar.date(byAdding: .day, value: 1, to: utcStart) else { return }
+        let dataForComparison = localData.filter {
+            let ts = Date(timeIntervalSince1970: TimeInterval($0.timestamp))
+            return ts >= utcStart && ts < utcEnd
+        }
+        
         HealthService.shared.getRingDataByType(
             userId: userId,
             type: "stress",
@@ -133,22 +142,15 @@ class StressSyncHelper {
             
             switch result {
             case .success(let response):
-                let apiData = response.data
-                let countMatches = localData.count == apiData.count
-                
-                // Compare latest entry (API returns descending, local is ascending)
-                var latestMatches = true
-                if let localLatest = localData.last, let apiLatest = apiData.first {
-                    let apiTimestamp = Int64(apiLatest.timestamp)
-                    let apiLevel = Int(apiLatest.value) ?? 0
-                    latestMatches = (localLatest.timestamp == apiTimestamp && localLatest.level == apiLevel)
-                }
-                
-                if !countMatches || !latestMatches {
-                    print("[\(self.TAG)] ⚠️ API mismatch - Local: \(localData.count), API: \(apiData.count)")
-                    self.uploadStressDataToAPI(userId: userId, date: date, data: localData)
-                } else {
+                let apiTimestamps = Set(response.data.map { Int64($0.timestamp) })
+                let missingEntries = dataForComparison.filter { !apiTimestamps.contains($0.timestamp) }
+
+                if missingEntries.isEmpty {
                     print("[\(self.TAG)] ✅ API synced")
+                    self.lastUploadedDateString = dateString
+                } else {
+                    print("[\(self.TAG)] ⚠️ API missing \(missingEntries.count) entries — uploading")
+                    self.uploadStressDataToAPI(userId: userId, date: date, data: missingEntries)
                 }
                 
             case .failure(let error):

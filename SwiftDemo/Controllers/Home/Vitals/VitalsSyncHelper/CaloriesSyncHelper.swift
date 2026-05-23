@@ -13,6 +13,8 @@ class CaloriesSyncHelper {
         func onLocalCaloriesDataFetched(_ data: [(timestamp: Int64, calories: Int)])
         /// Called on any failure
         func onCaloriesSyncFailed(error: String)
+        /// Called when data is still within the measurement interval — BLE skipped.
+        func onCaloriesUpToDate()
     }
 
     private weak var listener: CaloriesSyncListener?
@@ -34,6 +36,11 @@ class CaloriesSyncHelper {
     func startSync() {
         guard BLEStateManager.shared.hasConnectedDevice() else {
             listener?.onCaloriesSyncFailed(error: "No device connected")
+            return
+        }
+        if SyncFreshnessChecker.isUpToDate(lastSyncKey: SyncFreshnessChecker.SyncTimeKey.calories) {
+            print("[\(TAG)] ✅ Data is up to date — skipping BLE query")
+            listener?.onCaloriesUpToDate()
             return
         }
         print("[\(TAG)] 🔄 Starting BLE sync for calories...")
@@ -120,23 +127,28 @@ class CaloriesSyncHelper {
 
         guard lastUploadedDateString != dateStr else { return }
 
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+        let utcStart = utcCalendar.startOfDay(for: date)
+        guard let utcEnd = utcCalendar.date(byAdding: .day, value: 1, to: utcStart) else { return }
+        let dataForComparison = localData.filter {
+            let ts = Date(timeIntervalSince1970: TimeInterval($0.timestamp))
+            return ts >= utcStart && ts < utcEnd
+        }
+
         HealthService.shared.getRingDataByType(userId: userId, type: "calories", selectedDate: dateStr) { [weak self] result in
             guard let self = self else { return }
 
             switch result {
             case .success(let response):
-                let apiData = response.data
-                let countMatch = localData.count == apiData.count
-                var latestMatch = true
-                if let localLast = localData.last, let apiFirst = apiData.first {
-                    latestMatch = (localLast.timestamp == Int64(apiFirst.timestamp) &&
-                                   localLast.calories == (Int(apiFirst.value) ?? 0))
-                }
-                if !countMatch || !latestMatch {
-                    print("[\(self.TAG)] ⚠️ Mismatch — uploading \(localData.count) entries")
-                    self.uploadToAPI(userId: userId, date: date, data: localData)
-                } else {
+                let apiTimestamps = Set(response.data.map { Int64($0.timestamp) })
+                let missingEntries = dataForComparison.filter { !apiTimestamps.contains($0.timestamp) }
+                if missingEntries.isEmpty {
                     print("[\(self.TAG)] ✅ API already in sync")
+                    self.lastUploadedDateString = dateStr
+                } else {
+                    print("[\(self.TAG)] ⚠️ Missing \(missingEntries.count) entries — uploading")
+                    self.uploadToAPI(userId: userId, date: date, data: missingEntries)
                 }
             case .failure(let err):
                 print("[\(self.TAG)] ❌ API compare failed: \(err)")
@@ -165,4 +177,5 @@ class CaloriesSyncHelper {
             }
         }
     }
+    
 }

@@ -19,6 +19,8 @@ class CombinedDataSyncHelper {
             bloodGlucose: [(timestamp: Int64, glucoseValue: Double)],
             temperature: [(timestamp: Int64, temperatureValue: Double)]
         )
+        /// Called when data is still within the measurement interval — BLE skipped.
+        func onUpToDate()
     }
     
     private weak var listener: CombinedDataSyncListener?
@@ -41,13 +43,17 @@ class CombinedDataSyncHelper {
     }
     
     // MARK: - BLE Sync
-    
+
     func startSync() {
         guard BLEStateManager.shared.hasConnectedDevice() else {
             listener?.onSyncFailed(error: "No device connected")
             return
         }
-        
+        if SyncFreshnessChecker.isUpToDate(lastSyncKey: SyncFreshnessChecker.SyncTimeKey.combined) {
+            print("[\(TAG)] ✅ Data is up to date — skipping BLE query")
+            listener?.onUpToDate()
+            return
+        }
         print("[\(TAG)] 🔄 Starting BLE combined data sync...")
         fetchCombinedDataFromRing()
     }
@@ -289,6 +295,15 @@ class CombinedDataSyncHelper {
             return
         }
         
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+        let utcStart = utcCalendar.startOfDay(for: date)
+        guard let utcEnd = utcCalendar.date(byAdding: .day, value: 1, to: utcStart) else { return }
+        let dataForComparison = localData.filter {
+            let ts = Date(timeIntervalSince1970: TimeInterval($0.timestamp))
+            return ts >= utcStart && ts < utcEnd
+        }
+        
         HealthService.shared.getRingDataByType(
             userId: userId,
             type: "hrv",
@@ -298,21 +313,15 @@ class CombinedDataSyncHelper {
             
             switch result {
             case .success(let response):
-                let apiData = response.data
-                let countMatches = localData.count == apiData.count
-                
-                var latestMatches = true
-                if let localLatest = localData.last, let apiLatest = apiData.first {
-                    let apiTimestamp = Int64(apiLatest.timestamp)
-                    let apiValue = Int(apiLatest.value) ?? 0
-                    latestMatches = (localLatest.timestamp == apiTimestamp && localLatest.hrvValue == apiValue)
-                }
-                
-                if !countMatches || !latestMatches {
-                    print("[\(self.TAG)] ⚠️ HRV API mismatch - Local: \(localData.count), API: \(apiData.count)")
-                    self.uploadHRVDataToAPI(userId: userId, date: date, data: localData)
-                } else {
+                let apiTimestamps = Set(response.data.map { Int64($0.timestamp) })
+                let missingEntries = dataForComparison.filter { !apiTimestamps.contains($0.timestamp) }
+
+                if missingEntries.isEmpty {
                     print("[\(self.TAG)] ✅ HRV API synced")
+                    self.lastUploadedDateStrings["hrv"] = dateString
+                } else {
+                    print("[\(self.TAG)] ⚠️ HRV missing \(missingEntries.count) entries — uploading")
+                    self.uploadHRVDataToAPI(userId: userId, date: date, data: missingEntries)
                 }
                 
             case .failure(let error):
@@ -360,6 +369,15 @@ class CombinedDataSyncHelper {
             return
         }
         
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+        let utcStart = utcCalendar.startOfDay(for: date)
+        guard let utcEnd = utcCalendar.date(byAdding: .day, value: 1, to: utcStart) else { return }
+        let dataForComparison = localData.filter {
+            let ts = Date(timeIntervalSince1970: TimeInterval($0.timestamp))
+            return ts >= utcStart && ts < utcEnd
+        }
+        
         HealthService.shared.getRingDataByType(
             userId: userId,
             type: "blood_oxygen",
@@ -369,21 +387,15 @@ class CombinedDataSyncHelper {
             
             switch result {
             case .success(let response):
-                let apiData = response.data
-                let countMatches = localData.count == apiData.count
-                
-                var latestMatches = true
-                if let localLatest = localData.last, let apiLatest = apiData.first {
-                    let apiTimestamp = Int64(apiLatest.timestamp)
-                    let apiValue = Int(apiLatest.value) ?? 0
-                    latestMatches = (localLatest.timestamp == apiTimestamp && localLatest.oxygenValue == apiValue)
-                }
-                
-                if !countMatches || !latestMatches {
-                    print("[\(self.TAG)] ⚠️ Blood Oxygen API mismatch - Local: \(localData.count), API: \(apiData.count)")
-                    self.uploadBloodOxygenDataToAPI(userId: userId, date: date, data: localData)
-                } else {
+                let apiTimestamps = Set(response.data.map { Int64($0.timestamp) })
+                let missingEntries = dataForComparison.filter { !apiTimestamps.contains($0.timestamp) }
+
+                if missingEntries.isEmpty {
                     print("[\(self.TAG)] ✅ Blood Oxygen API synced")
+                    self.lastUploadedDateStrings["blood_oxygen"] = dateString
+                } else {
+                    print("[\(self.TAG)] ⚠️ Blood Oxygen missing \(missingEntries.count) entries — uploading")
+                    self.uploadBloodOxygenDataToAPI(userId: userId, date: date, data: missingEntries)
                 }
                 
             case .failure(let error):
@@ -431,6 +443,15 @@ class CombinedDataSyncHelper {
             return
         }
         
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+        let utcStart = utcCalendar.startOfDay(for: date)
+        guard let utcEnd = utcCalendar.date(byAdding: .day, value: 1, to: utcStart) else { return }
+        let dataForComparison = localData.filter {
+            let ts = Date(timeIntervalSince1970: TimeInterval($0.timestamp))
+            return ts >= utcStart && ts < utcEnd
+        }
+        
         HealthService.shared.getRingDataByType(
             userId: userId,
             type: "blood_glucose",
@@ -440,21 +461,15 @@ class CombinedDataSyncHelper {
             
             switch result {
             case .success(let response):
-                let apiData = response.data
-                let countMatches = localData.count == apiData.count
-                
-                var latestMatches = true
-                if let localLatest = localData.last, let apiLatest = apiData.first {
-                    let apiTimestamp = Int64(apiLatest.timestamp)
-                    let apiValue = Double(apiLatest.value) ?? 0.0
-                    latestMatches = (localLatest.timestamp == apiTimestamp && abs(localLatest.glucoseValue - apiValue) < 0.01)
-                }
-                
-                if !countMatches || !latestMatches {
-                    print("[\(self.TAG)] ⚠️ Blood Glucose API mismatch - Local: \(localData.count), API: \(apiData.count)")
-                    self.uploadBloodGlucoseDataToAPI(userId: userId, date: date, data: localData)
-                } else {
+                let apiTimestamps = Set(response.data.map { Int64($0.timestamp) })
+                let missingEntries = dataForComparison.filter { !apiTimestamps.contains($0.timestamp) }
+
+                if missingEntries.isEmpty {
                     print("[\(self.TAG)] ✅ Blood Glucose API synced")
+                    self.lastUploadedDateStrings["blood_glucose"] = dateString
+                } else {
+                    print("[\(self.TAG)] ⚠️ Blood Glucose missing \(missingEntries.count) entries — uploading")
+                    self.uploadBloodGlucoseDataToAPI(userId: userId, date: date, data: missingEntries)
                 }
                 
             case .failure(let error):
@@ -502,6 +517,15 @@ class CombinedDataSyncHelper {
             return
         }
         
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+        let utcStart = utcCalendar.startOfDay(for: date)
+        guard let utcEnd = utcCalendar.date(byAdding: .day, value: 1, to: utcStart) else { return }
+        let dataForComparison = localData.filter {
+            let ts = Date(timeIntervalSince1970: TimeInterval($0.timestamp))
+            return ts >= utcStart && ts < utcEnd
+        }
+        
         HealthService.shared.getRingDataByType(
             userId: userId,
             type: "temperature",
@@ -511,21 +535,15 @@ class CombinedDataSyncHelper {
             
             switch result {
             case .success(let response):
-                let apiData = response.data
-                let countMatches = localData.count == apiData.count
-                
-                var latestMatches = true
-                if let localLatest = localData.last, let apiLatest = apiData.first {
-                    let apiTimestamp = Int64(apiLatest.timestamp)
-                    let apiValue = Double(apiLatest.value) ?? 0.0
-                    latestMatches = (localLatest.timestamp == apiTimestamp && abs(localLatest.temperatureValue - apiValue) < 0.01)
-                }
-                
-                if !countMatches || !latestMatches {
-                    print("[\(self.TAG)] ⚠️ Temperature API mismatch - Local: \(localData.count), API: \(apiData.count)")
-                    self.uploadTemperatureDataToAPI(userId: userId, date: date, data: localData)
-                } else {
+                let apiTimestamps = Set(response.data.map { Int64($0.timestamp) })
+                let missingEntries = dataForComparison.filter { !apiTimestamps.contains($0.timestamp) }
+
+                if missingEntries.isEmpty {
                     print("[\(self.TAG)] ✅ Temperature API synced")
+                    self.lastUploadedDateStrings["temperature"] = dateString
+                } else {
+                    print("[\(self.TAG)] ⚠️ Temperature missing \(missingEntries.count) entries — uploading")
+                    self.uploadTemperatureDataToAPI(userId: userId, date: date, data: missingEntries)
                 }
                 
             case .failure(let error):
@@ -561,4 +579,5 @@ class CombinedDataSyncHelper {
             }
         }
     }
+    
 }

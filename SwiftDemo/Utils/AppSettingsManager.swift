@@ -18,6 +18,16 @@ final class AppSettingsManager {
         case min30 = "30 min"
         case min45 = "45 min"
         case min60 = "60 min"
+
+        /// Numeric value in minutes (used by SyncFreshnessChecker)
+        var minuteValue: Double {
+            switch self {
+            case .min15: return 15
+            case .min30: return 30
+            case .min45: return 45
+            case .min60: return 60
+            }
+        }
     }
 
     // MARK: - Temperature

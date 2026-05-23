@@ -149,8 +149,10 @@ class HeartRateDailySyncHelper {
             let diastolicValue = apiEntry.diastolicValue
             
             if let local = localDict[date] {
-                // Entry exists - check if value changed
-                if local.value != value || local.diastolicValue != diastolicValue {
+                // Entry exists — check if value actually changed.
+                // diastolicValue is irrelevant for heart rate (API always returns "0",
+                // local DB may store nil); compare only the heart rate value itself.
+                if local.value != value {
                     statsToSave.append((date: date, value: value))
                     hasChanges = true
                     print("[\(TAG)] 🔄 Updated entry for \(date): \(local.value ?? "nil") → \(value)")

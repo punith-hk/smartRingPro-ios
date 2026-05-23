@@ -6,8 +6,9 @@ import UIKit
 ///   🟢  Last synced: just now                    ↻
 final class LastSyncedBannerView: UIView {
 
-    // MARK: - Callback
-    var onSyncTapped: (() -> Void)?
+    // MARK: - Callbacks
+    var onSyncTapped:   (() -> Void)?
+    var onDetailTapped: (() -> Void)?
 
     // MARK: - Sub-views
     private let dotView    = UIView()
@@ -38,7 +39,10 @@ final class LastSyncedBannerView: UIView {
         // Label
         textLabel.font      = .systemFont(ofSize: 13, weight: .medium)
         textLabel.textColor = UIColor(red: 0.31, green: 0.76, blue: 0.97, alpha: 1)
+        textLabel.isUserInteractionEnabled = true
         textLabel.translatesAutoresizingMaskIntoConstraints = false
+        let tap = UITapGestureRecognizer(target: self, action: #selector(detailTapped))
+        textLabel.addGestureRecognizer(tap)
         addSubview(textLabel)
 
         // Spinner (shown during active sync; replaces dot)
@@ -110,7 +114,7 @@ final class LastSyncedBannerView: UIView {
             return
         }
         let elapsed = Date().timeIntervalSince(date)
-        textLabel.text          = "Last synced: \(relativeTime(elapsed))"
+        textLabel.text          = "Last data recorded \(relativeTime(elapsed))"
         dotView.backgroundColor = dotColor(elapsed)
     }
 
@@ -133,5 +137,10 @@ final class LastSyncedBannerView: UIView {
 
     @objc private func syncTapped() {
         onSyncTapped?()
+    }
+
+    @objc private func detailTapped() {
+        guard !isSyncing, lastSyncDate != nil else { return }
+        onDetailTapped?()
     }
 }

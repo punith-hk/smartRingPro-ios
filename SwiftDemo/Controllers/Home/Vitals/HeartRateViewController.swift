@@ -78,8 +78,7 @@ final class HeartRateViewController: AppBaseViewController {
         // Check if device is connected
         if DeviceSessionManager.shared.isDeviceConnected() {
             checkInitialBLEConnection()
-            syncHelper?.startSync()
-            syncHelper?.startSync()
+            syncHelper?.startSync(force: true)
             
             // Listen for BLE state changes
             BLEStateManager.shared.onStateChanged = { [weak self] state in
@@ -434,6 +433,13 @@ extension HeartRateViewController: HeartRateSyncHelper.HeartRateSyncListener {
     
     func onSyncFailed(error: String) {
         print("❌ Sync failed: \(error)")
+    }
+
+    func onUpToDate() {
+        print("[HeartRateVC] ✅ Heart rate data is up to date")
+        let next = SyncFreshnessChecker.nextSyncMessage(for: SyncFreshnessChecker.SyncTimeKey.heartRate)
+        let msg = next.isEmpty ? "Heart rate data is up to date" : "Heart rate data is up to date. \(next)"
+        Toast.show(message: msg, in: view)
     }
     
     func onLocalDataFetched(_ data: [(timestamp: Int64, bpm: Int)]) {

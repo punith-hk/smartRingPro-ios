@@ -999,6 +999,21 @@ extension HealthVitalsViewController: HeartRateSyncHelper.HeartRateSyncListener,
     func onSyncFailed(error: String) {
         print("❌ [\(vitalType.displayName)] Sync failed: \(error)")
     }
+
+    // Shared method: onUpToDate (used by HR, BP, Combined protocols)
+    func onUpToDate() {
+        print("[HealthVitalsVC] ✅ \(vitalType.displayName) data is up to date")
+        let freshnessKey: String
+        switch vitalType {
+        case .bloodPressure: freshnessKey = SyncFreshnessChecker.SyncTimeKey.bloodPressure
+        default:             freshnessKey = SyncFreshnessChecker.SyncTimeKey.combined
+        }
+        let next = SyncFreshnessChecker.nextSyncMessage(for: freshnessKey)
+        let msg = next.isEmpty
+            ? "\(vitalType.displayName) data is up to date"
+            : "\(vitalType.displayName) data is up to date. \(next)"
+        Toast.show(message: msg, in: view)
+    }
 }
 
 
