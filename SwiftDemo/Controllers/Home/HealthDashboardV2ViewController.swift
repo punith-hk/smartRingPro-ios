@@ -343,8 +343,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             iconBg: UIColor(red: 0.88, green: 0.89, blue: 1, alpha: 1),
             title: "Steps", value: "--", unit: "")
         stepsCard.onTap = { [weak self] in
-            // Steps VC placeholder
-            self?.showPlaceholder(title: "Steps")
+            self?.push(StepsViewController())
         }
 
         bmiCard = makeCard(

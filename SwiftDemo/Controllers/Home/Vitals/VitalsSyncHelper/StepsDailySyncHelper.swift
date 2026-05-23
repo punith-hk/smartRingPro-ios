@@ -91,8 +91,8 @@ class StepsDailySyncHelper {
                 let midDay = calendar.date(byAdding: .hour, value: 12, to: currentDate)!
                 let timestamp = Int64(midDay.timeIntervalSince1970)
                 
-                // Create data point with TOTAL calories for the day
-                let dataPoint = VitalDataPoint(timestamp: timestamp, value: Double(totalCalories))
+                // Create data point with TOTAL STEPS for the day (bar chart value)
+                let dataPoint = VitalDataPoint(timestamp: timestamp, value: Double(totalSteps))
                 dailyDataPoints.append(dataPoint)
                 
                 // Add to cumulative totals
@@ -126,30 +126,93 @@ class StepsDailySyncHelper {
             totalCalories: cumulativeCalories
         )
         completion(dailyDataPoints, totals)
-        
-        // Fetch from API in background for logging only (don't sync to local DB)
-        fetchAPIDataForLogging(userId: userId)
     }
-    
+
+    // MARK: - API Merge (supplement local with server steps data)
+
+    /// Fetches API daily step aggregates and merges dates missing from localPoints.
+    /// Never overwrites local data. Completion called on main thread with (mergedPoints, totalSteps).
+    func fetchAPIAndMerge(
+        userId: Int,
+        range: VitalChartRange,
+        selectedDate: Date,
+        localPoints: [VitalDataPoint],
+        completion: @escaping ([VitalDataPoint], Int) -> Void
+    ) {
+        guard range != .day else {
+            completion(localPoints, localPoints.reduce(0) { $0 + Int($1.value) })
+            return
+        }
+
+        let calendar = Calendar.current
+        var rangeStart: Date
+        var rangeEnd: Date
+        switch range {
+        case .week:
+            let weekday = calendar.component(.weekday, from: selectedDate)
+            let daysToMon = (weekday == 1) ? -6 : -(weekday - 2)
+            rangeStart = calendar.startOfDay(for: calendar.date(byAdding: .day, value: daysToMon, to: selectedDate)!)
+            rangeEnd   = calendar.date(byAdding: .day, value: 7, to: rangeStart)!
+        case .month:
+            let comps = calendar.dateComponents([.year, .month], from: selectedDate)
+            rangeStart = calendar.date(from: comps)!
+            rangeEnd   = calendar.date(byAdding: .month, value: 1, to: rangeStart)!
+        case .day:
+            completion(localPoints, localPoints.reduce(0) { $0 + Int($1.value) })
+            return
+        }
+
+        let df = DateFormatter()
+        df.dateFormat = "yyyy-MM-dd"
+        var localDates = Set<String>()
+        for point in localPoints {
+            let d = Date(timeIntervalSince1970: TimeInterval(point.timestamp))
+            localDates.insert(df.string(from: d))
+        }
+
+        HealthService.shared.getRingDataByDay(userId: userId, type: "steps") { result in
+            switch result {
+            case .failure:
+                DispatchQueue.main.async {
+                    completion(localPoints, localPoints.reduce(0) { $0 + Int($1.value) })
+                }
+            case .success(let response):
+                var merged = localPoints
+                for entry in response.data {
+                    guard let entryDate = df.date(from: entry.vDate) else { continue }
+                    guard entryDate >= rangeStart, entryDate < rangeEnd else { continue }
+                    guard !localDates.contains(entry.vDate) else { continue }
+                    guard let steps = Int(entry.value), steps > 0, steps < 100_000 else { continue }
+
+                    let midDay = calendar.date(byAdding: .hour, value: 12, to: entryDate)!
+                    merged.append(VitalDataPoint(timestamp: Int64(midDay.timeIntervalSince1970), value: Double(steps)))
+                }
+                merged.sort { $0.timestamp < $1.timestamp }
+                let total = merged.reduce(0) { $0 + Int($1.value) }
+                print("[StepsDailySyncHelper] 🌐 API merge: \(merged.count - localPoints.count) new dates added")
+                DispatchQueue.main.async { completion(merged, total) }
+            }
+        }
+    }
+
     // MARK: - API Logging (Read-only)
-    
+
     /// Fetch daily calories data from API for logging purposes only
     /// Does NOT sync to local DB - just prints last 5 entries
     private func fetchAPIDataForLogging(userId: Int) {
         print("[\(TAG)] 🔍 Fetching API data for logging...")
-        
+
         HealthService.shared.getRingDataByDay(
             userId: userId,
             type: "calories"
         ) { [weak self] result in
             guard let self = self else { return }
-            
+
             switch result {
             case .success(let response):
                 let apiData = response.data
                 print("[\(self.TAG)] ✅ API returned \(apiData.count) daily calorie entries")
-                
-                // Print last 5 entries
+
                 let last5 = Array(apiData.prefix(5))
                 if !last5.isEmpty {
                     print("[\(self.TAG)] 📋 Last 5 API entries:")
@@ -159,7 +222,7 @@ class StepsDailySyncHelper {
                 } else {
                     print("[\(self.TAG)] ℹ️ No API data found")
                 }
-                
+
             case .failure(let error):
                 print("[\(self.TAG)] ❌ API fetch failed: \(error)")
             }

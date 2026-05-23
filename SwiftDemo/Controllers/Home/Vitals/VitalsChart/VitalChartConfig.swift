@@ -10,6 +10,7 @@ enum VitalType {
     case hrv
     case calories
     case stress
+    case steps
     
     var displayName: String {
         switch self {
@@ -21,6 +22,7 @@ enum VitalType {
         case .hrv: return "HRV"
         case .calories: return "Calories"
         case .stress: return "Stress"
+        case .steps: return "Steps"
         }
     }
     
@@ -34,6 +36,7 @@ enum VitalType {
         case .hrv: return "ms"
         case .calories: return "kcal"
         case .stress: return "level"
+        case .steps: return "steps"
         }
     }
     
@@ -47,6 +50,7 @@ enum VitalType {
         case .hrv: return .systemGreen
         case .calories: return .systemYellow
         case .stress: return .systemPink
+        case .steps: return UIColor(red: 0.30, green: 0.69, blue: 0.31, alpha: 1) // #4CAF50
         }
     }
     
@@ -60,12 +64,13 @@ enum VitalType {
         case .hrv: return 20
         case .calories: return 5
         case .stress: return 10
+        case .steps: return 500
         }
     }
     
     var useBarChart: Bool {
         switch self {
-        case .calories:
+        case .calories, .steps:
             return true
         default:
             return false

@@ -146,7 +146,7 @@ class StepsSyncHelper {
         
         HealthService.shared.getRingDataByType(
             userId: userId,
-            type: "calories",
+            type: "steps",
             selectedDate: dateString
         ) { [weak self] result in
             guard let self = self else { return }
@@ -160,13 +160,13 @@ class StepsSyncHelper {
                 var latestMatches = true
                 if let localLatest = localData.last, let apiLatest = apiData.first {
                     let apiTimestamp = Int64(apiLatest.timestamp)
-                    let apiCalories = Int(apiLatest.value) ?? 0
-                    latestMatches = (localLatest.timestamp == apiTimestamp && localLatest.calories == apiCalories)
+                    let apiSteps = Int(apiLatest.value) ?? 0
+                    latestMatches = (localLatest.timestamp == apiTimestamp && localLatest.steps == apiSteps)
                 }
                 
                 if !countMatches || !latestMatches {
                     print("[\(self.TAG)] ⚠️ API mismatch - Local: \(localData.count), API: \(apiData.count)")
-                    self.uploadCaloriesDataToAPI(userId: userId, date: date, data: localData)
+                    self.uploadStepsDataToAPI(userId: userId, date: date, data: localData)
                 } else {
                     print("[\(self.TAG)] ✅ API synced")
                 }
@@ -177,23 +177,22 @@ class StepsSyncHelper {
         }
     }
     
-    /// Upload calories data to API for a specific date (only calories with timestamp)
-    private func uploadCaloriesDataToAPI(userId: Int, date: Date, data: [(timestamp: Int64, steps: Int, distance: Int, calories: Int)]) {
+    /// Upload steps data to API for a specific date
+    private func uploadStepsDataToAPI(userId: Int, date: Date, data: [(timestamp: Int64, steps: Int, distance: Int, calories: Int)]) {
         guard !data.isEmpty else { return }
         
-        // Upload only calories values with timestamps
-        let values: [RingValueEntry] = data.map { RingValueEntry(value: String($0.calories), timestamp: $0.timestamp) }
+        let values: [RingValueEntry] = data.map { RingValueEntry(value: String($0.steps), timestamp: $0.timestamp) }
         let latestEntry = data.last
         
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "M/d/yyyy"
         let dateString = dateFormatter.string(from: date)
         
-        print("[\(TAG)] 📤 Uploading \(values.count) calorie entries to API...")
+        print("[\(TAG)] 📤 Uploading \(values.count) step entries to API...")
         
         HealthService.shared.saveHealthDataBatch(
             userId: userId,
-            type: "calories",
+            type: "steps",
             values: values
         ) { [weak self] result in
             guard let self = self else { return }
@@ -201,16 +200,11 @@ class StepsSyncHelper {
             switch result {
             case .success(let response):
                 print("[\(self.TAG)] ✅ Upload successful: \(response.message)")
-                
-                // Save last uploaded entry
                 if let latest = latestEntry {
-                    UserDefaults.standard.set(latest.timestamp, forKey: "last_uploaded_calories_timestamp")
-                    UserDefaults.standard.set(latest.calories, forKey: "last_uploaded_calories_value")
+                    UserDefaults.standard.set(latest.timestamp, forKey: "last_uploaded_steps_timestamp")
+                    UserDefaults.standard.set(latest.steps, forKey: "last_uploaded_steps_value")
                 }
-                
-                // Mark date as uploaded
                 self.lastUploadedDateString = dateString
-                
             case .failure(let error):
                 print("[\(self.TAG)] ❌ Upload failed: \(error)")
             }

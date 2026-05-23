@@ -215,8 +215,8 @@ final class HealthVitalsViewController: AppBaseViewController {
                 stressDailySyncHelper?.fetchDailyData(userId: userId) { _ in }
             }
             
-        case .calories:
-            // Calories doesn't use HealthVitalsViewController, has its own CaloriesViewController
+        case .calories, .steps:
+            // These types have their own dedicated ViewControllers
             break
         }
     }
@@ -237,8 +237,8 @@ final class HealthVitalsViewController: AppBaseViewController {
         case .stress:
             stressSyncHelper?.startSync()
             
-        case .calories:
-            // Calories doesn't use HealthVitalsViewController
+        case .calories, .steps:
+            // These types have their own dedicated ViewControllers
             break
         }
     }
@@ -397,7 +397,7 @@ final class HealthVitalsViewController: AppBaseViewController {
     private func shouldShowMeasurementControls() -> Bool {
         // Show measurement controls for all vitals except calories
         switch vitalType {
-        case .calories:
+        case .calories, .steps:
             return false
         default:
             return true
@@ -657,8 +657,8 @@ extension HealthVitalsViewController: VitalChartDataSource {
                 }
             }
             
-        case .calories:
-            // Calories doesn't use HealthVitalsViewController, has its own CaloriesViewController
+        case .calories, .steps:
+            // These types have their own dedicated ViewControllers
             completion([])
         }
     }
@@ -1001,6 +1001,8 @@ extension HealthVitalsViewController {
             return UIImage(systemName: "flame.fill")
         case .stress:
             return UIImage(systemName: "brain.head.profile")
+        case .steps:
+            return UIImage(systemName: "figure.walk")
         }
     }
 }
