@@ -33,8 +33,9 @@ class DeviceCell: UITableViewCell {
         backgroundColor = .clear
 
         // Icon
-        iconView.image = UIImage(systemName: "antenna.radiowaves.left.and.right")
-        iconView.tintColor = .black
+        iconView.image = UIImage(named: "hearto_ring-nobg")
+            ?? UIImage(systemName: "antenna.radiowaves.left.and.right")
+        iconView.tintColor = AppTheme.primaryBlue
         iconView.contentMode = .scaleAspectFit
 
         // Labels
@@ -47,10 +48,8 @@ class DeviceCell: UITableViewCell {
 
         // Connect Button (NOW CLICKABLE)
         connectButton.setTitle("Connect", for: .normal)
-        connectButton.setTitleColor(.black, for: .normal)
-        connectButton.backgroundColor = UIColor(
-            red: 0.6, green: 0.95, blue: 0.8, alpha: 1
-        )
+        connectButton.setTitleColor(.white, for: .normal)
+        connectButton.backgroundColor = AppTheme.primaryBlue
         connectButton.layer.cornerRadius = 8
         connectButton.addTarget(self, action: #selector(connectTapped), for: .touchUpInside)
 

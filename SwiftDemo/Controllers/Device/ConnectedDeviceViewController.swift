@@ -22,16 +22,9 @@ class ConnectedDeviceViewController: AppBaseViewController {
     // Firmware row
     private let firmwareValueLabel = UILabel()
 
-    // Loading overlay
-    private let loadingOverlay: UIView = {
-        let v = UIView()
-        v.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
-        v.translatesAutoresizingMaskIntoConstraints = false
-        return v
-    }()
-
     // MARK: - Connection UI State
-    private var isBlinking = false
+    private var isBlinking   = false
+    private var isUnpairing  = false   // blocks BLE callbacks from overriding "Disconnecting…"
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -39,13 +32,9 @@ class ConnectedDeviceViewController: AppBaseViewController {
         setScreenTitle("Device")
         view.backgroundColor = bgColor
         buildUI()
-        // Only show loader when BLE is actually active (SDK will respond)
+        // Show standard loader while fetching device info from the SDK
         if DeviceSessionManager.shared.isDeviceActuallyConnected() {
-            setupLoadingOverlay()
-            // Safety net: dismiss loader after 5 s even if SDK never calls back
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
-                self?.hideLoadingOverlay()
-            }
+            Loader.shared.show(on: view, message: "Loading device info…", timeout: 5)
         }
         populateCachedDeviceInfo()
         fetchAndUpdateDeviceBasicInfo()
@@ -149,7 +138,7 @@ class ConnectedDeviceViewController: AppBaseViewController {
         card.layer.shadowOffset = CGSize(width: 0, height: 4)
         card.layer.shadowRadius = 10
 
-        let ringIV = UIImageView(image: UIImage(named: "smart_ring"))
+        let ringIV = UIImageView(image: UIImage(named: "hearto_ring"))
         ringIV.contentMode = .scaleAspectFit
         ringIV.clipsToBounds = true
         ringIV.translatesAutoresizingMaskIntoConstraints = false
@@ -161,35 +150,31 @@ class ConnectedDeviceViewController: AppBaseViewController {
         // Name
         deviceNameLabel.font = .systemFont(ofSize: 20, weight: .bold)
         deviceNameLabel.textColor = .black
+        deviceNameLabel.textAlignment = .left
         deviceNameLabel.text = "Device"
 
-        // Connection
+        // Connection status
         connectionLabel.font = .systemFont(ofSize: 14)
         connectionLabel.textColor = UIColor(red: 76/255, green: 175/255, blue: 80/255, alpha: 1)
-
-        // Bluetooth icon + connection row
-        let btIcon = UIImageView(image: UIImage(systemName: "bluetooth"))
-        btIcon.tintColor = UIColor(red: 76/255, green: 175/255, blue: 80/255, alpha: 1)
-        btIcon.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([btIcon.widthAnchor.constraint(equalToConstant: 16), btIcon.heightAnchor.constraint(equalToConstant: 18)])
-        let connRow = UIStackView(arrangedSubviews: [btIcon, connectionLabel])
-        connRow.axis = .horizontal
-        connRow.spacing = 4
-        connRow.alignment = .center
+        connectionLabel.textAlignment = .left
 
         // MAC
         macLabel.font = .systemFont(ofSize: 13)
         macLabel.textColor = .darkGray
+        macLabel.textAlignment = .left
         macLabel.text = "--"
 
-        // Battery
+        // Battery — icon on left, percentage next to it
         batteryIconView.image = UIImage(systemName: "battery.100")
         batteryIconView.tintColor = UIColor(red: 117/255, green: 249/255, blue: 76/255, alpha: 1)
         batteryIconView.contentMode = .scaleAspectFit
         batteryIconView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([batteryIconView.widthAnchor.constraint(equalToConstant: 36), batteryIconView.heightAnchor.constraint(equalToConstant: 22)])
+        NSLayoutConstraint.activate([
+            batteryIconView.widthAnchor.constraint(equalToConstant: 36),
+            batteryIconView.heightAnchor.constraint(equalToConstant: 22),
+        ])
 
-        batteryLabel.font = .systemFont(ofSize: 16)
+        batteryLabel.font = .systemFont(ofSize: 14)
         batteryLabel.textColor = .black
         batteryLabel.text = "--"
 
@@ -198,9 +183,11 @@ class ConnectedDeviceViewController: AppBaseViewController {
         battRow.spacing = 4
         battRow.alignment = .center
 
-        let infoStack = UIStackView(arrangedSubviews: [deviceNameLabel, connRow, macLabel, battRow])
+        // All 4 rows start at the same left edge
+        let infoStack = UIStackView(arrangedSubviews: [deviceNameLabel, connectionLabel, macLabel, battRow])
         infoStack.axis = .vertical
         infoStack.spacing = 6
+        infoStack.alignment = .fill
 
         let hStack = UIStackView(arrangedSubviews: [ringIV, infoStack])
         hStack.axis = .horizontal
@@ -363,6 +350,7 @@ class ConnectedDeviceViewController: AppBaseViewController {
 
     // MARK: - BLE Notifications
     @objc private func deviceStateChanged(_ notification: Notification) {
+        guard !isUnpairing else { return }   // ignore all BLE events while unpair is in progress
         guard
             let info = notification.userInfo as? [String: Any],
             let state = info[YCProduct.connecteStateKey] as? YCProductState
@@ -416,44 +404,8 @@ class ConnectedDeviceViewController: AppBaseViewController {
     }
 
     // MARK: - Loading Overlay
-    private func setupLoadingOverlay() {
-        view.addSubview(loadingOverlay)
-        NSLayoutConstraint.activate([
-            loadingOverlay.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            loadingOverlay.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            loadingOverlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            loadingOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-        ])
-
-        let spinner = UIActivityIndicatorView(style: .large)
-        spinner.color = UIColor(red: 13/255, green: 153/255, blue: 255/255, alpha: 1)
-        spinner.translatesAutoresizingMaskIntoConstraints = false
-        spinner.startAnimating()
-
-        let label = UILabel()
-        label.text = "Loading device info…"
-        label.font = .systemFont(ofSize: 14)
-        label.textColor = UIColor(red: 50/255, green: 80/255, blue: 120/255, alpha: 1)
-        label.translatesAutoresizingMaskIntoConstraints = false
-
-        let stack = UIStackView(arrangedSubviews: [spinner, label])
-        stack.axis = .vertical
-        stack.spacing = 12
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        loadingOverlay.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.centerXAnchor.constraint(equalTo: loadingOverlay.centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: loadingOverlay.centerYAnchor),
-        ])
-    }
-
     private func hideLoadingOverlay() {
-        UIView.animate(withDuration: 0.3, animations: {
-            self.loadingOverlay.alpha = 0
-        }, completion: { _ in
-            self.loadingOverlay.isHidden = true
-        })
+        Loader.shared.hide()
     }
 
     private func updateFirmware(_ version: YCDeviceVersionInfo?) {
@@ -470,18 +422,20 @@ class ConnectedDeviceViewController: AppBaseViewController {
             batteryIconView.tintColor = .lightGray
             return
         }
-        batteryLabel.text = "\(power)%"
 
         if status == .charging {
+            batteryLabel.text = "\(power)%"
             batteryIconView.image = UIImage(systemName: "battery.100.bolt")
             batteryIconView.tintColor = .systemBlue
             return
         }
         if status == .full {
+            batteryLabel.text = "\(power)%"
             batteryIconView.image = UIImage(systemName: "battery.100")
             batteryIconView.tintColor = UIColor(red: 117/255, green: 249/255, blue: 76/255, alpha: 1)
             return
         }
+        batteryLabel.text = "\(power)%"
         switch power {
         case 61...100:
             batteryIconView.image = UIImage(systemName: "battery.100")
@@ -540,9 +494,23 @@ class ConnectedDeviceViewController: AppBaseViewController {
     }
 
     private func performUnpair() {
+        isUnpairing = true
+
+        // Update status label immediately so user sees feedback
+        connectionLabel.text = "Disconnecting…"
+        connectionLabel.textColor = .systemOrange
+        connectionLabel.layer.removeAllAnimations()
+
+        // Fire disconnect + clear session immediately in the background
         YCProduct.disconnectDevice { _, _ in }
         DeviceSessionManager.shared.clearDevice()
-        navigationController?.popToRootViewController(animated: true)
+
+        // Show loader for 3 s, then pop — gives BLE stack time to clean up gracefully
+        Loader.shared.show(on: view, message: "Disconnecting…", timeout: 3)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            Loader.shared.hide()
+            self?.navigationController?.popToRootViewController(animated: true)
+        }
     }
 }
 

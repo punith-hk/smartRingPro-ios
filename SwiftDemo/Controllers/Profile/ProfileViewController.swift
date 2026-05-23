@@ -78,6 +78,9 @@ class ProfileViewController: AppBaseViewController {
     ]
     
     private var compressedImageData: Data?
+    /// True while a save-profile API round-trip is in flight; lets bindProfileData
+    /// know it should treat the server response as the new authoritative source for h/w.
+    private var isSavingProfile = false
     
     private let dobPicker = UIDatePicker()
     private let dobFormatter: DateFormatter = {
@@ -105,7 +108,17 @@ class ProfileViewController: AppBaseViewController {
         fetchUserProfile()
 
     }
-    
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        // Sync height/weight fields with local storage — the BMI screen may have
+        // updated UserDefaults while this VC was already in memory.
+        let h = UserDefaultsManager.shared.profileHeight
+        let w = UserDefaultsManager.shared.profileWeight
+        if h > 0 { heightField.text = "\(Int(h)) CM" }
+        if w > 0 { weightField.text = "\(Int(w)) KG" }
+    }
+
     // MARK: - Scroll Setup
     private func setupScroll() {
 
@@ -637,14 +650,24 @@ class ProfileViewController: AppBaseViewController {
             userInfo: ["name": fullName, "phone": data.phone_number, "imageUrl": data.patient_image_url ?? ""]
         )
         
-        // Save to UserDefaults for persistence
+        // Save to UserDefaults — height/weight are only overwritten from the server
+        // when the user explicitly saved from this screen (isSavingProfile = true).
+        // Otherwise we keep the local value, which may be fresher (set by the BMI screen).
+        let heightVal = data.height.flatMap { Double($0) } ?? 0
+        let weightVal = data.weight.flatMap { Double($0) } ?? 0
+        let localH = UserDefaultsManager.shared.profileHeight
+        let localW = UserDefaultsManager.shared.profileWeight
         UserDefaultsManager.shared.saveProfileData(
             name: fullName,
             photoUrl: data.patient_image_url ?? "",
             age: 0,
             gender: data.gender,
-            phone: data.phone_number
+            phone: data.phone_number,
+            height: (isSavingProfile || localH == 0) ? (heightVal > 0 ? heightVal : nil) : nil,
+            weight: (isSavingProfile || localW == 0) ? (weightVal > 0 ? weightVal : nil) : nil,
+            profileUserId: data.user_id
         )
+        isSavingProfile = false
 
         emailField.text = data.email ?? ""
         mobileField.text = data.phone_number
@@ -674,15 +697,20 @@ class ProfileViewController: AppBaseViewController {
 
         bloodGroupField.text = data.blood_group ?? ""
 
-        // Height — server sends numeric string, display as "175 CM"
-        if let h = data.height, let val = Double(h) {
+        // Height — prefer local UserDefaults (set by BMI screen or previous save);
+        // fall back to server value when there is no local data.
+        let displayH = UserDefaultsManager.shared.profileHeight
+        let displayW = UserDefaultsManager.shared.profileWeight
+        if displayH > 0 {
+            heightField.text = "\(Int(displayH)) CM"
+        } else if let h = data.height, let val = Double(h), val > 0 {
             heightField.text = "\(Int(val)) CM"
         } else {
             heightField.text = data.height ?? ""
         }
-
-        // Weight — server sends numeric string, display as "70 KG"
-        if let w = data.weight, let val = Double(w) {
+        if displayW > 0 {
+            weightField.text = "\(Int(displayW)) KG"
+        } else if let w = data.weight, let val = Double(w), val > 0 {
             weightField.text = "\(Int(val)) KG"
         } else {
             weightField.text = data.weight ?? ""
@@ -882,7 +910,9 @@ class ProfileViewController: AppBaseViewController {
                     Toast.show(message: response.message, in: self.view)
                     self.scrollView.setContentOffset(.zero, animated: true)
                     
-                    // Fetch updated profile data and update local storage
+                    // Fetch updated profile data; flag tells bindProfileData to
+                    // treat the server response as authoritative for height/weight.
+                    self.isSavingProfile = true
                     self.fetchUserProfile()
 
                 case .failure:

@@ -104,8 +104,33 @@ final class UserDefaultsManager {
         get { defaults.string(forKey: "profileGender") }
         set { defaults.set(newValue, forKey: "profileGender") }
     }
-    
-    func saveProfileData(name: String, photoUrl: String, age: Int = 0, gender: String? = nil, phone: String? = nil) {
+
+    var profileHeight: Double {
+        get { defaults.double(forKey: "user_height") }
+        set { defaults.set(newValue, forKey: "user_height") }
+    }
+
+    var profileWeight: Double {
+        get { defaults.double(forKey: "user_weight") }
+        set { defaults.set(newValue, forKey: "user_weight") }
+    }
+
+    /// The `user_id` field returned inside ProfileData — used when calling profile update API.
+    var profileUserId: Int {
+        get { defaults.integer(forKey: "profile_user_id") }
+        set { defaults.set(newValue, forKey: "profile_user_id") }
+    }
+
+    func saveProfileData(
+        name: String,
+        photoUrl: String,
+        age: Int = 0,
+        gender: String? = nil,
+        phone: String? = nil,
+        height: Double? = nil,
+        weight: Double? = nil,
+        profileUserId: Int? = nil
+    ) {
         defaults.set(name, forKey: "profileName")
         defaults.set(photoUrl, forKey: "profilePhotoUrl")
         if age > 0 {
@@ -116,6 +141,15 @@ final class UserDefaultsManager {
         }
         if let phone = phone, !phone.isEmpty {
             defaults.set(phone, forKey: "mobileNumber")
+        }
+        if let h = height, h > 0 {
+            defaults.set(h, forKey: "user_height")
+        }
+        if let w = weight, w > 0 {
+            defaults.set(w, forKey: "user_weight")
+        }
+        if let uid = profileUserId, uid > 0 {
+            defaults.set(uid, forKey: "profile_user_id")
         }
     }
     

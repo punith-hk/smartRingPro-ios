@@ -12,42 +12,43 @@ class SearchDeviceViewController: AppBaseViewController {
 
     private var devices: [ScannedDevice] = []
     private var scanTimer: Timer?
-    
+
     // Connection state
     private var isConnecting = false
-    private let loadingView = UIActivityIndicatorView(style: .large)
 
     // UI
-    private let containerView = UIView()
-    private let tableView = UITableView()
-    private let scanButton = UIButton(type: .system)
-    private let statusLabel = UILabel()
+    private let scanAnimationView = UIView()
+    private let deviceIconView    = UIImageView()
+    private var rippleLayers: [CAShapeLayer] = []
+    private let containerView  = UIView()
+    private let tableView      = UITableView()
+    private let scanButton     = UIButton(type: .system)
+    private let statusLabel    = UILabel()
     private let subStatusLabel = UILabel()
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        edgesForExtendedLayout = []   // start layout below the navigation bar
         setScreenTitle("Bind Device")
         setupUI()
-        setupLoadingView()
         startScanCycle()
     }
-    
-    private func setupLoadingView() {
-        // Loading indicator (hidden by default)
-        loadingView.color = .white
-        loadingView.backgroundColor = UIColor.black.withAlphaComponent(0.7)
-        loadingView.layer.cornerRadius = 10
-        loadingView.hidesWhenStopped = true
-        view.addSubview(loadingView)
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // Kick off animation now that bounds are final
+        if !scanButton.isEnabled { startScanAnimation() }
     }
 
-    private func setupUI() {
-        view.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.9)
+    // MARK: - Layout
 
-        containerView.frame = CGRect(x: 16, y: 120, width: view.bounds.width - 32, height: 360)
-        containerView.backgroundColor = UIColor(red: 0.35, green: 0.7, blue: 0.8, alpha: 1)
-        containerView.layer.cornerRadius = 20
+    private func setupUI() {
+        let W = view.bounds.width
+        view.backgroundColor = AppTheme.background
+
+        // ── Device list card (top) ───────────────────────────────────────────
+        containerView.frame = CGRect(x: 16, y: 16, width: W - 32, height: 280)
+        AppTheme.styleCard(containerView, cornerRadius: 20)
         view.addSubview(containerView)
 
         tableView.frame = containerView.bounds
@@ -59,31 +60,108 @@ class SearchDeviceViewController: AppBaseViewController {
         tableView.register(DeviceCell.self, forCellReuseIdentifier: DeviceCell.identifier)
         containerView.addSubview(tableView)
 
-        statusLabel.frame = CGRect(x: 0, y: containerView.frame.maxY + 16, width: view.bounds.width, height: 20)
+        // ── Status labels + scan button ──────────────────────────────────────
+        let labelTop = containerView.frame.maxY + 16
+        statusLabel.frame = CGRect(x: 0, y: labelTop, width: W, height: 20)
         statusLabel.textAlignment = .center
-        statusLabel.font = .boldSystemFont(ofSize: 14)
+        statusLabel.font = AppTheme.bodyFont(size: 14)
+        statusLabel.textColor = AppTheme.textPrimary
         view.addSubview(statusLabel)
 
-        subStatusLabel.frame = CGRect(x: 0, y: statusLabel.frame.maxY + 4, width: view.bounds.width, height: 18)
+        subStatusLabel.frame = CGRect(x: 0, y: statusLabel.frame.maxY + 4, width: W, height: 18)
         subStatusLabel.textAlignment = .center
-        subStatusLabel.font = .systemFont(ofSize: 13)
-        subStatusLabel.textColor = .darkGray
+        subStatusLabel.font = AppTheme.captionFont(size: 13)
+        subStatusLabel.textColor = AppTheme.textSecondary
         view.addSubview(subStatusLabel)
 
-        scanButton.frame = CGRect(x: 40, y: subStatusLabel.frame.maxY + 20, width: view.bounds.width - 80, height: 44)
-        scanButton.backgroundColor = UIColor(red: 0.6, green: 0.95, blue: 0.8, alpha: 1)
-        scanButton.layer.cornerRadius = 8
-        scanButton.setTitleColor(.black, for: .normal)
+        scanButton.frame = CGRect(
+            x: 40, y: subStatusLabel.frame.maxY + 16,
+            width: W - 80, height: 44)
+        AppTheme.stylePrimaryButton(scanButton, title: "Scanning…", cornerRadius: 8)
         scanButton.addTarget(self, action: #selector(rescanTapped), for: .touchUpInside)
         view.addSubview(scanButton)
+
+        // ── Scanning animation host (BOTTOM) ─────────────────────────────────
+        let iconSz: CGFloat = min(W * 0.175, 70)
+        let animH: CGFloat  = iconSz + 80          // just enough room for icon + ripples
+        let animTop = scanButton.frame.maxY + 12
+        scanAnimationView.backgroundColor = .clear
+        scanAnimationView.frame = CGRect(x: 0, y: animTop, width: W, height: animH)
+        view.addSubview(scanAnimationView)
+
+        // Ring icon centred inside the animation zone
+        deviceIconView.image = UIImage(named: "hearto_ring-nobg")
+            ?? UIImage(systemName: "antenna.radiowaves.left.and.right")
+        deviceIconView.contentMode = .scaleAspectFit
+        deviceIconView.tintColor = AppTheme.primaryBlue
+        deviceIconView.frame = CGRect(
+            x: W / 2 - iconSz / 2,
+            y: scanAnimationView.bounds.midY - iconSz / 2,
+            width: iconSz, height: iconSz)
+        scanAnimationView.addSubview(deviceIconView)
     }
-    
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        
-        // Center loading view after layout
-        loadingView.frame = CGRect(x: 0, y: 0, width: 80, height: 80)
-        loadingView.center = view.center
+
+    // MARK: - Scan Animation
+
+    private func startScanAnimation() {
+        scanAnimationView.alpha = 1
+
+        // Remove stale ripples
+        rippleLayers.forEach { $0.removeFromSuperlayer() }
+        rippleLayers.removeAll()
+        deviceIconView.layer.removeAnimation(forKey: "iconPulse")
+
+        // Ripple anchor = center of the icon in scanAnimationView's coordinate space
+        let cx = scanAnimationView.bounds.midX
+        let cy = scanAnimationView.bounds.midY
+        let maxR: CGFloat = 54
+
+        for i in 0..<3 {
+            let ripple = CAShapeLayer()
+            ripple.path = UIBezierPath(
+                ovalIn: CGRect(x: -maxR, y: -maxR, width: maxR * 2, height: maxR * 2)
+            ).cgPath
+            ripple.fillColor   = AppTheme.primaryBlue.withAlphaComponent(0.06).cgColor
+            ripple.strokeColor = AppTheme.primaryBlue.withAlphaComponent(0.40).cgColor
+            ripple.lineWidth   = 1.5
+            ripple.opacity     = 0
+            ripple.position    = CGPoint(x: cx, y: cy)
+            scanAnimationView.layer.insertSublayer(ripple, at: 0)
+            rippleLayers.append(ripple)
+
+            let group = CAAnimationGroup()
+            group.duration     = 2.6
+            group.repeatCount  = .infinity
+            group.beginTime    = CACurrentMediaTime() + Double(i) * 0.80
+            group.timingFunction = CAMediaTimingFunction(name: .easeOut)
+
+            let scale = CABasicAnimation(keyPath: "transform.scale")
+            scale.fromValue = 0.05
+            scale.toValue   = 1.0
+
+            let fade = CAKeyframeAnimation(keyPath: "opacity")
+            fade.values    = [0.0, 0.85, 0.0]
+            fade.keyTimes  = [0, 0.12, 1.0]
+
+            group.animations = [scale, fade]
+            ripple.add(group, forKey: "ripple")
+        }
+
+        // Gentle pulse on the ring icon
+        let pulse = CABasicAnimation(keyPath: "transform.scale")
+        pulse.fromValue     = 0.92
+        pulse.toValue       = 1.08
+        pulse.duration      = 1.1
+        pulse.autoreverses  = true
+        pulse.repeatCount   = .infinity
+        pulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        deviceIconView.layer.add(pulse, forKey: "iconPulse")
+    }
+
+    private func stopScanAnimation() {
+        deviceIconView.layer.removeAnimation(forKey: "iconPulse")
+        rippleLayers.forEach { $0.removeAllAnimations() }
+        UIView.animate(withDuration: 0.5) { self.scanAnimationView.alpha = 0 }
     }
 
     // MARK: - Scan
@@ -94,8 +172,11 @@ class SearchDeviceViewController: AppBaseViewController {
 
         statusLabel.text = "Scanning in progress"
         subStatusLabel.text = "Scanning for available devices..."
-        scanButton.setTitle("Scanning...", for: .normal)
+        scanButton.setTitle("Scanning…", for: .normal)
         scanButton.isEnabled = false
+
+        // Show ripple animation (runs immediately if viewDidAppear has fired)
+        startScanAnimation()
 
         YCProduct.scanningDevice { [weak self] peripherals, _ in
             guard let self = self else { return }
@@ -120,10 +201,13 @@ class SearchDeviceViewController: AppBaseViewController {
     }
 
     @objc private func scanCompleted() {
-        statusLabel.text = "Scan completed"
-        subStatusLabel.text = "Devices found: \(devices.count)"
+        statusLabel.text = devices.isEmpty ? "No devices found" : "Scan completed"
+        subStatusLabel.text = devices.isEmpty
+            ? "Make sure your ring is charged and nearby"
+            : "\(devices.count) device\(devices.count == 1 ? "" : "s") found"
         scanButton.setTitle("Rescan", for: .normal)
         scanButton.isEnabled = true
+        stopScanAnimation()
     }
 
     @objc private func rescanTapped() {
@@ -186,8 +270,7 @@ extension SearchDeviceViewController {
         isConnecting = true
         
         // 🔄 Show loading
-        loadingView.startAnimating()
-        view.bringSubviewToFront(loadingView)
+        Loader.shared.show(on: view, message: "Connecting…", timeout: 10)
         
         print("🔵 Connecting to device: \(device.name) (\(device.mac))")
         
@@ -196,7 +279,7 @@ extension SearchDeviceViewController {
             guard let self = self else { return }
             
             DispatchQueue.main.async {
-                self.loadingView.stopAnimating()
+                Loader.shared.hide()
                 self.isConnecting = false
                 
                 switch state {

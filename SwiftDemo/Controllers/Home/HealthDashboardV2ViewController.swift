@@ -353,7 +353,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             iconBg: UIColor(red: 0.88, green: 1, blue: 0.91, alpha: 1),
             title: "BMI", value: "--", unit: "kg/m²")
         bmiCard.onTap = { [weak self] in
-            self?.showPlaceholder(title: "BMI")
+            self?.push(BMIViewController())
         }
 
         // Row 2

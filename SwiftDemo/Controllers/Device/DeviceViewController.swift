@@ -14,20 +14,20 @@ class DeviceViewController: AppBaseViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        // Only build the bind UI when not connected and this VC is the top VC.
-        // The connected-state redirect is handled in viewDidAppear (after the
-        // transition animation finishes) to avoid nav-bar corruption.
-        if !DeviceSessionManager.shared.isDeviceConnected() {
+        if DeviceSessionManager.shared.isDeviceConnected() {
+            // Defer to viewDidAppear so the nav transition is finished before we push.
+            // (building UI here while animated is fine; pushing is done in viewDidAppear)
+        } else {
             buildBindUI()
         }
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        // Redirect to ConnectedDeviceVC AFTER the current transition finishes.
-        // Calling setViewControllers inside viewWillAppear (during an active
-        // animation) was creating the nav-bar jump on every push/pop.
-        if DeviceSessionManager.shared.isDeviceConnected() {
+        // Push ConnectedDeviceVC only once; if it is already the top VC we're returning
+        // from a child screen, so do nothing.
+        if DeviceSessionManager.shared.isDeviceConnected(),
+           !(navigationController?.topViewController is ConnectedDeviceViewController) {
             showConnectedDevice()
         }
     }
@@ -79,7 +79,7 @@ class DeviceViewController: AppBaseViewController {
         let tap = UITapGestureRecognizer(target: self, action: #selector(bindDeviceTapped))
         card.addGestureRecognizer(tap)
 
-        let ringIV = UIImageView(image: UIImage(named: "smart_ring") ?? UIImage(systemName: "dot.radiowaves.left.and.right"))
+        let ringIV = UIImageView(image: UIImage(named: "hearto_ring-nobg") ?? UIImage(systemName: "dot.radiowaves.left.and.right"))
         ringIV.contentMode = .scaleAspectFit
         ringIV.tintColor = .white
         ringIV.translatesAutoresizingMaskIntoConstraints = false

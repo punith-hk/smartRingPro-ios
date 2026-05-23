@@ -147,8 +147,12 @@ class MainTabBarController: UITabBarController {
 // MARK: - UITabBarControllerDelegate
 extension MainTabBarController: UITabBarControllerDelegate {
     func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
-        // Pop to root when switching tabs
         if let nav = viewController as? UINavigationController {
+            let top = nav.topViewController
+            // Don't disturb the Device tab when any device screen is already showing.
+            // Re-tapping the tab while on DeviceVC (bind/empty) or ConnectedDeviceVC
+            // should be a complete no-op — no pop, no reload, no loader.
+            if top is DeviceViewController || top is ConnectedDeviceViewController { return }
             nav.popToRootViewController(animated: false)
         }
     }
