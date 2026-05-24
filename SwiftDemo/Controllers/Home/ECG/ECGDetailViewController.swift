@@ -9,33 +9,38 @@ final class ECGDetailViewController: AppBaseViewController {
     
     private let scrollView = UIScrollView()
     private let contentView = UIView()
+    private let pageTitleLabel = UILabel()
     
     // Info Card Components
-    private let infoCard = UIView()
-    private let dateLabel = UILabel()
-    private let syncButton = UIButton(type: .system)
+    private let infoCard    = UIView()
+    private let accentBar   = UIView()
+    private let dateLabel   = UILabel()
+    private let syncBadgeLabel = UILabel()
+    private let syncButton  = UIButton(type: .system)
     private let diagnosisLabel = UILabel()
+    private let toresValueLabel = UILabel()
+    private let toresTitleLabel = UILabel()
     
     // Metrics in info card
-    private let hrLabel = UILabel()
-    private let bpLabel = UILabel()
+    private let hrLabel  = UILabel()
+    private let bpLabel  = UILabel()
     private let hrvLabel = UILabel()
     
     // ECG Waveform Card
-    private let ecgCard = UIView()
+    private let ecgCard       = UIView()
     private let ecgScrollView = UIScrollView()
-    private let ecgLineView = YCECGDrawLineView()
+    private let ecgLineView   = YCECGDrawLineView()
     private let graphInfoLabel = UILabel()
     
     // View Report Button (below waveform)
-    private let reportButton = UIButton(type: .system)
+    private let reportButton    = UIButton(type: .system)
     private let loadingIndicator = UIActivityIndicatorView(style: .medium)
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         setScreenTitle("ECG Detail")
-        view.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         
         setupUI()
         displayECGData()
@@ -49,13 +54,19 @@ final class ECGDetailViewController: AppBaseViewController {
         contentView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(contentView)
         
-        // Info Card (Date + Diagnosis + Metrics)
+        // Page Title
+        pageTitleLabel.text = "ECG Report Details"
+        pageTitleLabel.font = .systemFont(ofSize: 17, weight: .bold)
+        pageTitleLabel.textColor = UIColor(white: 0.08, alpha: 1)
+        pageTitleLabel.textAlignment = .center
+        pageTitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(pageTitleLabel)
         infoCard.backgroundColor = .white
-        infoCard.layer.cornerRadius = 12
+        infoCard.layer.cornerRadius = 14
         infoCard.layer.shadowColor = UIColor.black.cgColor
-        infoCard.layer.shadowOpacity = 0.1
+        infoCard.layer.shadowOpacity = 0.08
         infoCard.layer.shadowOffset = CGSize(width: 0, height: 2)
-        infoCard.layer.shadowRadius = 4
+        infoCard.layer.shadowRadius = 6
         infoCard.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(infoCard)
         
@@ -63,11 +74,11 @@ final class ECGDetailViewController: AppBaseViewController {
         
         // ECG Card
         ecgCard.backgroundColor = .white
-        ecgCard.layer.cornerRadius = 12
+        ecgCard.layer.cornerRadius = 14
         ecgCard.layer.shadowColor = UIColor.black.cgColor
-        ecgCard.layer.shadowOpacity = 0.1
+        ecgCard.layer.shadowOpacity = 0.08
         ecgCard.layer.shadowOffset = CGSize(width: 0, height: 2)
-        ecgCard.layer.shadowRadius = 4
+        ecgCard.layer.shadowRadius = 6
         ecgCard.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(ecgCard)
         
@@ -75,13 +86,11 @@ final class ECGDetailViewController: AppBaseViewController {
         
         // View Report Button (below ECG card)
         reportButton.setTitle("View AI Report", for: .normal)
-        reportButton.setImage(UIImage(systemName: "doc.text.fill"), for: .normal)
+        reportButton.setImage(UIImage(systemName: "waveform.path.ecg"), for: .normal)
         reportButton.titleLabel?.font = .boldSystemFont(ofSize: 16)
         reportButton.tintColor = .white
-        reportButton.backgroundColor = UIColor(red: 0.4, green: 0.8, blue: 0.6, alpha: 1)
-        reportButton.layer.cornerRadius = 12
-        reportButton.layer.borderWidth = 2
-        reportButton.layer.borderColor = UIColor.white.cgColor
+        reportButton.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        reportButton.layer.cornerRadius = 14
         reportButton.translatesAutoresizingMaskIntoConstraints = false
         reportButton.addTarget(self, action: #selector(viewReportButtonTapped), for: .touchUpInside)
         reportButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: -8, bottom: 0, right: 0)
@@ -105,7 +114,11 @@ final class ECGDetailViewController: AppBaseViewController {
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
             
-            infoCard.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            pageTitleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            pageTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            pageTitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            
+            infoCard.topAnchor.constraint(equalTo: pageTitleLabel.bottomAnchor, constant: 12),
             infoCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             infoCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             
@@ -125,63 +138,107 @@ final class ECGDetailViewController: AppBaseViewController {
     }
     
     private func setupInfoCard() {
+        // Accent bar
+        accentBar.layer.cornerRadius = 3
+        accentBar.translatesAutoresizingMaskIntoConstraints = false
+        infoCard.addSubview(accentBar)
+        
         // Date Label
-        dateLabel.font = .boldSystemFont(ofSize: 16)
-        dateLabel.textColor = .black
+        dateLabel.font = .systemFont(ofSize: 13, weight: .regular)
+        dateLabel.textColor = .secondaryLabel
         dateLabel.translatesAutoresizingMaskIntoConstraints = false
         infoCard.addSubview(dateLabel)
         
-        // Sync Button
-        syncButton.setImage(UIImage(systemName: "arrow.triangle.2.circlepath.circle"), for: .normal)
-        syncButton.tintColor = .systemOrange
+        // Sync badge label (read-only status)
+        syncBadgeLabel.font = .systemFont(ofSize: 11, weight: .semibold)
+        syncBadgeLabel.layer.cornerRadius = 6
+        syncBadgeLabel.layer.masksToBounds = true
+        syncBadgeLabel.textAlignment = .center
+        syncBadgeLabel.translatesAutoresizingMaskIntoConstraints = false
+        infoCard.addSubview(syncBadgeLabel)
+        
+        // Sync Button (upload action)
+        syncButton.setImage(UIImage(systemName: "arrow.triangle.2.circlepath.circle.fill"), for: .normal)
+        syncButton.tintColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
         syncButton.translatesAutoresizingMaskIntoConstraints = false
         syncButton.addTarget(self, action: #selector(syncButtonTapped), for: .touchUpInside)
         infoCard.addSubview(syncButton)
         
         // Diagnosis Label
-        diagnosisLabel.font = .boldSystemFont(ofSize: 14)
+        diagnosisLabel.font = .systemFont(ofSize: 17, weight: .bold)
         diagnosisLabel.numberOfLines = 2
         diagnosisLabel.translatesAutoresizingMaskIntoConstraints = false
         infoCard.addSubview(diagnosisLabel)
         
+        // Tores score (right side)
+        toresValueLabel.font = .systemFont(ofSize: 28, weight: .bold)
+        toresValueLabel.textColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        toresValueLabel.textAlignment = .center
+        toresValueLabel.translatesAutoresizingMaskIntoConstraints = false
+        infoCard.addSubview(toresValueLabel)
+        
+        toresTitleLabel.text = "tores"
+        toresTitleLabel.font = .systemFont(ofSize: 11, weight: .medium)
+        toresTitleLabel.textColor = .secondaryLabel
+        toresTitleLabel.textAlignment = .center
+        toresTitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        infoCard.addSubview(toresTitleLabel)
+        
         // Separator
         let separator = UIView()
-        separator.backgroundColor = UIColor(white: 0.9, alpha: 1)
+        separator.backgroundColor = UIColor(white: 0.92, alpha: 1)
         separator.translatesAutoresizingMaskIntoConstraints = false
         infoCard.addSubview(separator)
         
-        // Metrics Stack
+        // Metrics Stack (HR | BP | HRV)
         let metricsStack = UIStackView(arrangedSubviews: [
-            createMetricView(label: hrLabel, title: "Heart Rate"),
-            createMetricView(label: bpLabel, title: "Blood Pressure"),
+            createMetricView(label: hrLabel,  title: "Heart Rate"),
+            createMetricView(label: bpLabel,  title: "Blood Pressure"),
             createMetricView(label: hrvLabel, title: "HRV")
         ])
         metricsStack.axis = .horizontal
-        metricsStack.spacing = 12
+        metricsStack.spacing = 8
         metricsStack.distribution = .fillEqually
         metricsStack.translatesAutoresizingMaskIntoConstraints = false
         infoCard.addSubview(metricsStack)
         
         NSLayoutConstraint.activate([
+            accentBar.topAnchor.constraint(equalTo: infoCard.topAnchor, constant: 14),
+            accentBar.bottomAnchor.constraint(equalTo: separator.topAnchor, constant: -14),
+            accentBar.leadingAnchor.constraint(equalTo: infoCard.leadingAnchor, constant: 12),
+            accentBar.widthAnchor.constraint(equalToConstant: 4),
+            
+            toresValueLabel.topAnchor.constraint(equalTo: infoCard.topAnchor, constant: 16),
+            toresValueLabel.trailingAnchor.constraint(equalTo: infoCard.trailingAnchor, constant: -16),
+            toresValueLabel.widthAnchor.constraint(equalToConstant: 48),
+            
+            toresTitleLabel.topAnchor.constraint(equalTo: toresValueLabel.bottomAnchor, constant: 2),
+            toresTitleLabel.centerXAnchor.constraint(equalTo: toresValueLabel.centerXAnchor),
+            
             dateLabel.topAnchor.constraint(equalTo: infoCard.topAnchor, constant: 16),
-            dateLabel.leadingAnchor.constraint(equalTo: infoCard.leadingAnchor, constant: 16),
-            dateLabel.trailingAnchor.constraint(equalTo: syncButton.leadingAnchor, constant: -8),
+            dateLabel.leadingAnchor.constraint(equalTo: accentBar.trailingAnchor, constant: 12),
+            dateLabel.trailingAnchor.constraint(equalTo: syncBadgeLabel.leadingAnchor, constant: -8),
+            
+            syncBadgeLabel.centerYAnchor.constraint(equalTo: dateLabel.centerYAnchor),
+            syncBadgeLabel.trailingAnchor.constraint(equalTo: syncButton.leadingAnchor, constant: -4),
+            syncBadgeLabel.heightAnchor.constraint(equalToConstant: 18),
+            syncBadgeLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 52),
             
             syncButton.centerYAnchor.constraint(equalTo: dateLabel.centerYAnchor),
-            syncButton.trailingAnchor.constraint(equalTo: infoCard.trailingAnchor, constant: -16),
-            syncButton.widthAnchor.constraint(equalToConstant: 32),
-            syncButton.heightAnchor.constraint(equalToConstant: 32),
+            syncButton.trailingAnchor.constraint(equalTo: toresValueLabel.leadingAnchor, constant: -8),
+            syncButton.widthAnchor.constraint(equalToConstant: 28),
+            syncButton.heightAnchor.constraint(equalToConstant: 28),
             
             diagnosisLabel.topAnchor.constraint(equalTo: dateLabel.bottomAnchor, constant: 8),
-            diagnosisLabel.leadingAnchor.constraint(equalTo: infoCard.leadingAnchor, constant: 16),
-            diagnosisLabel.trailingAnchor.constraint(equalTo: infoCard.trailingAnchor, constant: -16),
+            diagnosisLabel.leadingAnchor.constraint(equalTo: accentBar.trailingAnchor, constant: 12),
+            diagnosisLabel.trailingAnchor.constraint(equalTo: toresValueLabel.leadingAnchor, constant: -8),
             
-            separator.topAnchor.constraint(equalTo: diagnosisLabel.bottomAnchor, constant: 12),
-            separator.leadingAnchor.constraint(equalTo: infoCard.leadingAnchor, constant: 16),
-            separator.trailingAnchor.constraint(equalTo: infoCard.trailingAnchor, constant: -16),
+            separator.topAnchor.constraint(equalTo: diagnosisLabel.bottomAnchor, constant: 14),
+            separator.leadingAnchor.constraint(equalTo: infoCard.leadingAnchor, constant: 12),
+            separator.trailingAnchor.constraint(equalTo: infoCard.trailingAnchor, constant: -12),
             separator.heightAnchor.constraint(equalToConstant: 1),
             
-            metricsStack.topAnchor.constraint(equalTo: separator.bottomAnchor, constant: 12),
+            metricsStack.topAnchor.constraint(equalTo: separator.bottomAnchor, constant: 14),
             metricsStack.leadingAnchor.constraint(equalTo: infoCard.leadingAnchor, constant: 16),
             metricsStack.trailingAnchor.constraint(equalTo: infoCard.trailingAnchor, constant: -16),
             metricsStack.bottomAnchor.constraint(equalTo: infoCard.bottomAnchor, constant: -16)
@@ -190,32 +247,35 @@ final class ECGDetailViewController: AppBaseViewController {
     
     private func createMetricView(label: UILabel, title: String) -> UIView {
         let container = UIView()
-        
+        container.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
+        container.layer.cornerRadius = 10
+
         let titleLabel = UILabel()
         titleLabel.text = title
-        titleLabel.font = .systemFont(ofSize: 10)
-        titleLabel.textColor = .gray
+        titleLabel.font = .systemFont(ofSize: 10, weight: .medium)
+        titleLabel.textColor = .secondaryLabel
         titleLabel.textAlignment = .center
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(titleLabel)
-        
-        label.font = .boldSystemFont(ofSize: 14)
-        label.textColor = .black
+
+        label.font = .boldSystemFont(ofSize: 15)
+        label.textColor = UIColor(white: 0.08, alpha: 1)
         label.textAlignment = .center
+        label.numberOfLines = 2
         label.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(label)
-        
+
         NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: container.topAnchor),
-            titleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            titleLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            
+            titleLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: 10),
+            titleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 4),
+            titleLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -4),
+
             label.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
-            label.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            label.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            label.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 4),
+            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -4),
+            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -10)
         ])
-        
+
         return container
     }
     
@@ -273,33 +333,41 @@ final class ECGDetailViewController: AppBaseViewController {
         }
         
         // Show/hide sync button based on isSynced flag
-        if let isSynced = ecgRecord.isSynced, isSynced {
-            syncButton.isHidden = true
-            print("[ECG Detail] ✅ Record synced - hiding sync button")
+        let synced = ecgRecord.isSynced ?? false
+        syncButton.isHidden = synced
+        syncBadgeLabel.text = synced ? " ✓ Synced " : " ⏳ Pending "
+        syncBadgeLabel.backgroundColor = synced
+            ? UIColor(red: 0.25, green: 0.75, blue: 0.50, alpha: 0.12)
+            : UIColor(red: 0.95, green: 0.65, blue: 0.15, alpha: 0.15)
+        syncBadgeLabel.textColor = synced
+            ? UIColor(red: 0.10, green: 0.60, blue: 0.35, alpha: 1)
+            : UIColor(red: 0.70, green: 0.45, blue: 0.0, alpha: 1)
+        if synced {
+            print("[ECG Detail] ✅ Record synced")
         } else {
-            syncButton.isHidden = false
-            print("[ECG Detail] ⚠️ Record NOT synced - showing sync button")
+            print("[ECG Detail] ⚠️ Record NOT synced")
         }
         
-        // Diagnosis - Color coded: Green for Normal (Type 1), Red for others
+        // Diagnosis - colored accent bar + label
         let diagnosisText = getDiagnosisText(ecgRecord.diagnoseType)
         diagnosisLabel.text = diagnosisText
+        let isNormal = ecgRecord.diagnoseType == 1
+        diagnosisLabel.textColor = isNormal
+            ? UIColor(red: 0.10, green: 0.55, blue: 0.35, alpha: 1)
+            : UIColor(red: 0.80, green: 0.25, blue: 0.15, alpha: 1)
+        accentBar.backgroundColor = isNormal
+            ? UIColor(red: 0.25, green: 0.75, blue: 0.50, alpha: 1)
+            : UIColor(red: 0.95, green: 0.55, blue: 0.25, alpha: 1)
         
-        if ecgRecord.diagnoseType == 1 {
-            // Normal ECG - Green
-            diagnosisLabel.textColor = UIColor.systemGreen
-        } else {
-            // Abnormal - Red
-            diagnosisLabel.textColor = UIColor.systemRed
-        }
+        // Tores score
+        let toresScore = HealthScoreCalculator.ecgScore(from: ecgRecord)
+        toresValueLabel.text = toresScore > 0 ? "\(toresScore)" : "--"
         
         // Metrics
-        hrLabel.text = "\(ecgRecord.heartRate)\nbpm"
+        hrLabel.text  = "\(ecgRecord.heartRate)\nbpm"
         hrLabel.numberOfLines = 2
-        
-        bpLabel.text = "\(ecgRecord.sbp)/\(ecgRecord.dbp)\nmmHg"
+        bpLabel.text  = "\(ecgRecord.sbp)/\(ecgRecord.dbp)\nmmHg"
         bpLabel.numberOfLines = 2
-        
         hrvLabel.text = "\(ecgRecord.hrv)\nms"
         hrvLabel.numberOfLines = 2
         
@@ -488,6 +556,9 @@ final class ECGDetailViewController: AppBaseViewController {
                             DispatchQueue.main.async {
                                 // Hide sync button after successful sync
                                 self?.syncButton.isHidden = true
+                                self?.syncBadgeLabel.text = " ✓ Synced "
+                                self?.syncBadgeLabel.backgroundColor = UIColor(red: 0.25, green: 0.75, blue: 0.50, alpha: 0.12)
+                                self?.syncBadgeLabel.textColor = UIColor(red: 0.10, green: 0.60, blue: 0.35, alpha: 1)
                                 self?.showSyncSuccess()
                             }
                         }

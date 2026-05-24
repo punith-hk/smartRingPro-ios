@@ -23,6 +23,7 @@ extension ECGRecordEntity {
     @NSManaged public var flag: Int16                // Always 0 (iOS doesn't have)
     @NSManaged public var isSynced: Bool             // Upload status flag
     @NSManaged public var createdAt: Date
+    @NSManaged public var tores: Int16               // Computed ECG health score 0-20
     
     @nonobjc public class func fetchRequest() -> NSFetchRequest<ECGRecordEntity> {
         return NSFetchRequest<ECGRecordEntity>(entityName: "ECGRecordEntity")

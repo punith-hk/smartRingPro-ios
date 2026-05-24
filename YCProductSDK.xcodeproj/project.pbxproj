@@ -111,6 +111,7 @@
 		B242E8462F4F5ED400FF2B21 /* StressRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StressRepository.swift; sourceTree = "<group>"; };
 		B29AE7632F17EF2B0080E203 /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
 		B29AE7662F17EF2B0080E203 /* MannaHealData.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = MannaHealData.xcdatamodel; sourceTree = "<group>"; };
+		B29AE7672F17EF2B0080E203 /* MannaHealData 2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "MannaHealData 2.xcdatamodel"; sourceTree = "<group>"; };
 		B29DCB262F4A3EBE0076DC41 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		B29DCB282F4A3F6D0076DC41 /* SwiftDemo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SwiftDemo.entitlements; sourceTree = "<group>"; };
 		B2C3AA0B2F408043002C36FA /* ECGRecordEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ECGRecordEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
@@ -1300,8 +1301,9 @@
 			isa = XCVersionGroup;
 			children = (
 				B29AE7662F17EF2B0080E203 /* MannaHealData.xcdatamodel */,
+				B29AE7672F17EF2B0080E203 /* MannaHealData 2.xcdatamodel */,
 			);
-			currentVersion = B29AE7662F17EF2B0080E203 /* MannaHealData.xcdatamodel */;
+			currentVersion = B29AE7672F17EF2B0080E203 /* MannaHealData 2.xcdatamodel */;
 			path = MannaHealData.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

@@ -30,6 +30,8 @@ class ConnectedDeviceViewController: AppBaseViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setScreenTitle("Device")
+        showHamburger()
+        navigationItem.hidesBackButton = true
         view.backgroundColor = bgColor
         buildUI()
         // Show standard loader while fetching device info from the SDK

@@ -21,6 +21,7 @@ struct ECGRecord: Codable {
     let symParaIndex: Double?         // Always 0 for iOS
     let flag: Int?                    // Always 0 for iOS
     let isSynced: Bool?
+    let tores: Int                    // Stored ECG score 0-20 (0 = use computed fallback)
     
     /// Create from Core Data entity
     init(from entity: ECGRecordEntity) {
@@ -42,6 +43,7 @@ struct ECGRecord: Codable {
         self.symParaIndex = entity.symParaIndex
         self.flag = Int(entity.flag)
         self.isSynced = entity.isSynced
+        self.tores = Int(entity.tores)
     }
     
     /// Convert to API format

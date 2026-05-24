@@ -6,6 +6,7 @@ class ECGTrendTrackingViewController: AppBaseViewController {
     // MARK: - Properties
     private let scrollView = UIScrollView()
     private let contentView = UIView()
+    private let pageTitleLabel = UILabel()
     
     // Pie Chart
     private let pieChartCard = UIView()
@@ -51,13 +52,19 @@ class ECGTrendTrackingViewController: AppBaseViewController {
     
     // MARK: - UI Setup
     private func setupUI() {
-        view.backgroundColor = UIColor(red: 0.27, green: 0.60, blue: 0.96, alpha: 1)
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         contentView.translatesAutoresizingMaskIntoConstraints = false
+        pageTitleLabel.text = "ECG Trend Tracking"
+        pageTitleLabel.font = .systemFont(ofSize: 17, weight: .bold)
+        pageTitleLabel.textColor = UIColor(white: 0.08, alpha: 1)
+        pageTitleLabel.textAlignment = .center
+        pageTitleLabel.translatesAutoresizingMaskIntoConstraints = false
         
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
+        contentView.addSubview(pageTitleLabel)
         
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -69,7 +76,11 @@ class ECGTrendTrackingViewController: AppBaseViewController {
             contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
             contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+
+            pageTitleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            pageTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            pageTitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
         ])
     }
     
@@ -108,7 +119,7 @@ class ECGTrendTrackingViewController: AppBaseViewController {
         pieChartCard.addSubview(pieChartView)
         
         NSLayoutConstraint.activate([
-            pieChartCard.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            pieChartCard.topAnchor.constraint(equalTo: pageTitleLabel.bottomAnchor, constant: 12),
             pieChartCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             pieChartCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             pieChartCard.heightAnchor.constraint(equalToConstant: 280),
@@ -462,7 +473,7 @@ class ECGTrendRecordCell: UITableViewCell {
     func configure(with record: ECGRecord, diagnosisText: String) {
         diagnosisLabel.text = diagnosisText
         timestampLabel.text = record.timestamp
-        heartRateLabel.text = "\(record.heartRate) bpm"
+        heartRateLabel.text = "\(record.tores) tores"
     }
 }
 

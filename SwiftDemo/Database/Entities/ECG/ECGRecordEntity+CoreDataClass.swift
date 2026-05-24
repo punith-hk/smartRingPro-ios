@@ -22,6 +22,7 @@ public class ECGRecordEntity: NSManagedObject {
         bodyIndex: Double,
         bloodOxygen: Int,
         temperature: Double,
+        tores: Int = 0,
         in context: NSManagedObjectContext
     ) -> ECGRecordEntity {
         let entity = ECGRecordEntity(context: context)
@@ -49,7 +50,8 @@ public class ECGRecordEntity: NSManagedObject {
         entity.respiratoryRate = 0.0
         entity.symParaIndex = 0.0
         entity.flag = 0
-        
+
+        entity.tores = Int16(tores)
         entity.isSynced = false
         entity.createdAt = Date()
         

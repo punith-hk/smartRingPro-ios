@@ -8,12 +8,13 @@ final class ECGHistoryViewController: AppBaseViewController {
     
     private let tableView = UITableView()
     private let emptyStateLabel = UILabel()
+    private let pageTitleLabel = UILabel()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         setScreenTitle("ECG History")
-        view.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         
         setupUI()
         loadECGHistory()
@@ -30,13 +31,22 @@ final class ECGHistoryViewController: AppBaseViewController {
     }
     
     private func setupUI() {
+        // Page Title
+        pageTitleLabel.text = "ECG History"
+        pageTitleLabel.font = .systemFont(ofSize: 17, weight: .bold)
+        pageTitleLabel.textColor = UIColor(white: 0.08, alpha: 1)
+        pageTitleLabel.textAlignment = .center
+        pageTitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(pageTitleLabel)
+
         // Table View
         tableView.delegate = self
         tableView.dataSource = self
         tableView.register(ECGHistoryCell.self, forCellReuseIdentifier: "ECGHistoryCell")
-        tableView.rowHeight = 100
+        tableView.rowHeight = UITableView.automaticDimension
+        tableView.estimatedRowHeight = 110
         tableView.separatorStyle = .none
-        tableView.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        tableView.backgroundColor = .clear
         tableView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(tableView)
         
@@ -51,7 +61,11 @@ final class ECGHistoryViewController: AppBaseViewController {
         view.addSubview(emptyStateLabel)
         
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            pageTitleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            pageTitleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            pageTitleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+
+            tableView.topAnchor.constraint(equalTo: pageTitleLabel.bottomAnchor, constant: 8),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -69,6 +83,38 @@ final class ECGHistoryViewController: AppBaseViewController {
                 self?.ecgRecords = records
                 self?.tableView.reloadData()
                 self?.emptyStateLabel.isHidden = !records.isEmpty
+                self?.backfillToresIfNeeded(records: records)
+            }
+        }
+    }
+    
+    /// For any legacy record saved before tores calculation was added (tores == 0),
+    /// compute a tores score now and persist it to the local DB.
+    private func backfillToresIfNeeded(records: [ECGRecord]) {
+        let needsBackfill = records.filter { $0.tores == 0 }
+        guard !needsBackfill.isEmpty else { return }
+        
+        print("[ECGHistory] 🔄 Backfilling tores for \(needsBackfill.count) record(s)")
+        var updatedCount = 0
+        
+        for record in needsBackfill {
+            let computed = HealthScoreCalculator.ecgScore(from: record)
+            guard computed > 0 else { continue }   // still no data to compute from
+            
+            ecgRepository.updateTores(timestamp: record.timestamp, tores: computed) { [weak self] success in
+                guard let self = self, success else { return }
+                updatedCount += 1
+                
+                // Refresh UI once the last update is done
+                if updatedCount == needsBackfill.filter({ HealthScoreCalculator.ecgScore(from: $0) > 0 }).count {
+                    self.ecgRepository.fetchAllRecords { records in
+                        DispatchQueue.main.async {
+                            self.ecgRecords = records
+                            self.tableView.reloadData()
+                            print("[ECGHistory] ✅ Backfilled tores for \(updatedCount) record(s)")
+                        }
+                    }
+                }
             }
         }
     }
@@ -83,7 +129,7 @@ final class ECGHistoryViewController: AppBaseViewController {
             return
         }
         
-        HealthService.shared.fetchECGRecords(userId: userId, limit: 5, offset: 0) { [weak self] result in
+        HealthService.shared.fetchECGRecords(userId: userId, limit: 100, offset: 0) { [weak self] result in
             switch result {
             case .success(let response):
                 let serverRecords = response.data ?? []
@@ -130,22 +176,19 @@ final class ECGHistoryViewController: AppBaseViewController {
                 print("       • Server has \(serverTimestamps.count) timestamps")
                 print("       • Local has \(allLocalRecords.count) records")
                 
-                // Update isSynced flag for all records
+                // Only mark as synced — never downgrade a record that's already synced
+                // (server response may be paginated and not contain all records)
                 var syncedCount = 0
-                var unsyncedCount = 0
                 
                 for record in allLocalRecords {
                     let isOnServer = serverTimestamps.contains(record.timestamp)
-                    
-                    // Update isSynced flag in database
                     if isOnServer {
                         self.ecgRepository.markAsSynced(timestamp: record.timestamp) { _ in }
                         syncedCount += 1
-                    } else {
-                        self.ecgRepository.markAsUnsynced(timestamp: record.timestamp) { _ in }
-                        unsyncedCount += 1
                     }
                 }
+                
+                let unsyncedCount = allLocalRecords.count - syncedCount
                 
                 print("[ECGHistory] ✅ Updated sync status:")
                 print("       • \(syncedCount) records marked as synced")
@@ -223,12 +266,16 @@ extension ECGHistoryViewController: UITableViewDelegate, UITableViewDataSource {
 // MARK: - ECG History Cell
 class ECGHistoryCell: UITableViewCell {
     
-    private let cardView = UIView()
-    private let dateLabel = UILabel()
+    private let cardView      = UIView()
+    private let accentBar     = UIView()
+    private let dateLabel     = UILabel()
+    // private let syncBadge  = UILabel()  // TODO: add proper sync logic later
     private let diagnosisLabel = UILabel()
-    private let hrLabel = UILabel()
-    private let bpLabel = UILabel()
-    private let hrvLabel = UILabel()
+    private let hrLabel       = UILabel()
+    private let bpLabel       = UILabel()
+    private let hrvLabel      = UILabel()
+    private let toresValueLabel = UILabel()
+    private let toresTitleLabel = UILabel()
     private let chevronImageView = UIImageView()
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -244,45 +291,71 @@ class ECGHistoryCell: UITableViewCell {
         backgroundColor = .clear
         selectionStyle = .none
         
-        // Card View
+        // Card
         cardView.backgroundColor = .white
-        cardView.layer.cornerRadius = 12
+        cardView.layer.cornerRadius = 14
         cardView.layer.shadowColor = UIColor.black.cgColor
         cardView.layer.shadowOpacity = 0.08
         cardView.layer.shadowOffset = CGSize(width: 0, height: 2)
-        cardView.layer.shadowRadius = 4
+        cardView.layer.shadowRadius = 6
         cardView.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(cardView)
         
-        // Date Label
-        dateLabel.font = .systemFont(ofSize: 14, weight: .medium)
-        dateLabel.textColor = .black
+        // Left accent bar
+        accentBar.layer.cornerRadius = 3
+        accentBar.translatesAutoresizingMaskIntoConstraints = false
+        cardView.addSubview(accentBar)
+        
+        // Date
+        dateLabel.font = .systemFont(ofSize: 13, weight: .regular)
+        dateLabel.textColor = .secondaryLabel
         dateLabel.translatesAutoresizingMaskIntoConstraints = false
         cardView.addSubview(dateLabel)
         
-        // Diagnosis Label
-        diagnosisLabel.font = .systemFont(ofSize: 12)
-        diagnosisLabel.textColor = .gray
+        // Sync badge — commented out, TODO: add proper sync logic later
+        // syncBadge.font = .systemFont(ofSize: 11, weight: .semibold)
+        // syncBadge.layer.cornerRadius = 6
+        // syncBadge.layer.masksToBounds = true
+        // syncBadge.textAlignment = .center
+        // syncBadge.translatesAutoresizingMaskIntoConstraints = false
+        // cardView.addSubview(syncBadge)
+        
+        // Diagnosis
+        diagnosisLabel.font = .systemFont(ofSize: 16, weight: .bold)
+        diagnosisLabel.textColor = UIColor(white: 0.08, alpha: 1)
         diagnosisLabel.translatesAutoresizingMaskIntoConstraints = false
         cardView.addSubview(diagnosisLabel)
         
-        // Metrics Stack
+        // Metrics
+        [hrLabel, bpLabel, hrvLabel].forEach { label in
+            label.font = .systemFont(ofSize: 12)
+            label.textColor = .secondaryLabel
+            label.translatesAutoresizingMaskIntoConstraints = false
+        }
         let metricsStack = UIStackView(arrangedSubviews: [hrLabel, bpLabel, hrvLabel])
         metricsStack.axis = .horizontal
-        metricsStack.spacing = 16
-        metricsStack.distribution = .fillEqually
+        metricsStack.spacing = 12
+        metricsStack.distribution = .fill
         metricsStack.translatesAutoresizingMaskIntoConstraints = false
         cardView.addSubview(metricsStack)
         
-        [hrLabel, bpLabel, hrvLabel].forEach { label in
-            label.font = .systemFont(ofSize: 11)
-            label.textColor = .darkGray
-            label.textAlignment = .left
-        }
+        // Tores score (right side)
+        toresValueLabel.font = .systemFont(ofSize: 24, weight: .bold)
+        toresValueLabel.textColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        toresValueLabel.textAlignment = .center
+        toresValueLabel.translatesAutoresizingMaskIntoConstraints = false
+        cardView.addSubview(toresValueLabel)
+        
+        toresTitleLabel.text = "tores"
+        toresTitleLabel.font = .systemFont(ofSize: 11, weight: .medium)
+        toresTitleLabel.textColor = .secondaryLabel
+        toresTitleLabel.textAlignment = .center
+        toresTitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        cardView.addSubview(toresTitleLabel)
         
         // Chevron
         chevronImageView.image = UIImage(systemName: "chevron.right")
-        chevronImageView.tintColor = .lightGray
+        chevronImageView.tintColor = UIColor.lightGray
         chevronImageView.contentMode = .scaleAspectFit
         chevronImageView.translatesAutoresizingMaskIntoConstraints = false
         cardView.addSubview(chevronImageView)
@@ -293,26 +366,46 @@ class ECGHistoryCell: UITableViewCell {
             cardView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             cardView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
             
-            dateLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 12),
-            dateLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 16),
+            accentBar.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 14),
+            accentBar.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -14),
+            accentBar.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 12),
+            accentBar.widthAnchor.constraint(equalToConstant: 4),
             
-            diagnosisLabel.topAnchor.constraint(equalTo: dateLabel.bottomAnchor, constant: 4),
-            diagnosisLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 16),
+            toresValueLabel.centerYAnchor.constraint(equalTo: cardView.centerYAnchor, constant: -8),
+            toresValueLabel.trailingAnchor.constraint(equalTo: chevronImageView.leadingAnchor, constant: -12),
+            toresValueLabel.widthAnchor.constraint(equalToConstant: 44),
             
-            metricsStack.topAnchor.constraint(equalTo: diagnosisLabel.bottomAnchor, constant: 8),
-            metricsStack.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 16),
-            metricsStack.trailingAnchor.constraint(equalTo: chevronImageView.leadingAnchor, constant: -8),
-            metricsStack.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -12),
+            toresTitleLabel.topAnchor.constraint(equalTo: toresValueLabel.bottomAnchor, constant: 2),
+            toresTitleLabel.centerXAnchor.constraint(equalTo: toresValueLabel.centerXAnchor),
             
             chevronImageView.centerYAnchor.constraint(equalTo: cardView.centerYAnchor),
-            chevronImageView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -16),
-            chevronImageView.widthAnchor.constraint(equalToConstant: 16),
-            chevronImageView.heightAnchor.constraint(equalToConstant: 16)
+            chevronImageView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -14),
+            chevronImageView.widthAnchor.constraint(equalToConstant: 14),
+            chevronImageView.heightAnchor.constraint(equalToConstant: 14),
+            
+            dateLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 14),
+            dateLabel.leadingAnchor.constraint(equalTo: accentBar.trailingAnchor, constant: 12),
+            dateLabel.trailingAnchor.constraint(equalTo: toresValueLabel.leadingAnchor, constant: -8),
+            
+            // syncBadge constraints — commented out, TODO: add proper sync logic later
+            // syncBadge.centerYAnchor.constraint(equalTo: dateLabel.centerYAnchor),
+            // syncBadge.trailingAnchor.constraint(equalTo: toresValueLabel.leadingAnchor, constant: -8),
+            // syncBadge.heightAnchor.constraint(equalToConstant: 18),
+            // syncBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 52),
+            
+            diagnosisLabel.topAnchor.constraint(equalTo: dateLabel.bottomAnchor, constant: 6),
+            diagnosisLabel.leadingAnchor.constraint(equalTo: accentBar.trailingAnchor, constant: 12),
+            diagnosisLabel.trailingAnchor.constraint(equalTo: toresValueLabel.leadingAnchor, constant: -8),
+            
+            metricsStack.topAnchor.constraint(equalTo: diagnosisLabel.bottomAnchor, constant: 8),
+            metricsStack.leadingAnchor.constraint(equalTo: accentBar.trailingAnchor, constant: 12),
+            metricsStack.trailingAnchor.constraint(equalTo: toresValueLabel.leadingAnchor, constant: -8),
+            metricsStack.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -14)
         ])
     }
     
     func configure(with record: ECGRecord) {
-        // Format date
+        // Date
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         if let date = dateFormatter.date(from: record.timestamp) {
@@ -325,10 +418,29 @@ class ECGHistoryCell: UITableViewCell {
         // Diagnosis
         diagnosisLabel.text = getDiagnosisText(record.diagnoseType)
         
+        // Accent bar color
+        let isNormal = record.diagnoseType == 1
+        accentBar.backgroundColor = isNormal
+            ? UIColor(red: 0.25, green: 0.75, blue: 0.50, alpha: 1)
+            : UIColor(red: 0.95, green: 0.55, blue: 0.25, alpha: 1)
+        
         // Metrics
-        hrLabel.text = "HR: \(record.heartRate) bpm"
-        bpLabel.text = "BP: \(record.sbp)/\(record.dbp)"
-        hrvLabel.text = "HRV: \(record.hrv) ms"
+        hrLabel.text  = "HR \(record.heartRate) bpm"
+        bpLabel.text  = "BP \(record.sbp)/\(record.dbp)"
+        hrvLabel.text = "HRV \(record.hrv) ms"
+        
+        // Tores
+        toresValueLabel.text = "\(record.tores)"
+        
+        // Sync badge — commented out, TODO: add proper sync logic later
+        // let synced = record.isSynced ?? false
+        // syncBadge.text = synced ? " ✓ Synced " : " ⏳ Pending "
+        // syncBadge.backgroundColor = synced
+        //     ? UIColor(red: 0.25, green: 0.75, blue: 0.50, alpha: 0.12)
+        //     : UIColor(red: 0.95, green: 0.65, blue: 0.15, alpha: 0.15)
+        // syncBadge.textColor = synced
+        //     ? UIColor(red: 0.10, green: 0.60, blue: 0.35, alpha: 1)
+        //     : UIColor(red: 0.70, green: 0.45, blue: 0.0, alpha: 1)
     }
     
     private func getDiagnosisText(_ type: Int) -> String {

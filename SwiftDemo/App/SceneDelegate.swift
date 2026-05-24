@@ -27,26 +27,27 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // 💾 Initialize static device info (app version, OS version)
         DeviceInfoManager.shared.initializeStaticInfo()
 
-        // 🔁 Decide root WITHOUT initializing BLE
+        setupGlobalNavBarAppearance()
+
+        // Show splash first, then transition to the real root after 2 seconds
+        let realRoot = makeRootViewController()
+        window.rootViewController = SplashViewController(destination: realRoot)
+        window.makeKeyAndVisible()
+    }
+
+    // MARK: - Determine real root VC
+    private func makeRootViewController() -> UIViewController {
         if !UserDefaultsManager.shared.isTermsAccepted() {
-            // First launch — show Terms & Conditions before login
             let nav = UINavigationController(rootViewController: TermsConditionsViewController())
             nav.setNavigationBarHidden(true, animated: false)
-            window.rootViewController = nav
+            return nav
         } else if UserDefaultsManager.shared.isLoggedIn() {
-            initializeBLEIfNeeded()   // ✅ BLE init only if logged in
-            
-            // 🚨 REQUEST LOCATION PERMISSION (for emergency health monitoring)
+            initializeBLEIfNeeded()
             LocationManager.shared.requestLocationPermission()
-            
-            window.rootViewController = SideMenuContainerController()
+            return SideMenuContainerController()
         } else {
-            let nav = UINavigationController(rootViewController: LoginViewController())
-            window.rootViewController = nav
+            return UINavigationController(rootViewController: LoginViewController())
         }
-
-        setupGlobalNavBarAppearance()
-        window.makeKeyAndVisible()
     }
 
     // MARK: - Global Nav Bar Appearance (set ONCE; never changed per-VC)

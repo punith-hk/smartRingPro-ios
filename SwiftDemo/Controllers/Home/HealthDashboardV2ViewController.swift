@@ -392,10 +392,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             title: "ECG", value: "--", unit: "tores")
         ecgCard.onTap = { [weak self] in
             guard let self = self else { return }
-            let vc = CardiovascularStatusViewController()
-            vc.vitalType = .ecg
-            self.populateCardioVC(vc)
-            self.push(vc)
+            self.push(ECGViewController())
         }
 
         // Row 2
@@ -407,10 +404,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         ecgDetailsCard.setValueFontSize(14)
         ecgDetailsCard.onTap = { [weak self] in
             guard let self = self else { return }
-            let vc = CardiovascularStatusViewController()
-            vc.vitalType = .ecg
-            self.populateCardioVC(vc)
-            self.push(vc)
+            self.push(ECGViewController())
         }
 
         bloodPressCard = makeCard(

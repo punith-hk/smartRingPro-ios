@@ -15,7 +15,12 @@ final class CoreDataManager {
     
     lazy var persistentContainer: NSPersistentContainer = {
         let container = NSPersistentContainer(name: "MannaHealData")
-        
+
+        // Enable lightweight migration so adding new attributes (e.g. tores) doesn't crash
+        let description = container.persistentStoreDescriptions.first
+        description?.setOption(true as NSNumber, forKey: NSMigratePersistentStoresAutomaticallyOption)
+        description?.setOption(true as NSNumber, forKey: NSInferMappingModelAutomaticallyOption)
+
         container.loadPersistentStores { storeDescription, error in
             if let error = error as NSError? {
                 print("❌ Core Data failed to load: \(error), \(error.userInfo)")

@@ -18,16 +18,16 @@ enum HealthScoreCalculator {
     /// Computes the ECG ring score stored on an ECGRecord.
     /// Formula from §6 of DASHBOARD_SCREEN_DESIGN_AND_LOGIC.md.
     static func ecgScore(from record: ECGRecord) -> Int {
+        // Use stored tores if already calculated (non-zero means it was set at measurement time)
+        if record.tores > 0 { return record.tores }
+
         if record.isAfib { return 3 }
         if record.diagnoseType == 5 || record.diagnoseType == 9 { return 5 }
 
-        let load     = record.loadIndex     ?? 0
-        let hrv      = record.hrvIndex      ?? 0
-        let pressure = record.pressureIndex ?? 0
-        let body     = record.bodyIndex     ?? 0
-        let symPara  = record.symParaIndex  ?? 0
-
-        let avg = (load + hrv + pressure + body + symPara) / 5.0
+        let candidates: [Double?] = [record.loadIndex, record.hrvIndex, record.pressureIndex, record.bodyIndex, record.symParaIndex]
+        let nonZero = candidates.compactMap { $0 }.filter { $0 > 0 }
+        guard !nonZero.isEmpty else { return 0 }
+        let avg = nonZero.reduce(0, +) / Double(nonZero.count)
         return min(20, max(0, Int(avg * 2.0)))
     }
 
@@ -36,12 +36,12 @@ enum HealthScoreCalculator {
     /// Derives a human-readable ECG condition label from ring data.
     static func ecgStatusText(isAfib: Bool, diagnoseType: Int,
                               heartRate: Int, hrv: Int) -> String {
-        if isAfib           { return "Atrial Fibrillation" }
-        if diagnoseType == 5 { return "Ventricular Premature" }
-        if diagnoseType == 9 { return "Atrial Premature" }
-        if heartRate <= 50  { return "Bradycardia" }
-        if heartRate >= 120 { return "Tachycardia" }
-        if hrv >= 125       { return "Sinus Arrhythmia" }
+        if isAfib || diagnoseType == 1 { return "Atrial Fibrillation" }
+        if diagnoseType == 2            { return "Ventricular Premature" }
+        if diagnoseType == 3            { return "Atrial Premature" }
+        if diagnoseType == 4 || heartRate <= 50  { return "Bradycardia" }
+        if diagnoseType == 5 || heartRate >= 120 { return "Tachycardia" }
+        if diagnoseType == 6 || hrv >= 125       { return "Sinus Arrhythmia" }
         return "Normal ECG"
     }
 

@@ -8,6 +8,7 @@ final class ECGMeasureViewController: BaseViewController {
     // MARK: - UI Components
     private var scrollView: UIScrollView!
     private var contentView: UIView!
+    private let pageTitleLabel = UILabel()
     private let measurementCard = ECGMeasurementCardView()
     private let progressView = ECGProgressView()
     private let tipsOverlay = ECGTipsOverlayView()
@@ -89,11 +90,11 @@ final class ECGMeasureViewController: BaseViewController {
     // MARK: - UI Setup
     private func setupUI() {
         title = "ECG Measurement"
-        view.backgroundColor = .white
+        view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         
         // Scroll View
         scrollView = UIScrollView()
-        scrollView.backgroundColor = UIColor(red: 0.30, green: 0.60, blue: 0.95, alpha: 1)
+        scrollView.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scrollView)
         
@@ -101,6 +102,14 @@ final class ECGMeasureViewController: BaseViewController {
         contentView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(contentView)
         
+        // Page Title
+        pageTitleLabel.text = "ECG Measurement"
+        pageTitleLabel.font = .systemFont(ofSize: 17, weight: .bold)
+        pageTitleLabel.textColor = UIColor(white: 0.08, alpha: 1)
+        pageTitleLabel.textAlignment = .center
+        pageTitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(pageTitleLabel)
+
         // Measurement Card
         measurementCard.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(measurementCard)
@@ -132,7 +141,11 @@ final class ECGMeasureViewController: BaseViewController {
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
             
-            measurementCard.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
+            pageTitleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            pageTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            pageTitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+
+            measurementCard.topAnchor.constraint(equalTo: pageTitleLabel.bottomAnchor, constant: 12),
             measurementCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             measurementCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             
@@ -546,7 +559,31 @@ final class ECGMeasureViewController: BaseViewController {
         print("[ECG] 💾 rawDataForStorage count: \(rawDataForStorage.count)")
         print("[ECG] 💾 First 10 raw values: \(Array(rawDataForStorage.prefix(10)))")
         print("[ECG] 💾 Min/Max: \(rawDataForStorage.min() ?? 0) to \(rawDataForStorage.max() ?? 0)")
-        
+
+        // Calculate tores score before saving so it's stored alongside the record
+        let isAfib = result.ecgMeasurementType == .atrialFibrillation
+        let diagnoseTypeInt = Int(result.ecgMeasurementType.rawValue)
+        let hrvIdx    = bodyIndexes?.isAvailable == true ? Double(bodyIndexes!.hrvNorm)    : 0.0
+        let loadIdx   = bodyIndexes?.isAvailable == true ? Double(bodyIndexes!.heavyLoad)  : 0.0
+        let pressIdx  = bodyIndexes?.isAvailable == true ? Double(bodyIndexes!.pressure)   : 0.0
+        let bodyIdx   = bodyIndexes?.isAvailable == true ? Double(bodyIndexes!.body)       : 0.0
+
+        let calculatedTores: Int
+        if isAfib {
+            calculatedTores = 3
+        } else if diagnoseTypeInt == 5 || diagnoseTypeInt == 9 {
+            calculatedTores = 5
+        } else {
+            let nonZero = [loadIdx, hrvIdx, pressIdx, bodyIdx].filter { $0 > 0 }
+            if nonZero.isEmpty {
+                calculatedTores = 0
+            } else {
+                let avg = nonZero.reduce(0, +) / Double(nonZero.count)
+                calculatedTores = min(20, max(0, Int(avg * 2.0)))
+            }
+        }
+        print("[ECG] 🎯 Calculated tores: \(calculatedTores)")
+
         // Save to database
         ecgRepository.saveRecord(
             timestamp: timestamp,
@@ -555,14 +592,15 @@ final class ECGMeasureViewController: BaseViewController {
             dbp: currentDiastolic,
             hrv: finalHRV,
             ecgList: rawDataForStorage,  // Save RAW waveform (not processed) for AI report
-            diagnoseType: Int(result.ecgMeasurementType.rawValue),
-            isAfib: result.ecgMeasurementType == .atrialFibrillation,
-            hrvIndex: bodyIndexes?.isAvailable == true ? Double(bodyIndexes!.hrvNorm) : 0.0,
-            loadIndex: bodyIndexes?.isAvailable == true ? Double(bodyIndexes!.heavyLoad) : 0.0,
-            pressureIndex: bodyIndexes?.isAvailable == true ? Double(bodyIndexes!.pressure) : 0.0,
-            bodyIndex: bodyIndexes?.isAvailable == true ? Double(bodyIndexes!.body) : 0.0,
+            diagnoseType: diagnoseTypeInt,
+            isAfib: isAfib,
+            hrvIndex: hrvIdx,
+            loadIndex: loadIdx,
+            pressureIndex: pressIdx,
+            bodyIndex: bodyIdx,
             bloodOxygen: currentBloodOxygen,
-            temperature: currentTemperature
+            temperature: currentTemperature,
+            tores: calculatedTores
         ) { [weak self] success, error in
             guard let self = self else { return }
             

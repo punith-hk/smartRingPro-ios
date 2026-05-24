@@ -30,6 +30,7 @@ class ECGRecordRepository {
         bodyIndex: Double,
         bloodOxygen: Int,
         temperature: Double,
+        tores: Int = 0,
         completion: @escaping (Bool, String?) -> Void
     ) {
         print("[\(TAG)] 💾 Saving ECG record: \(timestamp)")
@@ -74,6 +75,7 @@ class ECGRecordRepository {
                     bodyIndex: bodyIndex,
                     bloodOxygen: bloodOxygen,
                     temperature: temperature,
+                    tores: tores,
                     in: backgroundContext
                 )
                 
@@ -217,5 +219,27 @@ class ECGRecordRepository {
     func deleteAllRecords(completion: @escaping (Bool) -> Void) {
         CoreDataManager.shared.deleteAllData(for: "ECGRecordEntity")
         completion(true)
+    }
+    
+    /// Update the tores score for a record identified by timestamp
+    func updateTores(timestamp: String, tores: Int, completion: @escaping (Bool) -> Void) {
+        let fetchRequest: NSFetchRequest<ECGRecordEntity> = ECGRecordEntity.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "timestamp == %@", timestamp)
+        fetchRequest.fetchLimit = 1
+        
+        do {
+            let entities = try context.fetch(fetchRequest)
+            if let entity = entities.first {
+                entity.tores = Int16(tores)
+                try context.save()
+                print("[\(TAG)] ✅ Updated tores=\(tores) for \(timestamp)")
+                completion(true)
+            } else {
+                completion(false)
+            }
+        } catch {
+            print("[\(TAG)] ❌ updateTores failed: \(error)")
+            completion(false)
+        }
     }
 }
