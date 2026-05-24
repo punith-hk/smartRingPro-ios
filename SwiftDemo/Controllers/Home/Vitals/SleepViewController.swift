@@ -688,12 +688,13 @@ extension SleepViewController: SleepSyncListener {
                 let currentSession = sortedSessions[i]
                 let nextSession = sortedSessions[i + 1]
                 
-                // Use last DETAIL segment's endTime (more accurate than session.endTime,
-                // which can extend beyond the final recorded sleep segment)
+                // Use last DETAIL segment's endTime — if the ring has no detail data
+                // for a time window, that window is treated as awake. Using session.endTime
+                // would hide that awake period.
                 let currentDetails = currentSession.details?.allObjects as? [SleepDetailEntity] ?? []
                 let lastDetailEndTime = currentDetails.max(by: { $0.endTime < $1.endTime })?.endTime
                     ?? currentSession.endTime
-                
+
                 let gapSeconds = nextSession.startTime - lastDetailEndTime
                 let gapMinutes = Int(gapSeconds) / 60
                 

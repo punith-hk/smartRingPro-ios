@@ -7,7 +7,7 @@ final class NotificationService {
 
     // MARK: - Fetch Notifications
 
-    /// GET /api/notifications/{userId}
+    /// GET /api/user/notifications?user_id={userId}&unread_only=true
     func getNotifications(
         userId: Int,
         completion: @escaping (Result<NotificationsResponse, NetworkError>) -> Void
@@ -21,21 +21,15 @@ final class NotificationService {
 
     // MARK: - Mark as Read
 
-    private struct MarkAsReadBody: Codable {
-        let id: Int
-        let user_id: Int
-    }
-
-    /// POST /api/notifications/mark-as-read
+    /// POST /api/user/notifications/{notificationId}/read
     func markAsRead(
         notificationId: Int,
         userId: Int,
         completion: @escaping (Result<MarkAsReadResponse, NetworkError>) -> Void
     ) {
-        let body = MarkAsReadBody(id: notificationId, user_id: userId)
         APIClient.shared.postJSON(
-            endpoint: APIEndpoints.markNotificationRead,
-            body: body,
+            endpoint: APIEndpoints.markNotificationRead(notificationId: notificationId),
+            body: userId,
             responseType: MarkAsReadResponse.self,
             completion: completion
         )

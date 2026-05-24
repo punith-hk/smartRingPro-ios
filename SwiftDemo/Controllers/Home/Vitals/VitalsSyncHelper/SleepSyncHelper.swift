@@ -350,26 +350,28 @@ class SleepSyncHelper {
     /// total sleep duration (in minutes) and quality score (0-100), then writes
     /// both to UserDefaults so the dashboard can display them immediately.
     private func updateDashboardSleepStats() {
-        let allSessions = repository.getAllSessions()
-        guard !allSessions.isEmpty else {
-            print("ℹ️ [SleepSyncHelper] No sessions found — skipping dashboard stat update")
+        // Use the same sleep-group logic as the SleepVC so dashboard matches the detail screen.
+        // getByDateRange groups consecutive sessions and returns the group whose last session
+        // ends on today, which correctly scopes to tonight's sleep only.
+        let today = Date()
+        let source = repository.getByDateRange(startDate: today, endDate: today)
+        
+        guard !source.isEmpty else {
+            print("ℹ️ [SleepSyncHelper] No sessions found for today — skipping dashboard stat update")
             return
         }
         
-        // Last 36h covers the previous night + today's naps
-        let cutoff = Int64(Date().timeIntervalSince1970) - 36 * 3600
-        let recent = allSessions.filter { $0.endTime >= cutoff }
-        let source  = recent.isEmpty ? Array(allSessions.prefix(1)) : recent
+        // Mirror Sleep VC exactly: truncate each session's fields to minutes first, then sum.
+        // This avoids the rounding difference between seconds-based and minutes-based formulas.
+        var totalSleepMin = 0
+        for session in source {
+            totalSleepMin += Int(session.deepSleepTimes) / 60
+            totalSleepMin += Int(session.lightSleepTimes) / 60
+            totalSleepMin += Int(session.remSleepTimes) / 60
+        }
         
-        // Accumulate raw seconds (avoid per-field truncation)
-        let totalDeepSec  = source.reduce(0) { $0 + Int($1.deepSleepTimes) }
-        let totalLightSec = source.reduce(0) { $0 + Int($1.lightSleepTimes) }
-        let totalRemSec   = source.reduce(0) { $0 + Int($1.remSleepTimes) }
-        let totalSleepSec = totalDeepSec + totalLightSec + totalRemSec
-        let totalSleepMin = totalSleepSec / 60
-        
-        // Quality score: proportion of 8-hour (28800s) target, clamped 12-100
-        let qualityScore = min(100, max(12, Int(Double(totalSleepSec) / 28800.0 * 100)))
+        // Quality score: same formula as SleepVC.calculateSleepScore (÷480 min = 8h), clamped 12-100
+        let qualityScore = min(100, max(12, Int(Double(totalSleepMin) / 480.0 * 100)))
         
         UserDefaults.standard.set(totalSleepMin, forKey: "last_day_sleep_minutes")
         UserDefaults.standard.set(qualityScore,  forKey: "last_day_sleep_quality")

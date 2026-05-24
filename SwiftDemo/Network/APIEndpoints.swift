@@ -189,11 +189,13 @@ enum APIEndpoints {
     static let fcmToken = "user/fcm-token"
 
     // MARK: - Notifications
-    /// GET /api/notifications/{userId}
+    /// GET /api/user/notifications?user_id={userId}&unread_only=true
     static func getNotifications(userId: Int) -> String {
-        return "notifications/\(userId)"
+        return "user/notifications?user_id=\(userId)&unread_only=true"
     }
 
-    /// POST /api/notifications/mark-as-read
-    static let markNotificationRead = "notifications/mark-as-read"
+    /// POST /api/user/notifications/{notificationId}/read
+    static func markNotificationRead(notificationId: Int) -> String {
+        return "user/notifications/\(notificationId)/read"
+    }
 }

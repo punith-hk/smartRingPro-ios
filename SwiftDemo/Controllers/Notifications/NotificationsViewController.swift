@@ -206,24 +206,18 @@ final class NotificationsViewController: UIViewController {
 
     private func showDetail(for item: NotificationItem, at indexPath: IndexPath) {
         markAsRead(item: item, at: indexPath)
-
-        let alert = UIAlertController(title: nil, message: nil, preferredStyle: .alert)
-
-        // Custom view via setValue trick
-        let customView = NotificationDetailView(item: item)
-        customView.translatesAutoresizingMaskIntoConstraints = false
-
-        alert.view.addSubview(customView)
-        NSLayoutConstraint.activate([
-            customView.topAnchor.constraint(equalTo: alert.view.topAnchor, constant: 8),
-            customView.leadingAnchor.constraint(equalTo: alert.view.leadingAnchor, constant: 8),
-            customView.trailingAnchor.constraint(equalTo: alert.view.trailingAnchor, constant: -8),
-            customView.bottomAnchor.constraint(equalTo: alert.view.bottomAnchor, constant: -48),
-            customView.widthAnchor.constraint(greaterThanOrEqualToConstant: 260)
-        ])
-
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
+        let vc = NotificationDetailViewController(item: item)
+        if #available(iOS 15.0, *) {
+            vc.modalPresentationStyle = .pageSheet
+            if let sheet = vc.sheetPresentationController {
+                sheet.detents = [.medium(), .large()]
+                sheet.prefersGrabberVisible = true
+                sheet.prefersScrollingExpandsWhenScrolledToEdge = true
+            }
+        } else {
+            vc.modalPresentationStyle = .formSheet
+        }
+        present(vc, animated: true)
     }
 }
 
@@ -296,10 +290,11 @@ final class NotificationCell: UITableViewCell {
         // Card container
         card.translatesAutoresizingMaskIntoConstraints = false
         card.layer.cornerRadius = 12
-        card.layer.shadowColor  = UIColor.black.cgColor
-        card.layer.shadowOpacity = 0.06
-        card.layer.shadowOffset  = CGSize(width: 0, height: 2)
-        card.layer.shadowRadius  = 4
+        card.layer.shadowColor   = UIColor.black.cgColor
+        card.layer.shadowOpacity = 0.12
+        card.layer.shadowOffset  = CGSize(width: 0, height: 3)
+        card.layer.shadowRadius  = 6
+        card.layer.masksToBounds = false
         contentView.addSubview(card)
 
         // Unread dot
@@ -379,7 +374,7 @@ final class NotificationCell: UITableViewCell {
     func configure(with item: NotificationItem) {
         // Background color
         card.backgroundColor = item.isUnread
-            ? UIColor(red: 237/255, green: 246/255, blue: 255/255, alpha: 1)
+            ? UIColor(red: 224/255, green: 243/255, blue: 255/255, alpha: 1)   // #E0F3FF
             : .white
 
         // Dot visibility
@@ -442,6 +437,47 @@ final class NotificationChip: UIView {
     required init?(coder: NSCoder) { fatalError() }
 
     func setText(_ text: String) { label.text = text }
+}
+
+// MARK: - NotificationDetailViewController
+
+final class NotificationDetailViewController: UIViewController {
+
+    private let item: NotificationItem
+
+    init(item: NotificationItem) {
+        self.item = item
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .systemBackground
+
+        let scroll = UIScrollView()
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.alwaysBounceVertical = true
+        view.addSubview(scroll)
+
+        let detailView = NotificationDetailView(item: item)
+        detailView.translatesAutoresizingMaskIntoConstraints = false
+        scroll.addSubview(detailView)
+
+        NSLayoutConstraint.activate([
+            scroll.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            scroll.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scroll.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scroll.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+
+            detailView.topAnchor.constraint(equalTo: scroll.topAnchor),
+            detailView.leadingAnchor.constraint(equalTo: scroll.leadingAnchor),
+            detailView.trailingAnchor.constraint(equalTo: scroll.trailingAnchor),
+            detailView.bottomAnchor.constraint(equalTo: scroll.bottomAnchor),
+            detailView.widthAnchor.constraint(equalTo: scroll.widthAnchor)
+        ])
+    }
 }
 
 // MARK: - NotificationDetailView
@@ -517,10 +553,10 @@ final class NotificationDetailView: UIView {
 
         addSubview(stack)
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: topAnchor, constant: 16),
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8)
+            stack.topAnchor.constraint(equalTo: topAnchor, constant: 20),
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -24)
         ])
     }
 

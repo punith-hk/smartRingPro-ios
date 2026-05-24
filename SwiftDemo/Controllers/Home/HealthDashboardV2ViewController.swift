@@ -82,13 +82,27 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     private var cachedPrevECGScore: Int = 0
     private var cachedLastSyncMillis: Int64 = 0
 
-    // MARK: - Alert Card
-    private let alertCard = UIView()
-    private let alertIconContainer = UIView()
-    private let alertIconView      = UIImageView()
-    private let alertTitleLabel    = UILabel()
-    private let alertBodyLabel     = UILabel()
-    private let alertTimeLabel     = UILabel()
+    // MARK: - Insight Card Live References (Card 1 = Notification, 2 = Sleep, 3 = Steps)
+    private var insightCard1     = UIView()
+    private var insightIcon1     = UIImageView()
+    private var insightIconBg1   = UIView()
+    private var insightTitle1    = UILabel()
+    private var insightBody1     = UILabel()
+    private var insightTime1     = UILabel()
+
+    private var insightCard2     = UIView()
+    private var insightIcon2     = UIImageView()
+    private var insightIconBg2   = UIView()
+    private var insightTitle2    = UILabel()
+    private var insightBody2     = UILabel()
+    private var insightTime2     = UILabel()
+
+    private var insightCard3     = UIView()
+    private var insightIcon3     = UIImageView()
+    private var insightIconBg3   = UIView()
+    private var insightTitle3    = UILabel()
+    private var insightBody3     = UILabel()
+    private var insightTime3     = UILabel()
 
     // MARK: - Lifecycle
 
@@ -131,6 +145,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
                 if case .success(let resp) = result {
                     NotificationCache.shared.update(resp.data)
                     self?.updateNotificationBadge(count: NotificationCache.shared.unreadCount)
+                    self?.updateInsightCards()
                 }
             }
         }
@@ -463,100 +478,81 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         insightsSection.layer.masksToBounds = false
         insightsSection.clipsToBounds = false
 
-        let alerts: [(icon: String, iconTint: UIColor, iconBg: UIColor, title: String, body: String, date: String)] = [
-            (
-                icon: "bell.fill",
-                iconTint: UIColor(red: 0.96, green: 0.62, blue: 0.04, alpha: 1),
-                iconBg:   UIColor(red: 1,    green: 0.95, blue: 0.88, alpha: 1),
-                title: "Health Alert",
-                body:  "Low blood oxygen and heart rate detected. Monitor closely and seek medical attention if symptoms worsen.",
-                date:  "May 09"
-            ),
-            (
-                icon: "moon.fill",
-                iconTint: UIColor(red: 0.91, green: 0.12, blue: 0.39, alpha: 1),
-                iconBg:   UIColor(red: 1,    green: 0.88, blue: 0.92, alpha: 1),
-                title: "Sleep Needs Improvement",
-                body:  "You had 6h 10m of sleep. Aim for better rest tonight!",
-                date:  "Last night"
-            ),
-            (
-                icon: "figure.walk",
-                iconTint: UIColor(red: 0.40, green: 0.23, blue: 0.72, alpha: 1),
-                iconBg:   UIColor(red: 0.93, green: 0.90, blue: 0.98, alpha: 1),
-                title: "Keep Moving!",
-                body:  "You've taken 1591 steps and burned 62 kcal. You're 15% to your goal!",
-                date:  "Today"
-            )
-        ]
+        // Card 1 — Latest Notification
+        insightCard1 = makeInsightCardShell(
+            iconView: &insightIcon1, iconBg: &insightIconBg1,
+            titleLabel: &insightTitle1, bodyLabel: &insightBody1, timeLabel: &insightTime1
+        )
+        let tap1 = UITapGestureRecognizer(target: self, action: #selector(insightCard1Tapped))
+        insightCard1.addGestureRecognizer(tap1)
+        insightCard1.isUserInteractionEnabled = true
+        insightCard1.isHidden = true   // shown only when notification data exists
+        insightsSection.addContent(insightCard1)
 
-        for alert in alerts {
-            let card = UIView()
-            card.backgroundColor = .white
-            card.layer.cornerRadius = 12
-            card.layer.shadowColor = UIColor.black.cgColor
-            card.layer.shadowOpacity = 0.08
-            card.layer.shadowRadius = 6
-            card.layer.shadowOffset = CGSize(width: 0, height: 2)
-            card.layer.masksToBounds = false
-            card.translatesAutoresizingMaskIntoConstraints = false
+        // Card 2 — Sleep Quality
+        insightCard2 = makeInsightCardShell(
+            iconView: &insightIcon2, iconBg: &insightIconBg2,
+            titleLabel: &insightTitle2, bodyLabel: &insightBody2, timeLabel: &insightTime2
+        )
+        let tap2 = UITapGestureRecognizer(target: self, action: #selector(insightCard2Tapped))
+        insightCard2.addGestureRecognizer(tap2)
+        insightCard2.isUserInteractionEnabled = true
+        insightCard2.isHidden = true   // shown only when sleep data exists
+        insightsSection.addContent(insightCard2)
 
-            let row = makeAlertRow(
-                icon: UIImage(systemName: alert.icon),
-                iconTint: alert.iconTint,
-                iconBg: alert.iconBg,
-                title: alert.title,
-                body: alert.body,
-                date: alert.date
-            )
-            card.addSubview(row)
-            NSLayoutConstraint.activate([
-                row.topAnchor.constraint(equalTo: card.topAnchor),
-                row.leadingAnchor.constraint(equalTo: card.leadingAnchor),
-                row.trailingAnchor.constraint(equalTo: card.trailingAnchor),
-                row.bottomAnchor.constraint(equalTo: card.bottomAnchor),
-            ])
-
-            insightsSection.addContent(card)
-        }
+        // Card 3 — Steps & Activity (always visible)
+        insightCard3 = makeInsightCardShell(
+            iconView: &insightIcon3, iconBg: &insightIconBg3,
+            titleLabel: &insightTitle3, bodyLabel: &insightBody3, timeLabel: &insightTime3
+        )
+        let tap3 = UITapGestureRecognizer(target: self, action: #selector(insightCard3Tapped))
+        insightCard3.addGestureRecognizer(tap3)
+        insightCard3.isUserInteractionEnabled = true
+        insightsSection.addContent(insightCard3)
     }
 
-    private func makeAlertRow(icon: UIImage?, iconTint: UIColor, iconBg: UIColor,
-                              title: String, body: String, date: String) -> UIView {
-        let row = UIView()
-        row.translatesAutoresizingMaskIntoConstraints = false
-        row.isUserInteractionEnabled = true
+    /// Creates a card shell and sets the caller's label/icon references via inout params.
+    private func makeInsightCardShell(
+        iconView: inout UIImageView,
+        iconBg: inout UIView,
+        titleLabel: inout UILabel,
+        bodyLabel: inout UILabel,
+        timeLabel: inout UILabel
+    ) -> UIView {
+        let card = UIView()
+        card.backgroundColor = .white
+        card.layer.cornerRadius = 12
+        card.layer.shadowColor = UIColor.black.cgColor
+        card.layer.shadowOpacity = 0.08
+        card.layer.shadowRadius = 6
+        card.layer.shadowOffset = CGSize(width: 0, height: 2)
+        card.layer.masksToBounds = false
+        card.translatesAutoresizingMaskIntoConstraints = false
 
-        let iconBgView = UIView()
-        iconBgView.backgroundColor = iconBg
-        iconBgView.layer.cornerRadius = 24
-        iconBgView.translatesAutoresizingMaskIntoConstraints = false
+        let localIconBg = UIView()
+        localIconBg.layer.cornerRadius = 24
+        localIconBg.translatesAutoresizingMaskIntoConstraints = false
 
-        let iconView = UIImageView()
-        iconView.image = icon?.withRenderingMode(.alwaysTemplate)
-        iconView.tintColor = iconTint
-        iconView.contentMode = .scaleAspectFit
-        iconView.translatesAutoresizingMaskIntoConstraints = false
-        iconBgView.addSubview(iconView)
+        let localIconView = UIImageView()
+        localIconView.contentMode = .scaleAspectFit
+        localIconView.translatesAutoresizingMaskIntoConstraints = false
+        localIconBg.addSubview(localIconView)
 
-        let titleLbl = UILabel()
-        titleLbl.font = .systemFont(ofSize: 14, weight: .bold)
-        titleLbl.textColor = .black
-        titleLbl.text = title
-        titleLbl.translatesAutoresizingMaskIntoConstraints = false
+        let localTitle = UILabel()
+        localTitle.font = .systemFont(ofSize: 14, weight: .bold)
+        localTitle.textColor = .black
+        localTitle.translatesAutoresizingMaskIntoConstraints = false
 
-        let bodyLbl = UILabel()
-        bodyLbl.font = .systemFont(ofSize: 12)
-        bodyLbl.textColor = UIColor(white: 0.45, alpha: 1)
-        bodyLbl.text = body
-        bodyLbl.numberOfLines = 2
-        bodyLbl.translatesAutoresizingMaskIntoConstraints = false
+        let localBody = UILabel()
+        localBody.font = .systemFont(ofSize: 12)
+        localBody.textColor = UIColor(white: 0.45, alpha: 1)
+        localBody.numberOfLines = 2
+        localBody.translatesAutoresizingMaskIntoConstraints = false
 
-        let dateLbl = UILabel()
-        dateLbl.font = .systemFont(ofSize: 11)
-        dateLbl.textColor = UIColor(white: 0.60, alpha: 1)
-        dateLbl.text = date
-        dateLbl.translatesAutoresizingMaskIntoConstraints = false
+        let localTime = UILabel()
+        localTime.font = .systemFont(ofSize: 11)
+        localTime.textColor = UIColor(white: 0.60, alpha: 1)
+        localTime.translatesAutoresizingMaskIntoConstraints = false
 
         let chevron = UIImageView()
         chevron.image = UIImage(systemName: "chevron.right")?.withRenderingMode(.alwaysTemplate)
@@ -564,38 +560,220 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         chevron.contentMode = .scaleAspectFit
         chevron.translatesAutoresizingMaskIntoConstraints = false
 
-        [iconBgView, titleLbl, bodyLbl, dateLbl, chevron].forEach { row.addSubview($0) }
+        [localIconBg, localTitle, localBody, localTime, chevron].forEach { card.addSubview($0) }
 
         NSLayoutConstraint.activate([
-            iconView.centerXAnchor.constraint(equalTo: iconBgView.centerXAnchor),
-            iconView.centerYAnchor.constraint(equalTo: iconBgView.centerYAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 22),
-            iconView.heightAnchor.constraint(equalToConstant: 22),
+            localIconView.centerXAnchor.constraint(equalTo: localIconBg.centerXAnchor),
+            localIconView.centerYAnchor.constraint(equalTo: localIconBg.centerYAnchor),
+            localIconView.widthAnchor.constraint(equalToConstant: 22),
+            localIconView.heightAnchor.constraint(equalToConstant: 22),
 
-            iconBgView.leadingAnchor.constraint(equalTo: row.leadingAnchor, constant: 14),
-            iconBgView.centerYAnchor.constraint(equalTo: row.centerYAnchor),
-            iconBgView.widthAnchor.constraint(equalToConstant: 48),
-            iconBgView.heightAnchor.constraint(equalToConstant: 48),
+            localIconBg.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
+            localIconBg.centerYAnchor.constraint(equalTo: card.centerYAnchor),
+            localIconBg.widthAnchor.constraint(equalToConstant: 48),
+            localIconBg.heightAnchor.constraint(equalToConstant: 48),
 
-            chevron.trailingAnchor.constraint(equalTo: row.trailingAnchor, constant: -14),
-            chevron.centerYAnchor.constraint(equalTo: row.centerYAnchor),
+            chevron.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
+            chevron.centerYAnchor.constraint(equalTo: card.centerYAnchor),
             chevron.widthAnchor.constraint(equalToConstant: 9),
             chevron.heightAnchor.constraint(equalToConstant: 15),
 
-            titleLbl.topAnchor.constraint(equalTo: row.topAnchor, constant: 14),
-            titleLbl.leadingAnchor.constraint(equalTo: iconBgView.trailingAnchor, constant: 12),
-            titleLbl.trailingAnchor.constraint(equalTo: chevron.leadingAnchor, constant: -8),
+            localTitle.topAnchor.constraint(equalTo: card.topAnchor, constant: 14),
+            localTitle.leadingAnchor.constraint(equalTo: localIconBg.trailingAnchor, constant: 12),
+            localTitle.trailingAnchor.constraint(equalTo: chevron.leadingAnchor, constant: -8),
 
-            bodyLbl.topAnchor.constraint(equalTo: titleLbl.bottomAnchor, constant: 4),
-            bodyLbl.leadingAnchor.constraint(equalTo: titleLbl.leadingAnchor),
-            bodyLbl.trailingAnchor.constraint(equalTo: titleLbl.trailingAnchor),
+            localBody.topAnchor.constraint(equalTo: localTitle.bottomAnchor, constant: 4),
+            localBody.leadingAnchor.constraint(equalTo: localTitle.leadingAnchor),
+            localBody.trailingAnchor.constraint(equalTo: localTitle.trailingAnchor),
 
-            dateLbl.topAnchor.constraint(equalTo: bodyLbl.bottomAnchor, constant: 4),
-            dateLbl.leadingAnchor.constraint(equalTo: titleLbl.leadingAnchor),
-            dateLbl.bottomAnchor.constraint(equalTo: row.bottomAnchor, constant: -14),
+            localTime.topAnchor.constraint(equalTo: localBody.bottomAnchor, constant: 4),
+            localTime.leadingAnchor.constraint(equalTo: localTitle.leadingAnchor),
+            localTime.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -14),
         ])
 
-        return row
+        // Write back to caller's inout references
+        iconView   = localIconView
+        iconBg     = localIconBg
+        titleLabel = localTitle
+        bodyLabel  = localBody
+        timeLabel  = localTime
+
+        return card
+    }
+
+    // MARK: - Insight Card Tap Actions
+
+    @objc private func insightCard1Tapped() {
+        push(NotificationsViewController())
+    }
+
+    @objc private func insightCard2Tapped() {
+        push(SleepViewController())
+    }
+
+    @objc private func insightCard3Tapped() {
+        push(StepsViewController())
+    }
+
+    // MARK: - Update Insight Cards
+
+    func updateInsightCards() {
+        updateNotificationInsightCard()
+        updateSleepInsightCard()
+        updateStepsInsightCard()
+    }
+
+    private func updateNotificationInsightCard() {
+        // Prefer live cache; fall back to UserDefaults written by NotificationService
+        let title: String
+        let body: String
+        let time: String
+        let vitalKey: String
+
+        if let notif = NotificationCache.shared.latest {
+            title    = notif.resolvedTitle
+            body     = notif.message
+            time     = relativeTime(from: Date(timeIntervalSince1970: TimeInterval(notif.timestamp)))
+            vitalKey = notif.parsedVitals.keys.first ?? notif.vitals ?? ""
+            insightCard1.isHidden = false
+        } else {
+            let defaults = UserDefaults.standard
+            let storedTitle = defaults.string(forKey: "notif_latest_title") ?? ""
+            guard !storedTitle.isEmpty else {
+                insightCard1.isHidden = true
+                return
+            }
+            title    = storedTitle
+            body     = defaults.string(forKey: "notif_latest_body") ?? ""
+            let ts   = defaults.double(forKey: "notif_latest_time")
+            time     = ts > 0 ? relativeTime(from: Date(timeIntervalSince1970: ts)) : ""
+            vitalKey = defaults.string(forKey: "notif_latest_vital") ?? ""
+            insightCard1.isHidden = false
+        }
+
+        insightTitle1.text = title
+        insightBody1.text  = body
+        insightTime1.text  = time
+        let (icon, tint, bg) = notifIconInfo(for: vitalKey)
+        insightIcon1.image           = icon?.withRenderingMode(.alwaysTemplate)
+        insightIcon1.tintColor       = tint
+        insightIconBg1.backgroundColor = bg
+    }
+
+    private func updateSleepInsightCard() {
+        let sleepMin  = UserDefaults.standard.integer(forKey: "last_day_sleep_minutes")
+        let quality   = UserDefaults.standard.integer(forKey: "last_day_sleep_quality")
+
+        guard sleepMin > 0 else {
+            insightCard2.isHidden = true
+            return
+        }
+        insightCard2.isHidden = false
+
+        let h = sleepMin / 60
+        let m = sleepMin % 60
+        let durStr = h > 0 ? "\(h)h \(m)m" : "\(m)m"
+
+        let green  = UIColor(red: 0.40, green: 0.73, blue: 0.42, alpha: 1)
+        let orange = UIColor(red: 1.00, green: 0.65, blue: 0.15, alpha: 1)
+        let red    = UIColor(red: 1.00, green: 0.32, blue: 0.32, alpha: 1)
+        let greenBg  = UIColor(red: 0.88, green: 0.97, blue: 0.89, alpha: 1)
+        let orangeBg = UIColor(red: 1.00, green: 0.95, blue: 0.88, alpha: 1)
+        let redBg    = UIColor(red: 1.00, green: 0.88, blue: 0.88, alpha: 1)
+
+        let title: String
+        let body: String
+        let iconName: String
+        let tint: UIColor
+        let bg: UIColor
+
+        if quality >= 90 && sleepMin >= 420 {
+            title    = "Excellent Sleep Quality"
+            body     = "You had \(durStr) of quality sleep. Keep up the excellent work!"
+            iconName = "checkmark.circle.fill"
+            tint     = green;  bg = greenBg
+        } else if quality >= 80 && sleepMin >= 360 {
+            title    = "Great Sleep Quality"
+            body     = "You had \(durStr) of quality sleep. Keep up the good work!"
+            iconName = "checkmark.circle.fill"
+            tint     = green;  bg = greenBg
+        } else if quality >= 70 {
+            title    = "Good Sleep"
+            body     = "You slept for \(durStr). Try to maintain consistency!"
+            iconName = "moon.fill"
+            tint     = orange; bg = orangeBg
+        } else {
+            title    = "Sleep Needs Improvement"
+            body     = "You had \(durStr) of sleep. Aim for better rest tonight!"
+            iconName = "moon.fill"
+            tint     = red;    bg = redBg
+        }
+
+        insightTitle2.text = title
+        insightBody2.text  = body
+        insightTime2.text  = "Last night"
+        insightIcon2.image           = UIImage(systemName: iconName)?.withRenderingMode(.alwaysTemplate)
+        insightIcon2.tintColor       = tint
+        insightIconBg2.backgroundColor = bg
+    }
+
+    private func updateStepsInsightCard() {
+        let todayTotals = stepsRepo.getTodayTotals()
+        let steps       = todayTotals.steps
+        let calories    = todayTotals.calories
+        let target      = AppSettingsManager.shared.getStepsTarget()   // default 10 000
+
+        let green   = UIColor(red: 0.40, green: 0.73, blue: 0.42, alpha: 1)
+        let orange  = UIColor(red: 1.00, green: 0.65, blue: 0.15, alpha: 1)
+        let indigo  = UIColor(red: 0.33, green: 0.43, blue: 1.00, alpha: 1)
+        let grey    = UIColor(white: 0.6, alpha: 1)
+        let greenBg  = UIColor(red: 0.88, green: 0.97, blue: 0.89, alpha: 1)
+        let orangeBg = UIColor(red: 1.00, green: 0.95, blue: 0.88, alpha: 1)
+        let indigoBg = UIColor(red: 0.90, green: 0.92, blue: 1.00, alpha: 1)
+        let amberBg  = UIColor(red: 1.00, green: 0.97, blue: 0.88, alpha: 1)
+
+        let progress = target > 0 ? (steps * 100 / target) : 0
+        let remaining = max(0, target - steps)
+
+        let title: String
+        let body: String
+        let iconName: String
+        let tint: UIColor
+        let bg: UIColor
+
+        if steps == 0 {
+            title    = "Start Your Day Active!"
+            body     = "No steps recorded yet. Get moving to reach your \(formattedNumber(target)) step goal!"
+            iconName = "figure.run"
+            tint     = grey;   bg = amberBg
+        } else if steps >= target {
+            title    = "Daily Step Goal Achieved!"
+            body     = "Great job! You've walked \(formattedNumber(steps)) steps and burned \(calories) kcal today. Keep it up!"
+            iconName = "checkmark.circle.fill"
+            tint     = green;  bg = greenBg
+        } else if progress >= 75 {
+            title    = "Almost There!"
+            body     = "You're \(progress)% to your goal! Just \(formattedNumber(remaining)) more steps to go. You've burned \(calories) kcal."
+            iconName = "figure.walk"
+            tint     = green;  bg = greenBg
+        } else if progress >= 50 {
+            title    = "Halfway to Your Goal!"
+            body     = "You've completed \(formattedNumber(steps)) steps (\(progress)%). Burned \(calories) kcal so far. Keep moving!"
+            iconName = "figure.walk"
+            tint     = orange; bg = orangeBg
+        } else {
+            title    = "Keep Moving!"
+            body     = "You've taken \(formattedNumber(steps)) steps and burned \(calories) kcal. You're \(progress)% to your goal!"
+            iconName = "figure.run"
+            tint     = indigo; bg = indigoBg
+        }
+
+        insightTitle3.text = title
+        insightBody3.text  = body
+        insightTime3.text  = "Today"
+        insightIcon3.image           = UIImage(systemName: iconName)?.withRenderingMode(.alwaysTemplate)
+        insightIcon3.tintColor       = tint
+        insightIconBg3.backgroundColor = bg
     }
 
     // MARK: - Stack Layout in ContentView
@@ -670,7 +848,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         applyGlucose(glucose)
         applyTemperature(temp)
         applySleep(minutes: sleepMin, quality: sleepQual)
-        applyLatestNotification()
+        updateInsightCards()
 
         // Health score with ecgScore = 0 as placeholder
         applyHealthScore(hr: hr, hrv: hrv, sbp: sbp, dbp: dbp,
@@ -810,23 +988,6 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         sleepQualityCard.updateValue(quality > 0 ? "\(quality)" : "--", unit: "%")
         let (qualStatus, qualColor) = sleepQualityStatus(quality)
         sleepQualityCard.updateStatus(text: qualStatus, color: qualColor)
-    }
-
-    private func applyLatestNotification() {
-        let defaults = UserDefaults.standard
-        let title    = defaults.string(forKey: "notif_latest_title") ?? "No alerts"
-        let body     = defaults.string(forKey: "notif_latest_body")  ?? "You have no new health alerts"
-        let time     = defaults.double(forKey: "notif_latest_time")
-        let vitalKey = defaults.string(forKey: "notif_latest_vital") ?? ""
-
-        alertTitleLabel.text = title
-        alertBodyLabel.text  = body
-        alertTimeLabel.text  = time > 0 ? relativeTime(from: Date(timeIntervalSince1970: time)) : ""
-
-        let (icon, tint, bg) = notifIconInfo(for: vitalKey)
-        alertIconView.image           = icon?.withRenderingMode(.alwaysTemplate)
-        alertIconView.tintColor       = tint
-        alertIconContainer.backgroundColor = bg
     }
 
     // MARK: - Helpers — Status Logic
@@ -981,22 +1142,16 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     // MARK: - Helpers — Computation
 
     private func computeSleepQuality() -> Int {
-        // Primary: read value written by SleepSyncHelper.updateDashboardSleepStats
-        // after every BLE sync (correct formula: seconds / 28800 * 100)
         let stored = UserDefaults.standard.integer(forKey: "last_day_sleep_quality")
         if stored > 0 { return stored }
 
-        // Fallback: compute directly from CoreData using correct seconds denominator
-        let sessions = sleepRepo.getAllSessions()
+        // Fallback: mirror SleepSyncHelper — today's sleep group, per-field minute truncation
+        let sessions = sleepRepo.getByDateRange(startDate: Date(), endDate: Date())
         guard !sessions.isEmpty else { return 0 }
-        let cutoff = Int64(Date().timeIntervalSince1970) - 36 * 3600
-        let recent = sessions.filter { $0.endTime >= cutoff }
-        let source = recent.isEmpty ? Array(sessions.prefix(1)) : recent
-        let totalSec = source.reduce(0) {
-            $0 + Int($1.deepSleepTimes) + Int($1.lightSleepTimes) + Int($1.remSleepTimes)
+        let totalMin = sessions.reduce(0) {
+            $0 + Int($1.deepSleepTimes) / 60 + Int($1.lightSleepTimes) / 60 + Int($1.remSleepTimes) / 60
         }
-        // 28800 = 8 hours in seconds (correct denominator — values are stored as seconds)
-        return min(100, max(12, Int(Double(totalSec) / 28800.0 * 100)))
+        return min(100, max(12, Int(Double(totalMin) / 480.0 * 100)))
     }
 
     private func computeBMI() -> Double {

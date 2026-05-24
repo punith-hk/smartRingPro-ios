@@ -57,4 +57,5 @@ struct NotificationsResponse: Codable {
 
 struct MarkAsReadResponse: Codable {
     let message: String
+    let data: NotificationItem?
 }
