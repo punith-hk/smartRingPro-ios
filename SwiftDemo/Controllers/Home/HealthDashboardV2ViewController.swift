@@ -1,4 +1,5 @@
 import UIKit
+import YCProductSDK
 
 // MARK: - HealthDashboardV2ViewController
 
@@ -119,16 +120,24 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         buildSleepSection()
         buildInsightsSection()
         layoutStackInContentView()
+
+        // Path B: BLE connects while dashboard is visible (or on another tab)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(onBLEStateChanged(_:)),
+            name: YCProduct.deviceStateNotification,
+            object: nil
+        )
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         loadLocalData()
-        // Banner shows "Last data recorded X min ago" based on the oldest primary vital
         if let date = SyncFreshnessChecker.lastPrimaryDataDate() {
             syncBanner.markSynced(date: date)
         }
         refreshNotificationBadge()
+        attemptAutoSync()   // Path A: BLE already connected when dashboard appears
     }
 
     // MARK: - Notification Badge
@@ -149,6 +158,59 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
                 }
             }
         }
+    }
+
+    // MARK: - Auto Sync
+
+    /// Fires a full BLE sync exactly once per app session when:
+    ///   1. It has not already triggered this session
+    ///   2. A device is connected
+    ///   3. At least one vital is outside its measurement interval (data is stale)
+    ///
+    /// Called both from viewWillAppear (Path A: BLE already connected) and from
+    /// the BLE-connect notification handler (Path B: BLE connects after launch).
+    private func attemptAutoSync() {
+        guard !AutoSyncSession.hasTriggered else { return }
+        guard BLEStateManager.shared.hasConnectedDevice() else { return }
+        guard !SyncFreshnessChecker.allVitalsUpToDate() else { return }
+
+        AutoSyncSession.hasTriggered = true
+        print("🔄 AutoSync: triggering session sync (data stale, BLE connected)")
+
+        syncBanner.setSyncing(true)
+        Loader.shared.show(on: view, message: "Syncing data…")
+        BackgroundSyncManager.shared.startFullSync { [weak self] (_: Bool) in
+            DispatchQueue.main.async {
+                Loader.shared.hide()
+                guard let self = self else { return }
+                self.syncBanner.setSyncing(false)
+                let lastDataDate = SyncFreshnessChecker.lastPrimaryDataDate() ?? Date()
+                self.syncBanner.markSynced(date: lastDataDate)
+                UserDefaults.standard.set(lastDataDate.timeIntervalSince1970, forKey: "last_sync_timestamp")
+                self.loadLocalData()
+                print("✅ AutoSync: session sync complete")
+            }
+        }
+    }
+
+    /// Path B handler — BLE connects while the app is running.
+    /// Attempts auto-sync only if the dashboard view is currently on screen,
+    /// so the Loader attaches to the visible view.
+    @objc private func onBLEStateChanged(_ notification: Notification) {
+        guard
+            let info  = notification.userInfo as? [String: Any],
+            let state = info[YCProduct.connecteStateKey] as? YCProductState,
+            state == .connected
+        else { return }
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, self.view.window != nil else { return }
+            self.attemptAutoSync()
+        }
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: YCProduct.deviceStateNotification, object: nil)
     }
 
     override func viewDidLayoutSubviews() {
