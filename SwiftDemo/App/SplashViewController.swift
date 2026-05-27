@@ -21,11 +21,14 @@ final class SplashViewController: UIViewController {
         logoImageView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(logoImageView)
 
+        logoImageView.layer.cornerRadius = 24
+        logoImageView.layer.masksToBounds = true
+
         NSLayoutConstraint.activate([
             logoImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             logoImageView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            logoImageView.widthAnchor.constraint(equalToConstant: 220),
-            logoImageView.heightAnchor.constraint(equalToConstant: 220)
+            logoImageView.widthAnchor.constraint(equalToConstant: 120),
+            logoImageView.heightAnchor.constraint(equalToConstant: 120)
         ])
     }
 

@@ -26,6 +26,7 @@ class AppBaseViewController: UIViewController {
     // MARK: - Notification Bell (right bar button)
     private func setupNotificationButton() {
         let container = UIView(frame: CGRect(x: 0, y: 0, width: 44, height: 44))
+        container.backgroundColor = .clear
 
         let bellBtn = UIButton(type: .system)
         bellBtn.frame = CGRect(x: 2, y: 2, width: 40, height: 40)

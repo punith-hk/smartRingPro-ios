@@ -182,9 +182,11 @@ class BloodGlucoseDailySyncHelper {
                 return nil
             }
             
+            // Legacy migration: old entries stored as mmol/L (4–8); new entries are mmol/L×10 (40–80)
+            let migratedValue = (value > 0 && value < 10) ? value * 10 : value
             return VitalDataPoint(
                 timestamp: Int64(date.timeIntervalSince1970),
-                value: value
+                value: migratedValue
             )
         }
     }

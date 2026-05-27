@@ -133,8 +133,9 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         loadLocalData()
-        if let date = SyncFreshnessChecker.lastPrimaryDataDate() {
-            syncBanner.markSynced(date: date)
+        // Banner date comes from cachedLastSyncMillis (local DB, all 6 vitals) set inside loadLocalData()
+        if cachedLastSyncMillis > 0 {
+            syncBanner.markSynced(date: Date(timeIntervalSince1970: TimeInterval(cachedLastSyncMillis) / 1000))
         }
         refreshNotificationBadge()
         attemptAutoSync()   // Path A: BLE already connected when dashboard appears
@@ -171,42 +172,44 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     /// the BLE-connect notification handler (Path B: BLE connects after launch).
     private func attemptAutoSync() {
         guard !AutoSyncSession.hasTriggered else { return }
-        guard BLEStateManager.shared.hasConnectedDevice() else { return }
-        guard !SyncFreshnessChecker.allVitalsUpToDate() else { return }
+        // isConnected is true ONLY at state 7 (SDK fully initialized + ready for data commands)
+        // hasConnectedDevice() returns true too early (peripheral set during reconnect initiation)
+        guard BLEStateManager.shared.isConnected else { return }
+        // Use local DB timestamp (correct timezone) instead of BLE UserDefaults timestamps
+        let intervalSecs = AppSettingsManager.shared.getHealthInterval().minuteValue * 60
+        let isStale: Bool
+        if cachedLastSyncMillis > 0 {
+            let elapsed = Date().timeIntervalSince1970 - TimeInterval(cachedLastSyncMillis) / 1000
+            isStale = elapsed >= TimeInterval(intervalSecs)
+        } else {
+            isStale = true  // No data in DB yet → always sync
+        }
+        guard isStale else { return }
 
         AutoSyncSession.hasTriggered = true
         print("🔄 AutoSync: triggering session sync (data stale, BLE connected)")
 
         syncBanner.setSyncing(true)
-        Loader.shared.show(on: view, message: "Syncing data…")
+        Loader.shared.show(on: view, message: "Syncing data…", timeout: 50)
         BackgroundSyncManager.shared.startFullSync { [weak self] (_: Bool) in
             DispatchQueue.main.async {
                 Loader.shared.hide()
                 guard let self = self else { return }
+                self.loadLocalData()   // updates cachedLastSyncMillis from local DB
                 self.syncBanner.setSyncing(false)
-                let lastDataDate = SyncFreshnessChecker.lastPrimaryDataDate() ?? Date()
-                self.syncBanner.markSynced(date: lastDataDate)
-                UserDefaults.standard.set(lastDataDate.timeIntervalSince1970, forKey: "last_sync_timestamp")
-                self.loadLocalData()
+                if self.cachedLastSyncMillis > 0 {
+                    let date = Date(timeIntervalSince1970: TimeInterval(self.cachedLastSyncMillis) / 1000)
+                    self.syncBanner.markSynced(date: date)
+                    UserDefaults.standard.set(date.timeIntervalSince1970, forKey: "last_sync_timestamp")
+                }
                 print("✅ AutoSync: session sync complete")
             }
         }
     }
 
-    /// Path B handler — BLE connects while the app is running.
-    /// Attempts auto-sync only if the dashboard view is currently on screen,
-    /// so the Loader attaches to the visible view.
+    // Path B: BLE connects after launch → attempt sync (same guard as Path A prevents double-sync)
     @objc private func onBLEStateChanged(_ notification: Notification) {
-        guard
-            let info  = notification.userInfo as? [String: Any],
-            let state = info[YCProduct.connecteStateKey] as? YCProductState,
-            state == .connected
-        else { return }
-
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self, self.view.window != nil else { return }
-            self.attemptAutoSync()
-        }
+        attemptAutoSync()
     }
 
     deinit {
@@ -299,16 +302,17 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
                 return
             }
             self.syncBanner.setSyncing(true)
-            Loader.shared.show(on: self.view, message: "Syncing data…")
+            Loader.shared.show(on: self.view, message: "Syncing data…", timeout: 50)
             BackgroundSyncManager.shared.startFullSync { [weak self] (_: Bool) in
                 Loader.shared.hide()   // always hide — Loader is a singleton
                 guard let self = self else { return }
+                self.loadLocalData()   // updates cachedLastSyncMillis from local DB
                 self.syncBanner.setSyncing(false)
-                // Banner uses oldest primary vital timestamp (min of HR/BP/combined)
-                let lastDataDate = SyncFreshnessChecker.lastPrimaryDataDate() ?? Date()
-                self.syncBanner.markSynced(date: lastDataDate)
-                UserDefaults.standard.set(lastDataDate.timeIntervalSince1970, forKey: "last_sync_timestamp")
-                self.loadLocalData()
+                if self.cachedLastSyncMillis > 0 {
+                    let date = Date(timeIntervalSince1970: TimeInterval(self.cachedLastSyncMillis) / 1000)
+                    self.syncBanner.markSynced(date: date)
+                    UserDefaults.standard.set(date.timeIntervalSince1970, forKey: "last_sync_timestamp")
+                }
             }
         }
 
@@ -881,12 +885,21 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         cachedPrevDBP = allBP.count  > 1 ? Int(allBP[1].diastolicValue) : 0
         cachedPrevSPO2 = allSPO2.count > 1 ? Int(allSPO2[1].oxygenValue) : 0
 
-        // Cache last sync millis
-        if let lastSync = allHR.first { cachedLastSyncMillis = Int64(lastSync.timestamp * 1000) }
+        // Cache last sync millis — MAX of all 6 vitals' local DB timestamps (seconds → millis)
+        let ts1 = Int64(heartRateRepo.getLatestEntry()?.timestamp    ?? 0)
+        let ts2 = Int64(bpRepo.getLatestEntry()?.timestamp           ?? 0)
+        let ts3 = Int64(hrvRepo.getLatestEntry()?.timestamp          ?? 0)
+        let ts4 = Int64(bloodOxygenRepo.getLatestEntry()?.timestamp  ?? 0)
+        let ts5 = Int64(bloodGlucoseRepo.getLatestEntry()?.timestamp ?? 0)
+        let ts6 = Int64(temperatureRepo.getLatestEntry()?.timestamp  ?? 0)
+        let vitalTimestamps = [ts1, ts2, ts3, ts4, ts5, ts6].filter { $0 > 0 }
+        if let maxTs = vitalTimestamps.max() { cachedLastSyncMillis = maxTs * 1000 }
         let todaySteps = stepsRepo.getTodayTotals()
         let steps     = todaySteps.steps
         let calories  = todaySteps.calories
-        let glucose   = bloodGlucoseRepo.getLatestEntry()?.glucoseValue   ?? 0
+        // Legacy migration: old DB entries were stored in mmol/L (4–8); new entries are mmol/L×10 (40–80)
+        let rawGlucose = bloodGlucoseRepo.getLatestEntry()?.glucoseValue ?? 0
+        let glucose    = (rawGlucose > 0 && rawGlucose < 10) ? rawGlucose * 10 : rawGlucose
         let temp      = temperatureRepo.getLatestEntry()?.temperatureValue ?? 0
         // Both keys written by SleepSyncHelper.updateDashboardSleepStats after every BLE sync
         let sleepMin  = UserDefaults.standard.integer(forKey: "last_day_sleep_minutes")
@@ -1147,12 +1160,14 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     }
 
     private func glucoseStatus(_ mg: Int) -> (String, UIColor) {
+        let blue   = UIColor(red: 0.33, green: 0.43, blue: 1.0, alpha: 1)
         let orange = UIColor(red: 1, green: 0.65, blue: 0.15, alpha: 1)
         let amber  = UIColor(red: 1, green: 0.70, blue: 0, alpha: 1)
         let red    = UIColor(red: 1, green: 0.32, blue: 0.32, alpha: 1)
         guard mg > 0 else { return ("No data", UIColor.gray) }
-        if mg >= 70  && mg <= 99  { return ("Normal",   orange) }
-        if mg >= 100 && mg <= 125 { return ("Elevated", amber) }
+        if mg < 70                        { return ("Low",      blue) }
+        if mg >= 70  && mg <= 99          { return ("Normal",   orange) }
+        if mg >= 100 && mg <= 125         { return ("Elevated", amber) }
         return ("High", red)
     }
 

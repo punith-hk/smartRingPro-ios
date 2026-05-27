@@ -387,7 +387,8 @@ final class BackgroundSyncManager {
             results["Blood Glucose"] = VitalResult(bleCount: 0, bleStatus: "–", apiStatus: "skip", duration: 0)
             markSynced(SyncKey.bloodGlucose, countKey: SyncCountKey.bloodGlucose, bleCount: 0); completion(); return
         }
-        let values = data.map { RingValueEntry(value: String(format: "%.2f", $0.bloodGlucose), timestamp: Int64($0.startTimeStamp)) }
+        // iOS SDK returns bloodGlucose in mmol/L (4–8); multiply ×10 to match Android/server scale
+        let values = data.map { RingValueEntry(value: String(format: "%.1f", $0.bloodGlucose * 10), timestamp: Int64($0.startTimeStamp)) }
         log("API", "      → Uploading \(values.count) Blood Glucose entries  [blood_glucose]…")
         HealthService.shared.saveHealthDataBatch(userId: userId, type: "blood_glucose", values: values) { [weak self] result in
             guard let self = self else { return }

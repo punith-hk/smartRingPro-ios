@@ -68,11 +68,12 @@ class MainTabBarController: UITabBarController {
         vc.setScreenTitle(title)
         vc.showHamburger()
 
+        let iconConfig = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
         let nav = LogoNavigationController(rootViewController: vc)
         nav.tabBarItem = UITabBarItem(
             title: title,
-            image: UIImage(systemName: icon),
-            selectedImage: UIImage(systemName: selectedIcon)
+            image: UIImage(systemName: icon, withConfiguration: iconConfig),
+            selectedImage: UIImage(systemName: selectedIcon, withConfiguration: iconConfig)
         )
         return nav
     }

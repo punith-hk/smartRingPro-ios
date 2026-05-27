@@ -159,8 +159,10 @@ class CombinedDataSyncHelper {
             (timestamp: Int64($0.startTimeStamp), oxygenValue: $0.bloodOxygen)
         }
         
+        // iOS SDK returns bloodGlucose in mmol/L (4–8); multiply ×10 to match
+        // Android/server scale (40–80, stored as mmol/L×10 integer)
         let bloodGlucoseReadings: [(timestamp: Int64, glucoseValue: Double)] = datas.map {
-            (timestamp: Int64($0.startTimeStamp), glucoseValue: $0.bloodGlucose)
+            (timestamp: Int64($0.startTimeStamp), glucoseValue: $0.bloodGlucose * 10)
         }
         
         // Only save temperature if valid
@@ -261,8 +263,11 @@ class CombinedDataSyncHelper {
             .sorted { $0.timestamp < $1.timestamp }
         
         let glucoseEntries = bloodGlucoseRepository.getByDateRange(start: startOfDay, end: endOfDay)
-        let glucoseData = glucoseEntries.map { (timestamp: $0.timestamp, glucoseValue: $0.glucoseValue) }
-            .sorted { $0.timestamp < $1.timestamp }
+        // Legacy migration: old entries stored as mmol/L (4–8); new entries are mmol/L×10 (40–80)
+        let glucoseData = glucoseEntries.map { entry -> (timestamp: Int64, glucoseValue: Double) in
+            let v = entry.glucoseValue
+            return (timestamp: entry.timestamp, glucoseValue: (v > 0 && v < 10) ? v * 10 : v)
+        }.sorted { $0.timestamp < $1.timestamp }
         
         let tempEntries = temperatureRepository.getByDateRange(start: startOfDay, end: endOfDay)
         let tempData = tempEntries.map { (timestamp: $0.timestamp, temperatureValue: $0.temperatureValue) }
@@ -481,7 +486,11 @@ class CombinedDataSyncHelper {
     private func uploadBloodGlucoseDataToAPI(userId: Int, date: Date, data: [(timestamp: Int64, glucoseValue: Double)]) {
         guard !data.isEmpty else { return }
         
-        let values: [RingValueEntry] = data.map { RingValueEntry(value: String(format: "%.2f", $0.glucoseValue), timestamp: $0.timestamp) }
+        // Legacy migration: old entries stored as mmol/L (4–8); new entries are mmol/L×10 (40–80)
+        let values: [RingValueEntry] = data.map {
+            let v = ($0.glucoseValue > 0 && $0.glucoseValue < 10) ? $0.glucoseValue * 10 : $0.glucoseValue
+            return RingValueEntry(value: String(format: "%.1f", v), timestamp: $0.timestamp)
+        }
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "M/d/yyyy"
         let dateString = dateFormatter.string(from: date)
