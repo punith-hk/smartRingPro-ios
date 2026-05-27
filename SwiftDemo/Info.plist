@@ -90,5 +90,9 @@
 	<string>We need continuous access to your location for emergency health monitoring. This allows us to send ambulance services to your exact location if your vital signs reach critical levels, even when the app is not actively in use.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>We need continuous access to your location for emergency health monitoring and to dispatch medical assistance when needed.</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.mannaheal.MannaHealPro.bgsync</string>
+	</array>
 </dict>
 </plist>

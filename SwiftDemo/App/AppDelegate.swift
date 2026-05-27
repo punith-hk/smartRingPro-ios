@@ -9,6 +9,7 @@ import UIKit
 import Firebase
 import FirebaseMessaging
 import UserNotifications
+import BackgroundTasks
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -22,6 +23,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Initialize Core Data
         _ = CoreDataManager.shared.persistentContainer
         print("✅ AppDelegate - Core Data initialized")
+
+        // Register background sync task (must be called before app finishes launching)
+        BackgroundSyncTaskManager.shared.registerTask()
         
         // Set notification center delegate for foreground notifications
         UNUserNotificationCenter.current().delegate = self

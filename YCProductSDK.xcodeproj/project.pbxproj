@@ -11,6 +11,7 @@
 		4BEF9B752DE93FE900439088 /* YCHenAIBloodPressureViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEF9B732DE93FE900439088 /* YCHenAIBloodPressureViewController.swift */; };
 		703A84D983BC2980BDF7C1C4 /* libPods-SwiftDemo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = EF9FEBA8B7B9F9BF437F9DB5 /* libPods-SwiftDemo.a */; };
 		86DF0421802D2DA76404558C /* BackgroundSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CB2D15122D80E58A08BDE9A /* BackgroundSyncManager.swift */; };
+		AA3F7C2109B8E45D00C1F923 /* BackgroundSyncTaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3F7C2009B8E45D00C1F923 /* BackgroundSyncTaskManager.swift */; };
 		B242E8412F4F5E8100FF2B21 /* StressDailyStatsEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B242E83C2F4F5E8100FF2B21 /* StressDailyStatsEntity+CoreDataClass.swift */; };
 		B242E8422F4F5E8100FF2B21 /* StressEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B242E83E2F4F5E8100FF2B21 /* StressEntity+CoreDataClass.swift */; };
 		B242E8432F4F5E8100FF2B21 /* StressEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B242E83F2F4F5E8100FF2B21 /* StressEntity+CoreDataProperties.swift */; };
@@ -102,6 +103,7 @@
 		4BEF9B732DE93FE900439088 /* YCHenAIBloodPressureViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YCHenAIBloodPressureViewController.swift; sourceTree = "<group>"; };
 		53A832FD1C96D4E9D44CA48D /* Pods-ObjcDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ObjcDemo.release.xcconfig"; path = "Target Support Files/Pods-ObjcDemo/Pods-ObjcDemo.release.xcconfig"; sourceTree = "<group>"; };
 		7CB2D15122D80E58A08BDE9A /* BackgroundSyncManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackgroundSyncManager.swift; sourceTree = "<group>"; };
+		AA3F7C2009B8E45D00C1F923 /* BackgroundSyncTaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundSyncTaskManager.swift; sourceTree = "<group>"; };
 		B0A85F29BD0BE9FA5FB723B3 /* Pods-SwiftDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SwiftDemo.release.xcconfig"; path = "Target Support Files/Pods-SwiftDemo/Pods-SwiftDemo.release.xcconfig"; sourceTree = "<group>"; };
 		B242E83C2F4F5E8100FF2B21 /* StressDailyStatsEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StressDailyStatsEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
 		B242E83D2F4F5E8100FF2B21 /* StressDailyStatsEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StressDailyStatsEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
@@ -702,6 +704,7 @@
 			isa = PBXGroup;
 			children = (
 				7CB2D15122D80E58A08BDE9A /* BackgroundSyncManager.swift */,
+				AA3F7C2009B8E45D00C1F923 /* BackgroundSyncTaskManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -959,6 +962,7 @@
 				4BEF9B752DE93FE900439088 /* YCHenAIBloodPressureViewController.swift in Sources */,
 				CA8AB86B288005B800B91963 /* YCECGResultViewCell.swift in Sources */,
 				86DF0421802D2DA76404558C /* BackgroundSyncManager.swift in Sources */,
+				AA3F7C2109B8E45D00C1F923 /* BackgroundSyncTaskManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

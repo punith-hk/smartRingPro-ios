@@ -82,6 +82,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
     private var cachedECGStatus: String = "--"
     private var cachedPrevECGScore: Int = 0
     private var cachedLastSyncMillis: Int64 = 0
+    private var periodicSyncTimer: Timer?
 
     // MARK: - Insight Card Live References (Card 1 = Notification, 2 = Sleep, 3 = Steps)
     private var insightCard1     = UIView()
@@ -128,6 +129,22 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
             name: YCProduct.deviceStateNotification,
             object: nil
         )
+
+        // Path C: App returns from background → re-check staleness on every foreground
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(onAppWillEnterForeground),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+
+        // Stop periodic timer when app goes to background (no point running while invisible)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(onAppDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -139,6 +156,7 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         }
         refreshNotificationBadge()
         attemptAutoSync()   // Path A: BLE already connected when dashboard appears
+        schedulePeriodicSync()
     }
 
     // MARK: - Notification Badge
@@ -202,6 +220,10 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
                     self.syncBanner.markSynced(date: date)
                     UserDefaults.standard.set(date.timeIntervalSince1970, forKey: "last_sync_timestamp")
                 }
+                // Reschedule periodic timer now that cachedLastSyncMillis is fresh
+                self.schedulePeriodicSync()
+                // Schedule background task for when app is minimized
+                BackgroundSyncTaskManager.shared.scheduleNextSync()
                 print("✅ AutoSync: session sync complete")
             }
         }
@@ -212,8 +234,71 @@ final class HealthDashboardV2ViewController: AppBaseViewController {
         attemptAutoSync()
     }
 
+    // Path C: App returns from background → reset flag, re-check staleness, reschedule timer
+    @objc private func onAppWillEnterForeground() {
+        AutoSyncSession.hasTriggered = false
+        loadLocalData()          // refresh cachedLastSyncMillis before timer calculation
+        attemptAutoSync()        // sync if stale (completion will reschedule timer)
+        schedulePeriodicSync()   // schedule timer for remaining time if data is still fresh
+    }
+
+    // Stop timer when app goes to background — saves battery, no point ticking while hidden
+    @objc private func onAppDidEnterBackground() {
+        stopPeriodicSyncTimer()
+        // Ensure a background task is queued to sync while minimized
+        BackgroundSyncTaskManager.shared.scheduleNextSync()
+    }
+
+    // MARK: - Periodic Sync Timer
+
+    /// Schedules the next periodic sync respecting the +1 min buffer.
+    /// First fire = (interval + 1 min) from last sync time.
+    /// After first fire, repeats exactly every interval.
+    ///
+    /// Example (15 min interval, last sync 11:30):
+    ///   First fire → 11:46 (16 min later)
+    ///   Then → 12:01, 12:16, 12:31 … (every 15 min)
+    private func schedulePeriodicSync() {
+        stopPeriodicSyncTimer()
+
+        let intervalSecs = AppSettingsManager.shared.getHealthInterval().minuteValue * 60
+        let bufferSecs: TimeInterval = 60   // always add 1 min to give ring time to record
+
+        let firstFireDelay: TimeInterval
+        if cachedLastSyncMillis > 0 {
+            let elapsed = Date().timeIntervalSince1970 - TimeInterval(cachedLastSyncMillis) / 1000
+            let remaining = (intervalSecs + bufferSecs) - elapsed
+            firstFireDelay = max(bufferSecs, remaining)  // never fire sooner than 1 min
+        } else {
+            firstFireDelay = bufferSecs   // no data at all → try after 1 min
+        }
+
+        print("⏱ PeriodicSync: first fire in \(Int(firstFireDelay / 60))m \(Int(firstFireDelay.truncatingRemainder(dividingBy: 60)))s")
+
+        // One-shot timer for the first fire (accounts for remaining time)
+        periodicSyncTimer = Timer.scheduledTimer(withTimeInterval: firstFireDelay, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+            AutoSyncSession.hasTriggered = false
+            self.attemptAutoSync()
+            // After first fire, repeat exactly every interval
+            self.periodicSyncTimer = Timer.scheduledTimer(withTimeInterval: intervalSecs, repeats: true) { [weak self] _ in
+                guard let self = self else { return }
+                AutoSyncSession.hasTriggered = false
+                self.attemptAutoSync()
+            }
+        }
+    }
+
+    private func stopPeriodicSyncTimer() {
+        periodicSyncTimer?.invalidate()
+        periodicSyncTimer = nil
+    }
+
     deinit {
+        stopPeriodicSyncTimer()
         NotificationCenter.default.removeObserver(self, name: YCProduct.deviceStateNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: UIApplication.willEnterForegroundNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: UIApplication.didEnterBackgroundNotification, object: nil)
     }
 
     override func viewDidLayoutSubviews() {
