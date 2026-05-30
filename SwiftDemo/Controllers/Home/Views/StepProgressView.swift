@@ -95,9 +95,9 @@ class StepProgressView: UIView {
     // MARK: - Public
     func setProgress(current: Int, total: Int) {
         let progress = total == 0 ? 0 : CGFloat(current) / CGFloat(total)
-
-        // ensure visible minimum
-        currentProgress = progress > 0 && progress < 0.03 ? 0.03 : progress
+        
+        // Use actual progress without minimum threshold
+        currentProgress = progress
 
         progressLayer.strokeEnd = min(max(currentProgress, 0), 1)
         stepsLabel.text = "\(current)"

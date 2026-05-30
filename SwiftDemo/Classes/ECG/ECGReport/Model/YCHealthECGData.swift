@@ -33,6 +33,12 @@ import YCProductSDK
     /// 使用的数据
     var ecgDatas: [Int32] = [Int32]()
     
+    /// 用户年龄
+    var age: Int = 0
+    
+    /// 用户性别
+    var gender: String = ""
+    
 }
 
 

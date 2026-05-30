@@ -1,22 +1,207 @@
 import Foundation
 
 enum APIEndpoints {
-    static let baseURL = "https://webapi.mannaheal.com/api/"
 
+    // MARK: - Base
+    static let baseURL      = "https://hearto.in/api/"
+    /// Base URL for user-uploaded images (doctor photos, department icons).
+    /// API returns only the filename; prepend this to build the full URL.
+    static let imageBaseURL = "https://hearto.in/app/"
+
+    // MARK: - Auth
     static let login = "login"
     static let register = "register"
     static let verifyOtp = "verifyotp"
-    
+    static let refreshToken = "refresh-token"
+
+    // MARK: - Health
     static func lastHealthData(userId: Int) -> String {
-            return "getLastRingData?user_id=\(userId)"
+        return "getLastRingData?user_id=\(userId)"
+    }
+
+    // MARK: - Doctors / Departments
+    static let departments = "departments"
+    
+    /// Get doctors for a specific department
+    /// GET /api/departments/{id}
+    static func getDoctors(departmentId: Int) -> String {
+        return "departments/\(departmentId)"
+    }
+    
+    static func doctors(id: Int) -> String {
+        return "departments/\(id)"
+    }
+    
+    /// Get doctor's weekly schedule
+    /// GET /api/doctors/{id}/schedules
+    static func getDoctorSchedules(doctorId: Int) -> String {
+        return "doctors/\(doctorId)/schedules"
+    }
+    
+    // MARK: - Symptoms
+    /// Get all symptoms for male and female body parts
+    /// GET /api/getAllSymptoms
+    static let getAllSymptoms = "getAllSymptoms"
+
+    // MARK: - Profile
+    static func patientProfile(id: Int) -> String {
+        return "patients/\(id)"
+    }
+
+    // MARK: - Appointments
+    /// Get patient's appointments with query parameter
+    /// GET /api/patients/myappointments?patient_id={id}
+    static func getMyAppointments(patientId: Int) -> String {
+        return "patients/myappointments?patient_id=\(patientId)"
+    }
+    
+    static let bookAppointment = "appointments"
+    
+    /// Get doctor's appointments with query parameter
+    /// GET /api/doctors/myappointments?doctor_id={id}
+    static func getDoctorAppointments(doctorId: Int) -> String {
+        return "doctors/myappointments?doctor_id=\(doctorId)"
+    }
+    
+    /// Get appointment details with vitals, symptoms, prescriptions
+    /// GET /api/appointments/{id}/answers
+    static func getAppointmentDetails(appointmentId: Int) -> String {
+        return "appointments/\(appointmentId)/answers"
+    }
+
+    static func getPrescription(appointmentId: Int) -> String {
+        return "appointments/\(appointmentId)/answers"
+    }
+
+    // MARK: - Family / Dependents
+    static func getDependents(userId: Int) -> String {
+        return "patients/\(userId)/dependents"
+    }
+
+    static func updateFamilyMember(
+        userId: Int,
+        dependentId: Int
+    ) -> String {
+        return "patients/\(userId)/dependents/\(dependentId)"
+    }
+    
+    // Linked accounts
+        static func getLinkedAccounts(userId: Int) -> String {
+            return "caretaker/\(userId)"
         }
 
-    static let departments = "departments"
-    static func doctors(id: Int) -> String { "departments/\(id)" }
-    static func schedules(id: Int) -> String { "doctors/\(id)/schedules" }
+        static let addLinkedAccount = "caretaker/request"
+        static let verifyCaretakerOtp = "caretaker/verify"
 
-    static func patientProfile(id: Int) -> String { "patients/\(id)" }
+        static let getLastRingData = "getLastRingData"
 
-    static let myAppointments = "patients/myappointments"
-    static let bookAppointment = "appointments"
+    static func saveSymptoms(userId: Int) -> String {
+        return "patients/\(userId)/symptoms"
+    }
+    
+    // MARK: - Ring Data (History)
+    static func getRingDataByType(
+        userId: Int,
+        type: String,
+        selectedDate: String
+    ) -> String {
+        return "getRingDataByType?user_id=\(userId)&type=\(type)&selectedDate=\(selectedDate)"
+    }
+
+    /// Get day-wise ring data for a user and type
+    /// Example: getRingDataByDay?user_id=2&type=heart_rate
+    static func getRingDataByDay(
+        userId: Int,
+        type: String
+    ) -> String {
+        return "getRingDataByDay?user_id=\(userId)&type=\(type)"
+    }
+    
+    // MARK: - Create/Upload Ring Data
+    static let createRingValues = "CreateRingValues"
+    
+    /// Upload single ring value
+    static func createRingValue(
+        userId: Int,
+        type: String,
+        value: String,
+        timestamp: Int64
+    ) -> String {
+        return "CreateRingValue?user_id=\(userId)&type=\(type)&value=\(value)&timestamp=\(timestamp)"
+    }
+    
+    // MARK: - Sleep Data
+    /// Upload sleep data (matching Android CreateSleepData)
+    static func createSleepData(userId: Int) -> String {
+        return "CreateSleepData?user_id=\(userId)"
+    }
+    
+    /// Get sleep data for a single date (matching Android getSleepData)
+    /// - Parameters:
+    ///   - userId: User ID
+    ///   - selectedDate: Date in format "MM/dd/yyyy" (e.g., "01/30/2026")
+    static func getSleepData(userId: Int, selectedDate: String) -> String {
+        return "getSleepData?user_id=\(userId)&selectedDate=\(selectedDate)"
+    }
+    
+    /// Get sleep data for a date range (matching Android getSleepDataByDateWise)
+    /// - Parameters:
+    ///   - userId: User ID
+    ///   - startDate: Start date in format "MM/dd/yyyy"
+    ///   - endDate: End date in format "MM/dd/yyyy"
+    static func getSleepDataByDateRange(userId: Int, startDate: String, endDate: String) -> String {
+        return "getSleepData?user_id=\(userId)&startDate=\(startDate)&endDate=\(endDate)"
+    }
+    
+    /// Get all sleep sessions for a user (no details, just summaries)
+    static func getSleepSessions(userId: Int) -> String {
+        return "getSleepSessions?user_id=\(userId)"
+    }
+    
+    /// Get sleep data by date range
+    static func getSleepDataByDateWise(
+        userId: Int,
+        startDate: String,
+        endDate: String
+    ) -> String {
+        return "getSleepDataByDateWise?user_id=\(userId)&startDate=\(startDate)&endDate=\(endDate)"
+    }
+
+    // MARK: - Diseases
+    static let getDiseaseList = "diseases/list"
+    
+    // MARK: - ECG Records
+    /// Fetch ECG records from server
+    /// GET /api/ecg-records/{userId}?limit={limit}&offset={offset}
+    static func getECGRecords(userId: Int, limit: Int = 100, offset: Int = 0) -> String {
+        return "ecg-records/\(userId)?limit=\(limit)&offset=\(offset)"
+    }
+    
+    /// Upload ECG records (batch upload)
+    /// POST /api/ecg-records (userId in body)
+    static var uploadECGRecords: String {
+        return "ecg-records"
+    }
+
+    // MARK: - Device Status
+    /// Upload device status (battery, location, ring connection, etc.)
+    /// POST /api/user-app-details
+    static let deviceStatus = "user-app-details"
+
+    // MARK: - Firebase
+    static let fcmToken = "user/fcm-token"
+
+    // MARK: - Notifications
+    /// GET /api/user/notifications?user_id={userId}&unread_only=true
+    static func getNotifications(userId: Int) -> String {
+        return "user/notifications?user_id=\(userId)&unread_only=true"
+    }
+
+    /// POST /api/user/notifications/{notificationId}/read
+    static func markNotificationRead(notificationId: Int) -> String {
+        return "user/notifications/\(notificationId)/read"
+    }
+
+    /// POST /api/user/notifications/read-all
+    static let markAllNotificationsRead = "user/notifications/read-all"
 }

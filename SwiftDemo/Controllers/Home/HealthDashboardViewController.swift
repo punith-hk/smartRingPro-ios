@@ -40,19 +40,19 @@ class HealthDashboardViewController: AppBaseViewController {
     private lazy var heartRateCard = VitalCardView(
         icon: UIImage(systemName: "heart"),
         title: "Heart Rate",
-        value: "0 bpm"
+        value: "0 times/min"
     )
 
     private lazy var hrvCard = VitalCardView(
         icon: UIImage(systemName: "waveform"),
         title: "Heart Rate Variability",
-        value: "0 ms"
+        value: "0 times/min"
     )
 
     private lazy var temperatureCard = VitalCardView(
         icon: UIImage(systemName: "thermometer"),
         title: "Temperature",
-        value: "0°C"
+        value: AppSettingsManager.shared.getTemperatureUnit() == .fahrenheit ? "--°F" : "--°C"
     )
 
     private lazy var bloodOxygenCard = VitalCardView(
@@ -60,6 +60,14 @@ class HealthDashboardViewController: AppBaseViewController {
         title: "Blood Oxygen",
         value: "0%"
     )
+    
+    private lazy var stressCard = VitalCardView(
+        icon: UIImage(systemName: "brain.head.profile"),
+        title: "Stress",
+        value: "-- level"
+    )
+    
+    private var lastHealthResponse: GetLastUserHealthDataResponse?
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -76,8 +84,45 @@ class HealthDashboardViewController: AppBaseViewController {
 
         stepProgress.setProgress(current: 0, total: 10000)
 
+        observeSettings()
+        fetchProfileIfNeeded()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        // Refresh data from local DB every time view appears
         fetchLatestHealthData()
     }
+    
+    private func observeSettings() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(onTemperatureUnitChanged),
+            name: .temperatureUnitChanged,
+            object: nil
+        )
+    }
+    
+    @objc private func onTemperatureUnitChanged() {
+        // Re-fetch and update temperature from local DB with new unit
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            let tempRepo = TemperatureRepository()
+            let latestTemp = tempRepo.getLatestEntry()
+            
+            DispatchQueue.main.async {
+                if let temp = latestTemp {
+                    let tempValue = temp.temperatureValue
+                    self.temperatureCard.updateValue(self.formatBodyTemperature(tempValue))
+                } else {
+                    self.temperatureCard.updateValue(self.formatBodyTemperature(nil))
+                }
+            }
+        }
+    }
+
 
     // MARK: - Base UI
     private func setupUI() {
@@ -304,6 +349,7 @@ class HealthDashboardViewController: AppBaseViewController {
             createRow(left: ecgCard, right: sleepCard),
             createRow(left: heartRateCard, right: hrvCard),
             createRow(left: temperatureCard, right: bloodOxygenCard),
+            createRow(left: stressCard, right: UIView()), // Stress card with empty placeholder
         ].forEach { gridStack.addArrangedSubview($0) }
     }
 
@@ -323,12 +369,17 @@ class HealthDashboardViewController: AppBaseViewController {
     private func setupCardActions() {
 
         bloodGlucoseCard.onTap = { [weak self] in
-            let vc = BloodGlucoseViewController()
+            let vc = HealthVitalsViewController(vitalType: .bloodGlucose)
             self?.navigationController?.pushViewController(vc, animated: true)
         }
         
         bloodPressureCard.onTap = { [weak self] in
-            let vc = BloodPressureViewController()
+            let vc = HealthVitalsViewController(vitalType: .bloodPressure)
+            self?.navigationController?.pushViewController(vc, animated: true)
+        }
+        
+        ecgCard.onTap = { [weak self] in
+            let vc = ECGViewController()
             self?.navigationController?.pushViewController(vc, animated: true)
         }
 
@@ -338,22 +389,28 @@ class HealthDashboardViewController: AppBaseViewController {
         }
         
         heartRateCard.onTap = { [weak self] in
-            let vc = HeartRateViewController()
+            // Using new generic HealthVitalsViewController for testing
+            let vc = HealthVitalsViewController(vitalType: .heartRate)
             self?.navigationController?.pushViewController(vc, animated: true)
         }
         
         hrvCard.onTap = { [weak self] in
-            let vc = HrvViewController()
+            let vc = HealthVitalsViewController(vitalType: .hrv)
             self?.navigationController?.pushViewController(vc, animated: true)
         }
         
         temperatureCard.onTap = { [weak self] in
-            let vc = TemperatureViewController()
+            let vc = HealthVitalsViewController(vitalType: .temperature)
             self?.navigationController?.pushViewController(vc, animated: true)
         }
         
         bloodOxygenCard.onTap = { [weak self] in
-            let vc = BloodOxygenViewController()
+            let vc = HealthVitalsViewController(vitalType: .bloodOxygen)
+            self?.navigationController?.pushViewController(vc, animated: true)
+        }
+        
+        stressCard.onTap = { [weak self] in
+            let vc = HealthVitalsViewController(vitalType: .stress)
             self?.navigationController?.pushViewController(vc, animated: true)
         }
         
@@ -366,14 +423,139 @@ class HealthDashboardViewController: AppBaseViewController {
         let userId = UserDefaults.standard.integer(forKey: "id")
         guard userId > 0 else { return }
 
+        // ✅ Fetch latest values from local database instead of API
+        fetchLatestFromLocalDB()
+        
+        // 🔴 COMMENTED: Old API call for latest data
+        /*
         HealthService.shared.getLastHealthData(userId: userId) {
             [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
 
                 if case .success(let response) = result {
+                    self.lastHealthResponse = response
                     self.applyHealthData(response)
                 }
+            }
+        }
+        */
+    }
+    
+    // MARK: - Local Database Fetch
+    private func fetchLatestFromLocalDB() {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            // Fetch latest values from each repository
+            let heartRateRepo = HeartRateRepository()
+            let bpRepo = BloodPressureRepository()
+            let hrvRepo = HrvRepository()
+            let bloodOxygenRepo = BloodOxygenRepository()
+            let bloodGlucoseRepo = BloodGlucoseRepository()
+            let tempRepo = TemperatureRepository()
+            let stepsRepo = StepsRepository()
+            let sleepRepo = SleepRepository()
+            let stressRepo = StressRepository()
+            
+            let latestHR = heartRateRepo.getLatestEntry()
+            let latestBP = bpRepo.getLatestEntry()
+            let latestHRV = hrvRepo.getLatestEntry()
+            let latestO2 = bloodOxygenRepo.getLatestEntry()
+            let latestGlucose = bloodGlucoseRepo.getLatestEntry()
+            let latestTemp = tempRepo.getLatestEntry()
+            let latestStress = stressRepo.getLatestEntry()
+            
+            // Fetch today's steps data
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+            let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
+            let todaySteps = stepsRepo.getByDateRange(start: today, end: tomorrow)
+            
+            // Fetch today's sleep data
+            let todaySleep = sleepRepo.getByDateRange(startDate: today, endDate: tomorrow)
+            
+            // Calculate today's totals
+            let totalSteps = todaySteps.reduce(0) { $0 + Int($1.steps) }
+            let totalCalories = todaySteps.reduce(0) { $0 + Int($1.calories) }
+            let totalDistance = todaySteps.reduce(0) { $0 + Int($1.distance) }
+            let distanceKm = Double(totalDistance) / 1000.0
+            
+            // Calculate total sleep time (Deep + Light + REM only)
+            var totalSleepMinutes = 0
+            for session in todaySleep {
+                let deepMin = Int(session.deepSleepTimes) / 60
+                let lightMin = Int(session.lightSleepTimes) / 60
+                let remMin = Int(session.remSleepTimes) / 60
+                totalSleepMinutes += deepMin + lightMin + remMin
+            }
+            
+            DispatchQueue.main.async {
+                // Heart Rate
+                if let hr = latestHR {
+                    self.heartRateCard.updateValue("\(hr.bpm) times/min")
+                } else {
+                    self.heartRateCard.updateValue("-- times/min")
+                }
+                
+                // Blood Pressure
+                if let bp = latestBP {
+                    self.bloodPressureCard.updateValue("\(bp.systolicValue)/\(bp.diastolicValue) mmHg")
+                } else {
+                    self.bloodPressureCard.updateValue("--/-- mmHg")
+                }
+                
+                // HRV
+                if let hrv = latestHRV {
+                    self.hrvCard.updateValue("\(hrv.hrvValue) ms")
+                } else {
+                    self.hrvCard.updateValue("-- ms")
+                }
+                
+                // Blood Oxygen
+                if let o2 = latestO2 {
+                    self.bloodOxygenCard.updateValue("\(o2.oxygenValue) %")
+                } else {
+                    self.bloodOxygenCard.updateValue("-- %")
+                }
+                
+                // Stress
+                if let stress = latestStress {
+                    self.stressCard.updateValue("\(stress.level) level")
+                } else {
+                    self.stressCard.updateValue("-- level")
+                }
+                
+                // Blood Glucose
+                if let glucose = latestGlucose {
+                    self.bloodGlucoseCard.updateValue("\(glucose.glucoseValue) mg/dL")
+                } else {
+                    self.bloodGlucoseCard.updateValue("-- mg/dL")
+                }
+                
+                // Temperature
+                if let temp = latestTemp {
+                    let tempValue = temp.temperatureValue
+                    self.temperatureCard.updateValue(self.formatBodyTemperature(tempValue))
+                } else {
+                    self.temperatureCard.updateValue(self.formatBodyTemperature(nil))
+                }
+                
+                // Sleep
+                if totalSleepMinutes > 0 {
+                    let hours = totalSleepMinutes / 60
+                    let minutes = totalSleepMinutes % 60
+                    self.sleepCard.updateValue("\(hours)h \(minutes)m")
+                } else {
+                    self.sleepCard.updateValue("--:--")
+                }
+                
+                // Update Steps, Calories, Distance
+                self.updateStepStats(
+                    steps: totalSteps,
+                    calories: totalCalories,
+                    distanceKm: distanceKm
+                )
             }
         }
     }
@@ -386,10 +568,12 @@ class HealthDashboardViewController: AppBaseViewController {
 
         bloodGlucoseCard.updateValue("\(map["blood_sugar"] ?? "--") mg/dL")
         bloodPressureCard.updateValue(map["blood_pressure"] ?? "--/-- mmHg")
-        heartRateCard.updateValue("\(map["heart_rate"] ?? "--") bpm")
+        heartRateCard.updateValue("\(map["heart_rate"] ?? "--") times/min")
         bloodOxygenCard.updateValue("\(map["blood_oxygen"] ?? "--") %")
-        hrvCard.updateValue("\(map["hrv"] ?? "--") ms")
-        temperatureCard.updateValue("\(map["temperature"] ?? "--") °C")
+        hrvCard.updateValue("\(map["hrv"] ?? "--") times/min")
+        
+        let tempValue = Double(map["temperature"] ?? "")
+        temperatureCard.updateValue(formatBodyTemperature(tempValue))
         
         // ---- STEPS / CALORIES / DISTANCE ----
             let steps = Int(map["steps"] ?? "0") ?? 0
@@ -406,6 +590,25 @@ class HealthDashboardViewController: AppBaseViewController {
 
         applySleepData()
     }
+    
+    private func formatBodyTemperature(_ value: Double?) -> String {
+
+        let unit = AppSettingsManager.shared.getTemperatureUnit()
+
+        guard let value = value, value > 0 else {
+            return unit == .fahrenheit ? "--°F" : "--°C"
+        }
+
+        switch unit {
+        case .celsius:
+            return String(format: "%.1f°C", value)
+
+        case .fahrenheit:
+            let f = TemperatureConverter.celsiusToFahrenheit(value)
+            return String(format: "%.1f°F", f)
+        }
+    }
+
 
     private func applySleepData() {
 
@@ -444,7 +647,41 @@ class HealthDashboardViewController: AppBaseViewController {
 
         label.text = text
     }
-
-
-
+    
+    // MARK: - Profile Data Fetch
+    private func fetchProfileIfNeeded() {
+        // Check if profile data is already saved
+        guard UserDefaultsManager.shared.profileName == nil || 
+              UserDefaultsManager.shared.profileName?.isEmpty == true else {
+            return
+        }
+        
+        // Fetch profile data if not saved
+        let userId = UserDefaultsManager.shared.userId
+        guard userId > 0 else { return }
+        
+        ProfileService.shared.getUserProfile(userId: userId) { result in
+            DispatchQueue.main.async {
+                if case .success(let response) = result {
+                    let data = response.data
+                    let fullName = "\(data.first_name ?? "") \(data.last_name ?? "")".trimmingCharacters(in: .whitespaces)
+                    
+                    // Save to UserDefaults including age and gender
+                    UserDefaultsManager.shared.saveProfileData(
+                        name: fullName,
+                        photoUrl: data.patient_image_url ?? "",
+                        age: data.age,
+                        gender: data.gender
+                    )
+                    
+                    // Post notification to update side menu
+                    NotificationCenter.default.post(
+                        name: .profileDataLoaded,
+                        object: nil,
+                        userInfo: ["name": fullName, "imageUrl": data.patient_image_url ?? ""]
+                    )
+                }
+            }
+        }
+    }
 }

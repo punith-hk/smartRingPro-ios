@@ -1,4 +1,5 @@
 import UIKit
+import YCProductSDK
 
 class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
 
@@ -37,15 +38,21 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
         super.viewWillDisappear(animated)
         timer?.invalidate()
     }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(false, animated: animated)
+    }
     
     private func setupNavigationBar() {
         navigationController?.setNavigationBarHidden(false, animated: false)
 
+        let navColor = UIColor(red: 21/255, green: 85/255, blue: 141/255, alpha: 1)
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(red: 0.85, green: 0.92, blue: 0.97, alpha: 1.0) // light blue
+        appearance.backgroundColor = navColor
         appearance.titleTextAttributes = [
-            .foregroundColor: UIColor.black,
+            .foregroundColor: UIColor.white,
             .font: UIFont.systemFont(ofSize: 17, weight: .semibold)
         ]
 
@@ -53,7 +60,7 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
         navigationItem.scrollEdgeAppearance = appearance
         navigationItem.compactAppearance = appearance
 
-        navigationItem.title = "Let’s verify your number"
+        navigationItem.title = "Verify Your Number"
         navigationItem.backButtonTitle = ""
     }
 
@@ -61,35 +68,48 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
     // MARK: - UI
     private func setupUI() {
 
-        view.backgroundColor = .systemBlue
+        view.backgroundColor = UIColor(red: 0.85, green: 0.93, blue: 1.0, alpha: 1)
         navigationItem.title = "Let’s verify your number"
 
         // Card
         cardView.backgroundColor = .white
-        cardView.layer.cornerRadius = 16
+        cardView.layer.cornerRadius = 20
+        cardView.layer.shadowColor = UIColor.black.cgColor
+        cardView.layer.shadowOpacity = 0.08
+        cardView.layer.shadowRadius = 10
+        cardView.layer.shadowOffset = CGSize(width: 0, height: 4)
         cardView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(cardView)
 
         NSLayoutConstraint.activate([
-            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-            cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            cardView.heightAnchor.constraint(equalToConstant: 300)
+            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
+            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
+            cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
+
+        // Title inside card
+        let titleLabel = UILabel()
+        titleLabel.text = "Verify Your Number"
+        titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        cardView.addSubview(titleLabel)
 
         // Info Label
         let infoLabel = UILabel()
-        infoLabel.text = "Otp Sent to your Mobile Number\n\(mobileNumber)"
+        infoLabel.text = "OTP sent to your mobile number \(mobileNumber)"
         infoLabel.numberOfLines = 2
-        infoLabel.font = .systemFont(ofSize: 14)
+        infoLabel.font = .systemFont(ofSize: 16)
+        infoLabel.textColor = .black
         infoLabel.translatesAutoresizingMaskIntoConstraints = false
         cardView.addSubview(infoLabel)
 
         // OTP Field
         otpField.delegate = self
-        otpField.placeholder = "Enter OTP"
+        otpField.placeholder = "● ● ● ● ● ●"
         otpField.keyboardType = .numberPad
         otpField.borderStyle = .roundedRect
+        otpField.textAlignment = .center
+        otpField.font = .systemFont(ofSize: 22, weight: .semibold)
         otpField.translatesAutoresizingMaskIntoConstraints = false
         cardView.addSubview(otpField)
 
@@ -103,8 +123,8 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
         let resendTap = UITapGestureRecognizer(target: self, action: #selector(resendTapped))
         resendLabel.addGestureRecognizer(resendTap)
 
-        // Submit Button
-        submitButton.setTitle("Submit", for: .normal)
+        // Verify OTP Button
+        submitButton.setTitle("Verify OTP", for: .normal)
         submitButton.setTitleColor(.white, for: .normal)
         submitButton.backgroundColor = .systemGreen
         submitButton.layer.cornerRadius = 10
@@ -113,22 +133,26 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
         cardView.addSubview(submitButton)
 
         NSLayoutConstraint.activate([
-            infoLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 24),
-            infoLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 20),
-            infoLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -20),
+            titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 40),
+            titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 32),
+
+            infoLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 16),
+            infoLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 32),
+            infoLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -32),
 
             otpField.topAnchor.constraint(equalTo: infoLabel.bottomAnchor, constant: 24),
             otpField.leadingAnchor.constraint(equalTo: infoLabel.leadingAnchor),
             otpField.trailingAnchor.constraint(equalTo: infoLabel.trailingAnchor),
-            otpField.heightAnchor.constraint(equalToConstant: 44),
+            otpField.heightAnchor.constraint(equalToConstant: 52),
 
-            resendLabel.topAnchor.constraint(equalTo: otpField.bottomAnchor, constant: 8),
-            resendLabel.trailingAnchor.constraint(equalTo: otpField.trailingAnchor),
+            resendLabel.topAnchor.constraint(equalTo: otpField.bottomAnchor, constant: 12),
+            resendLabel.leadingAnchor.constraint(equalTo: otpField.leadingAnchor),
 
             submitButton.topAnchor.constraint(equalTo: resendLabel.bottomAnchor, constant: 24),
             submitButton.leadingAnchor.constraint(equalTo: otpField.leadingAnchor),
             submitButton.trailingAnchor.constraint(equalTo: otpField.trailingAnchor),
-            submitButton.heightAnchor.constraint(equalToConstant: 48)
+            submitButton.heightAnchor.constraint(equalToConstant: 48),
+            submitButton.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -40)
         ])
     }
     
@@ -147,7 +171,7 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
 
     // MARK: - Timer Logic
     private func startTimer() {
-        remainingSeconds = 90
+        remainingSeconds = 60
         updateResendLabel()
 
         timer?.invalidate()
@@ -160,11 +184,10 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
 
     private func updateResendLabel() {
         if remainingSeconds > 0 {
-            let minutes = remainingSeconds / 60
             let seconds = remainingSeconds % 60
             resendLabel.textColor = .gray
             resendLabel.attributedText = nil
-            resendLabel.text = String(format: "Resend code in %02d:%02d", minutes, seconds)
+            resendLabel.text = String(format: "Resend code in 00:%02d", seconds)
         } else {
             timer?.invalidate()
             showResendLink()
@@ -176,7 +199,8 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
             string: "Resend OTP",
             attributes: [
                 .foregroundColor: UIColor.systemBlue,
-                .underlineStyle: NSUnderlineStyle.single.rawValue
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .font: UIFont.boldSystemFont(ofSize: 13)
             ]
         )
         resendLabel.attributedText = text
@@ -186,7 +210,7 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
     @objc private func resendTapped() {
         if remainingSeconds > 0 { return }
 
-        Loader.shared.show(on: view)
+        Loader.shared.show(on: view, message: "Resending OTP...", timeout: 10)
 
         AuthService.shared.login(mobile: mobileNumber) { [weak self] result in
             DispatchQueue.main.async {
@@ -215,7 +239,7 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
             return
         }
 
-        Loader.shared.show(on: view)
+        Loader.shared.show(on: view, message: "Verifying OTP...", timeout: 10)
 
         AuthService.shared.verifyOtp(userId: userId, otp: otp) { [weak self] result in
             DispatchQueue.main.async {
@@ -230,11 +254,53 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
                         // ✅ Save session
                         UserDefaultsManager.shared.saveOtpResponse(response)
 
+                        // ✅ Background-fetch profile so side menu shows name + photo immediately
+                        let userId = UserDefaultsManager.shared.userId
+                        if userId > 0 {
+                            ProfileService.shared.getUserProfile(userId: userId) { result in
+                                if case .success(let profileResponse) = result {
+                                    let data = profileResponse.data
+                                    let fullName = "\(data.first_name ?? "") \(data.last_name ?? "")".trimmingCharacters(in: .whitespaces)
+                                    DispatchQueue.main.async {
+                                        UserDefaultsManager.shared.saveProfileData(
+                                            name: fullName,
+                                            photoUrl: data.patient_image_url ?? ""
+                                        )
+                                        NotificationCenter.default.post(
+                                            name: .profileDataLoaded,
+                                            object: nil,
+                                            userInfo: [
+                                                "name": fullName,
+                                                "phone": data.phone_number,
+                                                "imageUrl": data.patient_image_url ?? ""
+                                            ]
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // ✅ Send FCM token to server
+                        FCMService.forceSendTokenToServer { success, message in
+                            if success {
+                                print("✅ FCM token sent to server after login")
+                            } else {
+                                print("⚠️ Failed to send FCM token: \(message ?? "unknown")")
+                            }
+                        }
+
                         // ✅ Small toast
                         Toast.show(message: "OTP verified successfully", in: self.view)
 
                         // 🔥 SWITCH ROOT CONTROLLER CORRECTLY
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                            
+                            // 🔥 BLE INIT
+                                    YCProduct.setLogLevel(.normal, saveLevel: .error)
+                                    _ = YCProduct.shared
+                            
+                            // 🚨 REQUEST LOCATION PERMISSION (for emergency health monitoring)
+                            LocationManager.shared.requestLocationPermission()
 
                             let rootVC = SideMenuContainerController()
 
@@ -256,52 +322,6 @@ class OtpVerifyViewController: UIViewController, UITextFieldDelegate {
             }
         }
     }
-
-
-
-
-//    @objc private func submitTapped() {
-//        hideKeyboard()
-//
-//        let otp = otpField.text ?? ""
-//        guard otp.count == 6 else {
-//            showAlert("OTP must be 6 digits")
-//            return
-//        }
-//
-//        Loader.shared.show(on: view)
-//
-//        AuthService.shared.verifyOtp(userId: userId, otp: otp) { [weak self] result in
-//            DispatchQueue.main.async {
-//                guard let self = self else { return }
-//                Loader.shared.hide()
-//
-//                switch result {
-//                case .success(let response):
-//
-//                    if response.response == 0 {
-//                        UserDefaultsManager.shared.saveOtpResponse(response)
-//
-//                            Toast.show(message: "OTP verified successfully", in: self.view)
-//
-//                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-//                                let storyboard = UIStoryboard(name: "Main", bundle: nil)
-//                                let homeVC = storyboard.instantiateViewController(
-//                                    withIdentifier: "ViewController"
-//                                )
-//                                self.navigationController?.setViewControllers([homeVC], animated: true)
-//                            }
-//
-//                    } else {
-//                        self.showAlert(response.message ?? "OTP verification failed")
-//                    }
-//
-//                case .failure:
-//                    self.showAlert("Something went wrong. Please try again.")
-//                }
-//            }
-//        }
-//    }
 
     // MARK: - Keyboard
     private func setupKeyboardDismiss() {

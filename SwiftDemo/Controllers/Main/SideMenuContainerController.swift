@@ -1,4 +1,5 @@
 import UIKit
+import YCProductSDK
 
 class SideMenuContainerController: UIViewController, SideMenuDelegate {
 
@@ -21,6 +22,13 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
     private func setupChildren() {
 
         sideMenuVC.delegate = self
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(closeMenu),
+            name: .init("SideMenuCloseRequested"),
+            object: nil
+        )
 
         // MAIN CONTENT
         addChild(mainTabsVC)
@@ -120,7 +128,7 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
                 mainTabsVC.pushScreen(vc, title: "Family Members")
 
         case .appointmentSummary:
-            let vc = AppointmentsViewController()
+            let vc = AppointmentsViewController(defaultTab: .summary)
             mainTabsVC.pushScreen(vc, title: "Appointments")
 
 //        case .vitals:
@@ -133,6 +141,10 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
         case .referFriend:
             let vc = ReferFriendViewController()
                 mainTabsVC.pushScreen(vc, title: "Refer a Friend")
+
+        case .helpSupport:
+            let vc = HelpSupportViewController()
+            mainTabsVC.pushScreen(vc, title: "Help & Support")
 
         case .logout:
             showLogoutConfirmation()
@@ -164,17 +176,52 @@ class SideMenuContainerController: UIViewController, SideMenuDelegate {
 
         closeMenu()
 
-        // Clear user session
-        UserDefaults.standard.removeObject(forKey: "isLoggedIn")
+        Loader.shared.show(on: view, message: "Logging Out...")
 
-        let loginVC = LoginViewController()
-        let nav = UINavigationController(rootViewController: loginVC)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            // 🔥 BLE CLEANUP
+            YCProduct.disconnectDevice { _, _ in }
+            YCProduct.shared.isReconnectEnable = false
 
-        if let sceneDelegate = UIApplication.shared.connectedScenes
-            .first?.delegate as? SceneDelegate {
+            DeviceSessionManager.shared.clearDevice()
 
-            sceneDelegate.setRootViewController(nav)
+            // 🗄️ CLEAR ALL LOCAL DATABASE
+            print("🗑️ Clearing all local database data...")
+
+            HeartRateRepository().deleteAll()
+            BloodPressureRepository().deleteAll()
+            HrvRepository().deleteAll()
+            BloodOxygenRepository().deleteAll()
+            BloodGlucoseRepository().deleteAll()
+            TemperatureRepository().deleteAll()
+            StepsRepository().deleteAll()
+
+            HeartRateDailyStatsRepository().deleteAll()
+            BloodPressureDailyStatsRepository().deleteAll()
+            HrvDailyStatsRepository().deleteAll()
+            BloodOxygenDailyStatsRepository().deleteAll()
+            BloodGlucoseDailyStatsRepository().deleteAll()
+            TemperatureDailyStatsRepository().deleteAll()
+            StepsDailyStatsRepository().deleteAll()
+
+            print("✅ All local data cleared")
+
+            // Clear user session and profile data
+            UserDefaults.standard.removeObject(forKey: "isLoggedIn")
+            UserDefaultsManager.shared.clearProfileData()
+
+            Loader.shared.hide()
+
+            let loginVC = LoginViewController()
+            let nav = UINavigationController(rootViewController: loginVC)
+
+            if let sceneDelegate = UIApplication.shared.connectedScenes
+                .first?.delegate as? SceneDelegate {
+
+                sceneDelegate.setRootViewController(nav)
+            }
         }
     }
+
 
 }

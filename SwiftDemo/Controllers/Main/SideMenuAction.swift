@@ -4,5 +4,6 @@ enum SideMenuAction {
 //    case vitals
     case profile
     case referFriend
+    case helpSupport
     case logout
 }

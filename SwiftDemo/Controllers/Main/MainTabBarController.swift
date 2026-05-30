@@ -13,6 +13,7 @@ class MainTabBarController: UITabBarController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        delegate = self
         setupTabs()
         setupAppearance()
     }
@@ -20,59 +21,96 @@ class MainTabBarController: UITabBarController {
     private func setupTabs() {
 
         let home = createNav(
-            vc: HealthDashboardViewController(),
+            vc: HealthDashboardV2ViewController(),
             title: "Health",
-            icon: "house"
+            icon: "waveform.path.ecg",
+            selectedIcon: "waveform.path.ecg"
         )
 
         let specialists = createNav(
             vc: SpecialistsViewController(),
-            title: "Specialists",
-            icon: "stethoscope"
+            title: "Doctor",
+            icon: "cross",
+            selectedIcon: "cross.fill"
         )
 
         let appointments = createNav(
             vc: AppointmentsViewController(),
-            title: "Appointments",
-            icon: "calendar"
+            title: "Appointment",
+            icon: "calendar",
+            selectedIcon: "calendar"
         )
 
         let device = createNav(
             vc: DeviceViewController(),
             title: "Device",
-            icon: "wave.3.right"
+            icon: "record.circle",
+            selectedIcon: "record.circle.fill"
         )
 
-        let profile = createNav(
+        let familyCare = createNav(
             vc: CareViewController(),
-            title: "Profile",
-            icon: "person"
+            title: "Family Care",
+            icon: "person.3",
+            selectedIcon: "person.3.fill"
         )
 
-        viewControllers = [home, specialists, appointments, device, profile]
+        viewControllers = [home, specialists, appointments, device, familyCare]
     }
 
     private func createNav(
         vc: AppBaseViewController,
         title: String,
-        icon: String
+        icon: String,
+        selectedIcon: String
     ) -> UINavigationController {
 
         vc.setScreenTitle(title)
         vc.showHamburger()
 
-        let nav = UINavigationController(rootViewController: vc)
+        let iconConfig = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+        let nav = LogoNavigationController(rootViewController: vc)
         nav.tabBarItem = UITabBarItem(
             title: title,
-            image: UIImage(systemName: icon),
-            selectedImage: UIImage(systemName: "\(icon).fill")
+            image: UIImage(systemName: icon, withConfiguration: iconConfig),
+            selectedImage: UIImage(systemName: selectedIcon, withConfiguration: iconConfig)
         )
         return nav
     }
 
     private func setupAppearance() {
-        tabBar.tintColor = .systemBlue
-        tabBar.backgroundColor = .white
+        let navBlue = UIColor(red: 21/255, green: 85/255, blue: 141/255, alpha: 1)
+        let selectedWhite = UIColor.white
+        let unselectedWhite = UIColor.white.withAlphaComponent(0.55)
+
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = navBlue
+
+        let itemAppearance = UITabBarItemAppearance()
+
+        // Selected state
+        itemAppearance.selected.iconColor = selectedWhite
+        itemAppearance.selected.titleTextAttributes = [
+            .foregroundColor: selectedWhite,
+            .font: UIFont.systemFont(ofSize: 10, weight: .semibold)
+        ]
+
+        // Normal (unselected) state
+        itemAppearance.normal.iconColor = unselectedWhite
+        itemAppearance.normal.titleTextAttributes = [
+            .foregroundColor: unselectedWhite,
+            .font: UIFont.systemFont(ofSize: 10, weight: .regular)
+        ]
+
+        appearance.stackedLayoutAppearance = itemAppearance
+        appearance.inlineLayoutAppearance = itemAppearance
+        appearance.compactInlineLayoutAppearance = itemAppearance
+
+        tabBar.standardAppearance = appearance
+        if #available(iOS 15.0, *) {
+            tabBar.scrollEdgeAppearance = appearance
+        }
     }
     
     func openScreen(_ screen: AppScreen, title: String) {
@@ -105,6 +143,18 @@ class MainTabBarController: UITabBarController {
             nav.pushViewController(vc, animated: true)
         }
     }
+}
 
-
+// MARK: - UITabBarControllerDelegate
+extension MainTabBarController: UITabBarControllerDelegate {
+    func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
+        if let nav = viewController as? UINavigationController {
+            let top = nav.topViewController
+            // Don't disturb the Device tab when any device screen is already showing.
+            // Re-tapping the tab while on DeviceVC (bind/empty) or ConnectedDeviceVC
+            // should be a complete no-op — no pop, no reload, no loader.
+            if top is DeviceViewController || top is ConnectedDeviceViewController { return }
+            nav.popToRootViewController(animated: false)
+        }
+    }
 }
