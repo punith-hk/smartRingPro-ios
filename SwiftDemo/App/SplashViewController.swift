@@ -16,19 +16,32 @@ final class SplashViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .white
 
+        // Logo on top
         let logoImageView = UIImageView(image: UIImage(named: "launch_logo"))
         logoImageView.contentMode = .scaleAspectFit
+        logoImageView.clipsToBounds = true
+        logoImageView.layer.cornerRadius = 20
         logoImageView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(logoImageView)
 
-        logoImageView.layer.cornerRadius = 24
-        logoImageView.layer.masksToBounds = true
+        // "HEARTO" brand text below icon
+        let titleLabel = UILabel()
+        titleLabel.text = "HEARTO"
+        titleLabel.font = UIFont.systemFont(ofSize: 30, weight: .bold)
+        titleLabel.textColor = UIColor(red: 0.18, green: 0.49, blue: 0.80, alpha: 1)
+        titleLabel.textAlignment = .center
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(titleLabel)
 
+        // Container — centred vertically as a unit
         NSLayoutConstraint.activate([
             logoImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            logoImageView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            logoImageView.widthAnchor.constraint(equalToConstant: 120),
-            logoImageView.heightAnchor.constraint(equalToConstant: 120)
+            logoImageView.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -64),
+            logoImageView.widthAnchor.constraint(equalToConstant: 90),
+            logoImageView.heightAnchor.constraint(equalToConstant: 90),
+
+            titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            titleLabel.topAnchor.constraint(equalTo: logoImageView.bottomAnchor, constant: 28),
         ])
     }
 

@@ -3,7 +3,7 @@ import UIKit
 final class SpecialistsViewController: AppBaseViewController {
     
     // MARK: - Properties
-    private let specialists = Specialization.mockSpecialists
+    private var departments: [DepartmentItem] = []
     private let tableView = UITableView()
     
     // MARK: - Lifecycle
@@ -14,8 +14,29 @@ final class SpecialistsViewController: AppBaseViewController {
         view.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
         
         setupTableView()
+        fetchDepartments()
     }
     
+    // MARK: - API
+    private func fetchDepartments() {
+        Loader.shared.show(on: view, message: "Loading Specialists...", timeout: 10)
+        DoctorService.shared.getDepartments { [weak self] result in
+            DispatchQueue.main.async {
+                Loader.shared.hide()
+                guard let self = self else { return }
+                switch result {
+                case .success(let items):
+                    self.departments = items
+                    self.tableView.reloadData()
+                case .failure(let error):
+                    print("❌ SpecialistsVC: failed to load departments — \(error)")
+                    // Fallback: show empty state (no mock data)
+                    self.tableView.reloadData()
+                }
+            }
+        }
+    }
+
     // MARK: - Setup UI
     private func setupTableView() {
         tableView.backgroundColor = UIColor(red: 217/255, green: 237/255, blue: 255/255, alpha: 1)
@@ -40,7 +61,7 @@ final class SpecialistsViewController: AppBaseViewController {
 // MARK: - UITableViewDataSource
 extension SpecialistsViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return specialists.count
+        return departments.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -51,8 +72,7 @@ extension SpecialistsViewController: UITableViewDataSource {
             return UITableViewCell()
         }
         
-        let specialist = specialists[indexPath.row]
-        cell.configure(with: specialist)
+        cell.configure(with: departments[indexPath.row])
         return cell
     }
 }
@@ -60,14 +80,14 @@ extension SpecialistsViewController: UITableViewDataSource {
 // MARK: - UITableViewDelegate
 extension SpecialistsViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        let specialist = specialists[indexPath.row]
+        let department = departments[indexPath.row]
         
-        print("🏥 Selected specialist: \(specialist.name) (ID: \(specialist.id))")
+        print("🏥 Selected department: \(department.description) (ID: \(department.department_id))")
         
         // Navigate to DoctorsViewController
         let doctorsVC = DoctorsViewController(
-            departmentId: specialist.id,
-            departmentName: specialist.name
+            departmentId: department.department_id,
+            departmentName: department.description
         )
         navigationController?.pushViewController(doctorsVC, animated: true)
     }

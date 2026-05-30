@@ -1149,7 +1149,7 @@
 				CODE_SIGN_ENTITLEMENTS = SwiftDemo/SwiftDemo.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 78L9V5BF5Y;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1185,7 +1185,7 @@
 				CODE_SIGN_ENTITLEMENTS = SwiftDemo/SwiftDemo.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 78L9V5BF5Y;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",

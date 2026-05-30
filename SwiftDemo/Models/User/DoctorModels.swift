@@ -61,8 +61,9 @@ struct Doctor: Codable {
     }
     
     var profileImageURL: URL? {
-        guard let imageURL = doctor_image_url else { return nil }
-        return URL(string: imageURL)
+        guard let imageURL = doctor_image_url, !imageURL.isEmpty else { return nil }
+        let full = imageURL.hasPrefix("http") ? imageURL : APIEndpoints.imageBaseURL + imageURL
+        return URL(string: full)
     }
     
     var specializationText: String {
@@ -84,6 +85,21 @@ struct DoctorDepartment: Codable {
 
 // MARK: - Specialization (nested in Doctor response)
 struct DoctorSpecialization: Codable {
+}
+
+// MARK: - Departments List (GET /departments)
+struct DepartmentItem: Codable {
+    let department_id: Int
+    let description: String
+    let icon: String?
+
+    /// Full URL for the department icon.
+    /// API returns only a filename — prepend imageBaseURL to make it loadable.
+    var iconURL: URL? {
+        guard let icon = icon, !icon.isEmpty else { return nil }
+        let full = icon.hasPrefix("http") ? icon : APIEndpoints.imageBaseURL + icon
+        return URL(string: full)
+    }
 }
 
 

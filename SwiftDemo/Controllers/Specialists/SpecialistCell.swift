@@ -103,40 +103,53 @@ final class SpecialistCell: UITableViewCell {
     }
     
     // MARK: - Configure
-    func configure(with specialist: Specialization) {
-        nameLabel.text = specialist.name
-        descriptionLabel.text = specialist.description
-        
-        // Set icon based on specialization
-        switch specialist.name.lowercased() {
-        case "general physician":
-            iconImageView.image = UIImage(systemName: "stethoscope")
-            iconImageView.tintColor = UIColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1)
-            iconImageView.backgroundColor = UIColor(red: 1.0, green: 0.9, blue: 0.9, alpha: 1)
-        case "cardiology":
-            iconImageView.image = UIImage(systemName: "heart.fill")
-            iconImageView.tintColor = UIColor(red: 0.9, green: 0.2, blue: 0.2, alpha: 1)
-            iconImageView.backgroundColor = UIColor(red: 1.0, green: 0.95, blue: 0.95, alpha: 1)
-        case "pediatrician":
-            iconImageView.image = UIImage(systemName: "figure.2.and.child.holdinghands")
-            iconImageView.tintColor = UIColor(red: 0.4, green: 0.6, blue: 0.9, alpha: 1)
-            iconImageView.backgroundColor = UIColor(red: 0.9, green: 0.95, blue: 1.0, alpha: 1)
-        case "dermatology":
-            iconImageView.image = UIImage(systemName: "face.smiling")
-            iconImageView.tintColor = UIColor(red: 0.9, green: 0.6, blue: 0.4, alpha: 1)
-            iconImageView.backgroundColor = UIColor(red: 1.0, green: 0.95, blue: 0.9, alpha: 1)
-        case "psychiatrist":
-            iconImageView.image = UIImage(systemName: "brain.head.profile")
-            iconImageView.tintColor = UIColor(red: 0.6, green: 0.4, blue: 0.8, alpha: 1)
-            iconImageView.backgroundColor = UIColor(red: 0.95, green: 0.9, blue: 1.0, alpha: 1)
-        case "others":
-            iconImageView.image = UIImage(systemName: "medical.thermometer")
-            iconImageView.tintColor = UIColor(red: 0.5, green: 0.7, blue: 0.9, alpha: 1)
-            iconImageView.backgroundColor = UIColor(red: 0.9, green: 0.95, blue: 1.0, alpha: 1)
-        default:
+    func configure(with department: DepartmentItem) {
+        nameLabel.text = department.description
+        descriptionLabel.text = "Specialists in \(department.description.lowercased())"
+
+        if let iconURL = department.iconURL {
             iconImageView.image = UIImage(systemName: "cross.case")
             iconImageView.tintColor = .systemBlue
             iconImageView.backgroundColor = UIColor(red: 0.9, green: 0.95, blue: 1.0, alpha: 1)
+            iconImageView.loadImage(from: iconURL)
+        } else {
+            applySymbolIcon(for: department.description)
         }
+    }
+
+    // MARK: - Symbol icon fallback (used when server provides no icon URL)
+    private func applySymbolIcon(for name: String) {
+        let key = name.lowercased()
+
+        let mapping: [(keywords: [String], symbol: String, tint: UIColor, bg: UIColor)] = [
+            (["general", "physician"],  "stethoscope",                UIColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1), UIColor(red: 1.0, green: 0.9, blue: 0.9, alpha: 1)),
+            (["cardio"],                "heart.fill",                  UIColor(red: 0.9, green: 0.2, blue: 0.2, alpha: 1), UIColor(red: 1.0, green: 0.95, blue: 0.95, alpha: 1)),
+            (["allerg"],                "allergens",                   UIColor(red: 0.8, green: 0.6, blue: 0.2, alpha: 1), UIColor(red: 1.0, green: 0.98, blue: 0.9, alpha: 1)),
+            (["derma"],                 "face.smiling",                UIColor(red: 0.9, green: 0.6, blue: 0.4, alpha: 1), UIColor(red: 1.0, green: 0.95, blue: 0.9, alpha: 1)),
+            (["endoc"],                 "waveform.path.ecg",           UIColor(red: 0.5, green: 0.8, blue: 0.4, alpha: 1), UIColor(red: 0.93, green: 1.0, blue: 0.93, alpha: 1)),
+            (["gastro"],                "fork.knife",                  UIColor(red: 0.7, green: 0.5, blue: 0.3, alpha: 1), UIColor(red: 1.0, green: 0.96, blue: 0.9, alpha: 1)),
+            (["infect"],                "cross.vial.fill",             UIColor(red: 0.4, green: 0.7, blue: 0.5, alpha: 1), UIColor(red: 0.9, green: 1.0, blue: 0.94, alpha: 1)),
+            (["neuro"],                 "brain.head.profile",          UIColor(red: 0.6, green: 0.4, blue: 0.8, alpha: 1), UIColor(red: 0.95, green: 0.9, blue: 1.0, alpha: 1)),
+            (["pulmo", "lung"],         "lungs.fill",                  UIColor(red: 0.3, green: 0.6, blue: 0.9, alpha: 1), UIColor(red: 0.9, green: 0.95, blue: 1.0, alpha: 1)),
+            (["rheuma"],                "figure.walk",                 UIColor(red: 0.7, green: 0.3, blue: 0.5, alpha: 1), UIColor(red: 1.0, green: 0.92, blue: 0.96, alpha: 1)),
+            (["vascular"],              "chart.line.uptrend.xyaxis",   UIColor(red: 0.9, green: 0.3, blue: 0.3, alpha: 1), UIColor(red: 1.0, green: 0.92, blue: 0.92, alpha: 1)),
+            (["other"],                 "medical.thermometer",         UIColor(red: 0.5, green: 0.7, blue: 0.9, alpha: 1), UIColor(red: 0.9, green: 0.95, blue: 1.0, alpha: 1)),
+            (["pediatr", "child"],      "figure.2.and.child.holdinghands", UIColor(red: 0.4, green: 0.6, blue: 0.9, alpha: 1), UIColor(red: 0.9, green: 0.95, blue: 1.0, alpha: 1)),
+            (["psych"],                 "brain",                       UIColor(red: 0.6, green: 0.4, blue: 0.8, alpha: 1), UIColor(red: 0.95, green: 0.9, blue: 1.0, alpha: 1)),
+        ]
+
+        for entry in mapping {
+            if entry.keywords.contains(where: { key.contains($0) }) {
+                iconImageView.image = UIImage(systemName: entry.symbol)
+                iconImageView.tintColor = entry.tint
+                iconImageView.backgroundColor = entry.bg
+                return
+            }
+        }
+
+        // Default fallback
+        iconImageView.image = UIImage(systemName: "cross.case")
+        iconImageView.tintColor = .systemBlue
+        iconImageView.backgroundColor = UIColor(red: 0.9, green: 0.95, blue: 1.0, alpha: 1)
     }
 }

@@ -22,6 +22,7 @@ final class NotificationsViewController: UIViewController {
         setupTableView()
         setupLoadingView()
         setupEmptyView()
+        setupMarkAllButton()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -30,6 +31,17 @@ final class NotificationsViewController: UIViewController {
     }
 
     // MARK: - Setup
+
+    private func setupMarkAllButton() {
+        let btn = UIBarButtonItem(
+            title: "Mark all read",
+            style: .plain,
+            target: self,
+            action: #selector(markAllTapped)
+        )
+        btn.tintColor = UIColor(red: 21/255, green: 85/255, blue: 141/255, alpha: 1)
+        navigationItem.rightBarButtonItem = btn
+    }
 
     private func setupTableView() {
         tableView.translatesAutoresizingMaskIntoConstraints = false
@@ -152,14 +164,7 @@ final class NotificationsViewController: UIViewController {
     private func fetchNotifications() {
         guard userId > 0 else { showEmpty(); return }
 
-        // Use cache if still valid
-        if NotificationCache.shared.isValid {
-            items = NotificationCache.shared.all
-            tableView.reloadData()
-            items.isEmpty ? showEmpty() : showList()
-            return
-        }
-
+        // Always fetch from API so unread_only=true filter is applied fresh
         showLoading()
         NotificationService.shared.getNotifications(userId: userId) { [weak self] result in
             DispatchQueue.main.async {
@@ -196,6 +201,28 @@ final class NotificationsViewController: UIViewController {
                     self.items[indexPath.row].status = 1
                     NotificationCache.shared.markRead(id: item.id)
                     self.tableView.reloadRows(at: [indexPath], with: .none)
+                    self.updateNavBadge()
+                }
+            }
+        }
+    }
+
+    // MARK: - Mark All as Read
+
+    @objc private func markAllTapped() {
+        guard !items.isEmpty else { return }
+        navigationItem.rightBarButtonItem?.isEnabled = false
+
+        NotificationService.shared.markAllAsRead(userId: userId) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.navigationItem.rightBarButtonItem?.isEnabled = true
+                if case .success = result {
+                    // Clear list — all are now read, API will return empty on next fetch
+                    self.items = []
+                    NotificationCache.shared.invalidate()
+                    self.tableView.reloadData()
+                    self.showEmpty()
                     self.updateNavBadge()
                 }
             }

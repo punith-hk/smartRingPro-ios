@@ -4,7 +4,20 @@ final class DoctorService {
     
     static let shared = DoctorService()
     private init() {}
-    
+
+    /// Fetch all departments (Specialists list screen)
+    /// GET /api/departments
+    func getDepartments(
+        completion: @escaping (Result<[DepartmentItem], NetworkError>) -> Void
+    ) {
+        print("[DoctorService] 📥 Fetching all departments...")
+        APIClient.shared.get(
+            endpoint: APIEndpoints.departments,
+            responseType: [DepartmentItem].self,
+            completion: completion
+        )
+    }
+
     /// Fetch doctors for a specific department
     /// - Parameters:
     ///   - departmentId: Department ID

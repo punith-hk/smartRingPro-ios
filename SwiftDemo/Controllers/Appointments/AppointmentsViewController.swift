@@ -450,8 +450,11 @@ private class AppointmentCell: UITableViewCell {
             arrowImageView.isHidden = !appointment.isCompleted
             
             // Load doctor image
-            if let imageUrlString = appointment.doctorImageUrl, let imageURL = URL(string: imageUrlString) {
-                profileImageView.loadImage(from: imageURL)
+            if let raw = appointment.doctorImageUrl, !raw.isEmpty {
+                let full = raw.hasPrefix("http") ? raw : APIEndpoints.imageBaseURL + raw
+                if let imageURL = URL(string: full) {
+                    profileImageView.loadImage(from: imageURL)
+                }
             } else {
                 profileImageView.image = UIImage(systemName: "person.circle.fill")
                 profileImageView.tintColor = .lightGray

@@ -34,4 +34,19 @@ final class NotificationService {
             completion: completion
         )
     }
+
+    // MARK: - Mark All as Read
+
+    /// POST /api/user/notifications/read-all
+    func markAllAsRead(
+        userId: Int,
+        completion: @escaping (Result<MarkAsReadResponse, NetworkError>) -> Void
+    ) {
+        APIClient.shared.post(
+            endpoint: APIEndpoints.markAllNotificationsRead,
+            body: ["user_id": userId],
+            responseType: MarkAsReadResponse.self,
+            completion: completion
+        )
+    }
 }

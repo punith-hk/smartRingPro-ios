@@ -3,7 +3,10 @@ import Foundation
 enum APIEndpoints {
 
     // MARK: - Base
-    static let baseURL = "https://hearto.in/api/"
+    static let baseURL      = "https://hearto.in/api/"
+    /// Base URL for user-uploaded images (doctor photos, department icons).
+    /// API returns only the filename; prepend this to build the full URL.
+    static let imageBaseURL = "https://hearto.in/app/"
 
     // MARK: - Auth
     static let login = "login"
@@ -198,4 +201,7 @@ enum APIEndpoints {
     static func markNotificationRead(notificationId: Int) -> String {
         return "user/notifications/\(notificationId)/read"
     }
+
+    /// POST /api/user/notifications/read-all
+    static let markAllNotificationsRead = "user/notifications/read-all"
 }
